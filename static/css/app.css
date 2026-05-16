@@ -1,0 +1,103 @@
+:root {
+  --paper: #f4ead8;
+  --paper-soft: #fff9ed;
+  --ink: #251f18;
+  --seal: #9f3a22;
+  --gold: #c98d38;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(201, 141, 56, 0.18), transparent 28rem),
+    radial-gradient(circle at 88% 4%, rgba(159, 58, 34, 0.12), transparent 24rem),
+    linear-gradient(135deg, rgba(255,255,255,0.35), transparent 45%);
+}
+
+h1, h2, h3, .display-font {
+  font-family: inherit;
+}
+
+.ink-panel {
+  background:
+    linear-gradient(145deg, rgba(37,31,24,0.98), rgba(61,43,28,0.96)),
+    repeating-linear-gradient(90deg, transparent 0 18px, rgba(255,255,255,0.04) 18px 19px);
+  box-shadow: 18px 0 60px rgba(37, 31, 24, 0.25);
+}
+
+.nav-item {
+  display: block;
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  color: rgba(245, 245, 244, 0.78);
+  transition: 160ms ease;
+}
+
+.nav-item:hover, .nav-active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff7ed;
+  transform: translateX(3px);
+}
+
+.card {
+  border: 1px solid rgba(120, 113, 108, 0.28);
+  border-radius: 1.5rem;
+  background: rgba(255, 249, 237, 0.82);
+  box-shadow: 0 18px 50px rgba(79, 70, 58, 0.11);
+  backdrop-filter: blur(14px);
+}
+
+.btn-primary {
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff7ed;
+  padding: 0.75rem 1.15rem;
+  font-weight: 800;
+  transition: 160ms ease;
+}
+
+.btn-primary:hover {
+  background: var(--seal);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  border: 1px solid rgba(87, 83, 78, 0.28);
+  border-radius: 999px;
+  color: var(--ink);
+  padding: 0.7rem 1.1rem;
+  font-weight: 800;
+  transition: 160ms ease;
+}
+
+.btn-secondary:hover {
+  border-color: var(--seal);
+  color: var(--seal);
+}
+
+.input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(120, 113, 108, 0.35);
+  background: rgba(255, 255, 255, 0.62);
+  padding: 0.75rem 0.95rem;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px rgba(201, 141, 56, 0.16);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(159, 58, 34, 0.1);
+  color: var(--seal);
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+}

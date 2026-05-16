@@ -1,0 +1,38 @@
+{{define "content"}}
+<section class="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+  <article class="card p-6">
+    <span class="badge">{{tenantStatusLabel .Tenant.Status}}</span>
+    <h3 class="mt-4 text-3xl font-black">{{.Tenant.Name}}</h3>
+    <p class="mt-2 text-stone-600">{{.Tenant.Phone}}</p>
+    <dl class="mt-8 grid gap-4">
+      <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">房源</dt><dd class="mt-1 font-black">{{.Tenant.Room.RoomNo}} · {{.Tenant.Room.Title}}</dd></div>
+      <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">入住日期</dt><dd class="mt-1 font-black">{{formatDate .Tenant.CheckinDate}}</dd></div>
+      <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">月租 / 押金</dt><dd class="mt-1 font-black">¥{{formatFen .Tenant.RentPrice}} / ¥{{formatFen .Tenant.Deposit}}</dd></div>
+      <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">紧急联系人</dt><dd class="mt-1 font-black">{{.Tenant.EmergencyContact}}</dd></div>
+    </dl>
+    {{if eq .Tenant.Status "active"}}
+      <form class="mt-6" method="post" action="/admin/tenants/{{.Tenant.ID}}/checkout">
+        <button class="btn-primary" data-confirm="确定为该租客办理退租吗？" type="submit">办理退租</button>
+      </form>
+    {{end}}
+  </article>
+  <article class="card overflow-hidden">
+    <div class="border-b border-stone-300/70 p-6">
+      <h3 class="text-2xl font-black">收款记录</h3>
+    </div>
+    <div class="divide-y divide-stone-200/80">
+      {{range .Tenant.Payments}}
+        <div class="flex items-center justify-between gap-4 p-5">
+          <div>
+            <p class="font-black">{{paymentTypeLabel .Type}} · ¥{{formatFen .Amount}}</p>
+            <p class="text-sm text-stone-500">{{formatDate .PayDate}} · {{.Note}}</p>
+          </div>
+          <span class="badge">{{if .Paid}}已收{{else}}未收{{end}}</span>
+        </div>
+      {{else}}
+        <p class="p-8 text-center text-stone-500">还没有收款记录。</p>
+      {{end}}
+    </div>
+  </article>
+</section>
+{{end}}

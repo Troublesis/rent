@@ -1,0 +1,36 @@
+{{define "content"}}
+<section class="relative overflow-hidden rounded-[2.5rem] border border-stone-300/70 bg-stone-950 px-7 py-14 text-stone-50 shadow-2xl md:px-12">
+  <div class="max-w-3xl">
+    <p class="text-xs font-bold tracking-[0.45em] text-amber-200">城市里的安稳小屋</p>
+    <h2 class="mt-5 text-5xl font-black leading-tight md:text-7xl">直接联系房东，少一点中间成本。</h2>
+    <p class="mt-6 max-w-2xl text-lg leading-8 text-stone-300">精选可租房源，租金、面积、配置清清楚楚。看中房源后可直接电话咨询。</p>
+    <div class="mt-8 flex flex-wrap gap-3">
+      <a class="btn-primary bg-amber-700 hover:bg-amber-600" href="/rooms">查看可租房源</a>
+      <a class="rounded-full border border-white/20 px-5 py-3 font-bold text-stone-100 hover:bg-white/10" href="tel:{{.Settings.LandlordPhone}}">电话咨询</a>
+    </div>
+  </div>
+</section>
+<section class="mt-10">
+  <div class="flex items-end justify-between gap-4">
+    <div>
+      <p class="text-xs font-bold tracking-[0.35em] text-amber-700">最新空置</p>
+      <h3 class="mt-2 text-3xl font-black">最新空置房源</h3>
+    </div>
+    <a class="font-bold text-amber-800" href="/rooms">全部房源</a>
+  </div>
+  <div class="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+    {{range .Rooms}}
+      <a class="card block overflow-hidden transition hover:-translate-y-1 hover:border-amber-700" href="/room/{{.ID}}">
+        <div class="p-6">
+          <span class="badge">可租</span>
+          <h4 class="mt-4 text-2xl font-black">{{.Title}}</h4>
+          <p class="mt-2 text-sm text-stone-500">{{.RoomNo}} · {{.Area}}㎡ · {{.Floor}}层</p>
+          <p class="mt-6 text-3xl font-black text-amber-800">¥{{formatFen .Price}}<span class="text-sm text-stone-500"> / 月</span></p>
+        </div>
+      </a>
+    {{else}}
+      <div class="card p-10 text-center text-stone-600 md:col-span-2 xl:col-span-3">暂时没有空置房源，欢迎稍后再看。</div>
+    {{end}}
+  </div>
+</section>
+{{end}}

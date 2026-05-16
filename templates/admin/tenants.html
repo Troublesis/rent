@@ -1,0 +1,47 @@
+{{define "content"}}
+<section class="card p-5">
+  <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <form class="flex flex-1 flex-col gap-3 md:flex-row" method="get" action="/admin/tenants">
+      <input class="input md:max-w-xs" name="q" value="{{.Filter.Query}}" placeholder="搜索姓名或电话">
+      <select class="input md:max-w-48" name="status">
+        <option value="">全部状态</option>
+        {{range .Statuses}}
+          <option value="{{.Value}}" {{if eq $.Filter.Status .Value}}selected{{end}}>{{.Label}}</option>
+        {{end}}
+      </select>
+      <button class="btn-secondary" type="submit">筛选</button>
+    </form>
+    <a class="btn-primary" href="/admin/tenants/new">办理入住</a>
+  </div>
+</section>
+<section class="card mt-6 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-[760px] text-left text-sm">
+      <thead class="border-b border-stone-300/70 bg-white/40 text-stone-500">
+        <tr>
+          <th class="px-5 py-4">租客</th>
+          <th class="px-5 py-4">房源</th>
+          <th class="px-5 py-4">月租</th>
+          <th class="px-5 py-4">入住日期</th>
+          <th class="px-5 py-4">状态</th>
+          <th class="px-5 py-4">操作</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-stone-200/80">
+        {{range .Tenants}}
+          <tr>
+            <td class="px-5 py-4"><p class="font-black">{{.Name}}</p><p class="text-stone-500">{{.Phone}}</p></td>
+            <td class="px-5 py-4">{{.Room.RoomNo}} · {{.Room.Title}}</td>
+            <td class="px-5 py-4">¥{{formatFen .RentPrice}}</td>
+            <td class="px-5 py-4">{{formatDate .CheckinDate}}</td>
+            <td class="px-5 py-4"><span class="badge">{{tenantStatusLabel .Status}}</span></td>
+            <td class="px-5 py-4"><a class="font-bold text-amber-800" href="/admin/tenants/{{.ID}}">详情</a></td>
+          </tr>
+        {{else}}
+          <tr><td class="px-5 py-10 text-center text-stone-500" colspan="6">还没有租客记录。</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{end}}

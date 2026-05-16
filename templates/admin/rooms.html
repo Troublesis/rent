@@ -1,0 +1,47 @@
+{{define "content"}}
+<section class="card p-5">
+  <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <form class="flex flex-1 flex-col gap-3 md:flex-row" method="get" action="/admin/rooms">
+      <input class="input md:max-w-xs" name="q" value="{{.Filter.Query}}" placeholder="搜索房号或标题">
+      <select class="input md:max-w-48" name="status">
+        <option value="">全部状态</option>
+        {{range .Statuses}}
+          <option value="{{.Value}}" {{if eq $.Filter.Status .Value}}selected{{end}}>{{.Label}}</option>
+        {{end}}
+      </select>
+      <button class="btn-secondary" type="submit">筛选</button>
+    </form>
+    <a class="btn-primary" href="/admin/rooms/new">新增房源</a>
+  </div>
+</section>
+<section class="mt-6 grid gap-5 lg:grid-cols-2">
+  {{range .Rooms}}
+    <article class="card overflow-hidden">
+      <div class="p-6">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <span class="badge">{{roomStatusLabel .Status}}</span>
+            <h3 class="mt-3 text-2xl font-black">{{.RoomNo}} · {{.Title}}</h3>
+          </div>
+          <p class="text-2xl font-black text-amber-800">¥{{formatFen .Price}}</p>
+        </div>
+        <p class="mt-4 line-clamp-2 text-sm leading-6 text-stone-600">{{.Description}}</p>
+        <div class="mt-5 flex flex-wrap gap-3 text-sm text-stone-600">
+          <span>{{.Area}}㎡</span>
+          <span>{{.Floor}}层</span>
+          <span>{{.Tags}}</span>
+        </div>
+        <div class="mt-6 flex flex-wrap gap-3">
+          <a class="btn-secondary" href="/admin/rooms/{{.ID}}">详情</a>
+          <a class="btn-secondary" href="/admin/rooms/{{.ID}}/edit">编辑</a>
+          <form method="post" action="/admin/rooms/{{.ID}}/delete">
+            <button class="btn-secondary" data-confirm="确定删除这个房源吗？" type="submit">删除</button>
+          </form>
+        </div>
+      </div>
+    </article>
+  {{else}}
+    <div class="card p-10 text-center text-stone-600 lg:col-span-2">还没有房源，先新增一个房间。</div>
+  {{end}}
+</section>
+{{end}}

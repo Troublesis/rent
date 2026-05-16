@@ -1,0 +1,42 @@
+{{define "content"}}
+<section class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+  <article class="card overflow-hidden">
+    <div class="p-6">
+      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <span class="badge">{{roomStatusLabel .Room.Status}}</span>
+          <h3 class="mt-3 text-3xl font-black">{{.Room.RoomNo}} · {{.Room.Title}}</h3>
+          <p class="mt-3 text-stone-600">{{.Room.Description}}</p>
+        </div>
+        <p class="text-4xl font-black text-amber-800">¥{{formatFen .Room.Price}}</p>
+      </div>
+      <dl class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">押金</dt><dd class="mt-1 font-black">¥{{formatFen .Room.Deposit}}</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">面积</dt><dd class="mt-1 font-black">{{.Room.Area}}㎡</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">楼层</dt><dd class="mt-1 font-black">{{.Room.Floor}}层</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">标签</dt><dd class="mt-1 font-black">{{.Room.Tags}}</dd></div>
+      </dl>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a class="btn-secondary" href="/admin/rooms/{{.Room.ID}}/edit">编辑房源</a>
+        <a class="btn-secondary" href="/admin/rooms">返回列表</a>
+      </div>
+    </div>
+  </article>
+  <aside class="card p-6">
+    <h3 class="text-2xl font-black">房源媒体</h3>
+    <form class="mt-5 space-y-4" method="post" action="/api/upload" enctype="multipart/form-data">
+      <input type="hidden" name="room_id" value="{{.Room.ID}}">
+      <input class="input" type="file" name="file" accept=".jpg,.jpeg,.png,.mp4" required>
+      <button class="btn-primary w-full" type="submit">上传图片或视频</button>
+      <p class="text-xs text-stone-500">支持图片或视频文件，单个文件不超过 10 兆。</p>
+    </form>
+    <div class="mt-6 grid gap-3">
+      {{range .Room.Media}}
+        <a class="rounded-2xl border border-stone-300 bg-white/50 p-3 text-sm font-semibold hover:border-amber-700" href="{{.URL}}" target="_blank">{{mediaTypeLabel .MediaType}} · 查看文件</a>
+      {{else}}
+        <p class="rounded-2xl bg-white/50 p-4 text-sm text-stone-600">还没有上传媒体。</p>
+      {{end}}
+    </div>
+  </aside>
+</section>
+{{end}}

@@ -1,0 +1,40 @@
+{{define "content"}}
+<section class="grid gap-7 xl:grid-cols-[1.25fr_0.75fr]">
+  <article class="card overflow-hidden">
+    {{if .Room.Media}}
+      <div class="grid gap-3 bg-stone-950 p-3 md:grid-cols-2">
+        {{range .Room.Media}}
+          {{if eq .MediaType "image"}}
+            <img class="h-72 w-full rounded-2xl object-cover" src="{{.URL}}" alt="房源图片">
+          {{else}}
+            <video class="h-72 w-full rounded-2xl object-cover" src="{{.URL}}" controls></video>
+          {{end}}
+        {{end}}
+      </div>
+    {{end}}
+    <div class="p-7">
+      <span class="badge">可租</span>
+      <h2 class="mt-4 text-4xl font-black">{{.Room.RoomNo}} · {{.Room.Title}}</h2>
+      <p class="mt-4 leading-8 text-stone-700">{{.Room.Description}}</p>
+      <dl class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">月租</dt><dd class="mt-1 text-xl font-black text-amber-800">¥{{formatFen .Room.Price}}</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">押金</dt><dd class="mt-1 font-black">¥{{formatFen .Room.Deposit}}</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">面积</dt><dd class="mt-1 font-black">{{.Room.Area}}㎡</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">楼层</dt><dd class="mt-1 font-black">{{.Room.Floor}}层</dd></div>
+      </dl>
+    </div>
+  </article>
+  <aside class="card h-fit p-7">
+    <p class="text-xs font-bold tracking-[0.35em] text-amber-700">联系房东</p>
+    <h3 class="mt-3 text-3xl font-black">直接联系房东</h3>
+    <p class="mt-4 text-stone-600">看中这个房间后，可以直接电话沟通看房时间。</p>
+    <div class="mt-6 rounded-2xl bg-white/55 p-5">
+      <p class="text-sm text-stone-500">联系人</p>
+      <p class="mt-1 text-xl font-black">{{.Settings.LandlordName}}</p>
+      <p class="mt-4 text-sm text-stone-500">电话</p>
+      <p class="mt-1 text-xl font-black">{{.Settings.LandlordPhone}}</p>
+    </div>
+    <a class="btn-primary mt-6 block text-center" href="tel:{{.Settings.LandlordPhone}}">拨打电话</a>
+  </aside>
+</section>
+{{end}}

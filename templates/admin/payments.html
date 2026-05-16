@@ -1,0 +1,78 @@
+{{define "content"}}
+<section class="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+  <form class="card space-y-5 p-6" method="post" action="/admin/payments">
+    <div>
+      <h3 class="text-2xl font-black">新增收款</h3>
+      <p class="mt-2 text-sm text-stone-600">记录租金、水电费或其他费用。</p>
+    </div>
+    <label class="block">
+      <span class="text-sm font-bold text-stone-600">租客</span>
+      <select class="input mt-2" name="tenant_id" required>
+        <option value="">请选择在租租客</option>
+        {{range .Tenants}}
+          <option value="{{.ID}}">{{.Name}} · {{.Room.RoomNo}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label class="block">
+      <span class="text-sm font-bold text-stone-600">金额（元）</span>
+      <input class="input mt-2" name="amount" inputmode="decimal" required>
+    </label>
+    <label class="block">
+      <span class="text-sm font-bold text-stone-600">类型</span>
+      <select class="input mt-2" name="type" required>
+        {{range .PaymentTypes}}
+          <option value="{{.Value}}">{{.Label}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label class="block">
+      <span class="text-sm font-bold text-stone-600">付款日期</span>
+      <input class="input mt-2" type="date" name="pay_date">
+    </label>
+    <label class="flex items-center gap-3 text-sm font-bold text-stone-600">
+      <input type="checkbox" name="paid" class="h-4 w-4 rounded border-stone-400">
+      已收款
+    </label>
+    <label class="block">
+      <span class="text-sm font-bold text-stone-600">备注</span>
+      <textarea class="input mt-2" name="note"></textarea>
+    </label>
+    <button class="btn-primary w-full" type="submit">保存收款</button>
+  </form>
+  <section class="card overflow-hidden">
+    <div class="border-b border-stone-300/70 p-5">
+      <form class="flex flex-wrap gap-3" method="get" action="/admin/payments">
+        <select class="input max-w-44" name="paid">
+          <option value="">全部状态</option>
+          <option value="true">已收</option>
+          <option value="false">未收</option>
+        </select>
+        <select class="input max-w-44" name="type">
+          <option value="">全部类型</option>
+          {{range .PaymentTypes}}
+            <option value="{{.Value}}" {{if eq $.Filter.Type .Value}}selected{{end}}>{{.Label}}</option>
+          {{end}}
+        </select>
+        <button class="btn-secondary" type="submit">筛选</button>
+      </form>
+    </div>
+    <div class="divide-y divide-stone-200/80">
+      {{range .Payments}}
+        <div class="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p class="text-lg font-black">{{paymentTypeLabel .Type}} · ¥{{formatFen .Amount}}</p>
+            <p class="mt-1 text-sm text-stone-500">{{.Tenant.Name}} · {{.Tenant.Room.RoomNo}} · {{formatDate .PayDate}}</p>
+            {{if .Note}}<p class="mt-2 text-sm text-stone-600">{{.Note}}</p>{{end}}
+          </div>
+          <form method="post" action="/admin/payments/{{.ID}}/toggle">
+            <button class="btn-secondary" type="submit">{{if .Paid}}已收，改为未收{{else}}未收，标记已收{{end}}</button>
+          </form>
+        </div>
+      {{else}}
+        <p class="p-10 text-center text-stone-500">还没有收款记录。</p>
+      {{end}}
+    </div>
+  </section>
+</section>
+{{end}}

@@ -1,0 +1,50 @@
+{{define "content"}}
+<form class="card grid gap-6 p-6" method="post" action="{{.Action}}">
+  <div class="grid gap-5 md:grid-cols-2">
+    <label>
+      <span class="text-sm font-bold text-stone-600">房号</span>
+      <input class="input mt-2" name="room_no" value="{{.Room.RoomNo}}" placeholder="101室" required>
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">标题</span>
+      <input class="input mt-2" name="title" value="{{.Room.Title}}" placeholder="南向一居室" required>
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">月租（元）</span>
+      <input class="input mt-2" name="price" value="{{formatFen .Room.Price}}" inputmode="decimal" required>
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">押金（元）</span>
+      <input class="input mt-2" name="deposit" value="{{formatFen .Room.Deposit}}" inputmode="decimal" required>
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">面积（㎡）</span>
+      <input class="input mt-2" name="area" value="{{.Room.Area}}" inputmode="numeric">
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">楼层</span>
+      <input class="input mt-2" name="floor" value="{{.Room.Floor}}" inputmode="numeric">
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">状态</span>
+      <select class="input mt-2" name="status">
+        {{range .Statuses}}
+          <option value="{{.Value}}" {{if eq $.Room.Status .Value}}selected{{end}}>{{.Label}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">标签</span>
+      <input class="input mt-2" name="tags" value="{{.Room.Tags}}" placeholder="电梯,阳台,空调">
+    </label>
+  </div>
+  <label>
+    <span class="text-sm font-bold text-stone-600">描述</span>
+    <textarea class="input mt-2 min-h-32" name="description" placeholder="采光、交通、家具等信息">{{.Room.Description}}</textarea>
+  </label>
+  <div class="flex gap-3">
+    <button class="btn-primary" type="submit">保存房源</button>
+    <a class="btn-secondary" href="/admin/rooms">返回列表</a>
+  </div>
+</form>
+{{end}}

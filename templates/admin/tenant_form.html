@@ -1,0 +1,43 @@
+{{define "content"}}
+<form class="card grid gap-6 p-6" method="post" action="/admin/tenants/checkin">
+  <div class="grid gap-5 md:grid-cols-2">
+    <label>
+      <span class="text-sm font-bold text-stone-600">租客姓名</span>
+      <input class="input mt-2" name="name" value="{{.Input.Name}}" required>
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">联系电话</span>
+      <input class="input mt-2" name="phone" value="{{.Input.Phone}}" required>
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">紧急联系人</span>
+      <input class="input mt-2" name="emergency_contact" value="{{.Input.EmergencyContact}}">
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">入住房源</span>
+      <select class="input mt-2" name="room_id" required>
+        <option value="">请选择空置房源</option>
+        {{range .Rooms}}
+          <option value="{{.ID}}" {{if eq $.Input.RoomID .ID}}selected{{end}}>{{.RoomNo}} · {{.Title}} · ¥{{formatFen .Price}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">入住日期</span>
+      <input class="input mt-2" type="date" name="checkin_date">
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">约定月租（元）</span>
+      <input class="input mt-2" name="rent_price" value="{{.Input.RentPriceYuan}}" inputmode="decimal" required>
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">已收押金（元）</span>
+      <input class="input mt-2" name="deposit" value="{{.Input.DepositYuan}}" inputmode="decimal" required>
+    </label>
+  </div>
+  <div class="flex gap-3">
+    <button class="btn-primary" type="submit">确认入住</button>
+    <a class="btn-secondary" href="/admin/tenants">返回列表</a>
+  </div>
+</form>
+{{end}}

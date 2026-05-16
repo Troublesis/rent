@@ -1,0 +1,39 @@
+{{define "content"}}
+<section class="card p-6">
+  <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <div>
+      <h3 class="text-2xl font-black">{{.Year}} 年已收收入</h3>
+      <p class="mt-2 text-sm text-stone-600">只统计已标记“已收”的付款记录。</p>
+    </div>
+    <span class="badge">按月汇总</span>
+  </div>
+  <div class="mt-8 rounded-[1.5rem] bg-white/55 p-4">
+    <canvas id="incomeChart" height="120"></canvas>
+  </div>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  fetch('/api/dashboard/stats?year={{.Year}}')
+    .then((response) => response.json())
+    .then((data) => {
+      const context = document.getElementById('incomeChart')
+      new Chart(context, {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: '已收金额（元）',
+            data: data.totalsFen.map((value) => value / 100),
+            backgroundColor: '#9f3a22',
+            borderRadius: 14,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
+      })
+    })
+</script>
+{{end}}

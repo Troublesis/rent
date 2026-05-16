@@ -1,0 +1,17 @@
+{{define "content"}}
+<form class="card max-w-2xl space-y-6 p-6" method="post" action="/admin/settings">
+  <div>
+    <h3 class="text-2xl font-black">公开联系信息</h3>
+    <p class="mt-2 text-sm text-stone-600">这些信息会显示在公开房源页面底部和详情页。</p>
+  </div>
+  <label class="block">
+    <span class="text-sm font-bold text-stone-600">房东姓名</span>
+    <input class="input mt-2" name="landlord_name" value="{{.Settings.LandlordName}}" required>
+  </label>
+  <label class="block">
+    <span class="text-sm font-bold text-stone-600">联系电话</span>
+    <input class="input mt-2" name="landlord_phone" value="{{.Settings.LandlordPhone}}" required>
+  </label>
+  <button class="btn-primary" type="submit">保存设置</button>
+</form>
+{{end}}
