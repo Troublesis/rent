@@ -603,7 +603,7 @@ const dashboardTable = (headers, rows, footer = '', options = {}) => {
   const defaultSortDir = options.defaultSortDir === 'desc' ? 'desc' : 'asc'
   const headerCells = headers.map((header, index) => {
     const isDefault = index === defaultSortIndex
-    const indicator = isDefault ? (defaultSortDir === 'asc' ? '↑' : '↓') : '↕'
+    const indicator = isDefault ? (defaultSortDir === 'asc' ? '↑' : '↓') : ''
     return `<th class="border-b border-stone-200 px-3 py-3" aria-sort="${isDefault ? (defaultSortDir === 'asc' ? 'ascending' : 'descending') : 'none'}"><button class="inline-flex items-center gap-1 font-black text-stone-600 transition hover:text-stone-950" type="button" data-dashboard-sort-column="${index}" data-dashboard-sort-dir="${isDefault ? defaultSortDir : 'none'}" aria-label="按${escapeHTML(header)}排序"><span>${escapeHTML(header)}</span><span data-dashboard-sort-indicator>${indicator}</span></button></th>`
   }).join('')
   return `${footer}<div class="overflow-x-auto"><table class="w-full min-w-[620px] text-left text-sm" data-dashboard-sortable data-dashboard-default-sort-index="${defaultSortIndex}" data-dashboard-default-sort-dir="${defaultSortDir}"><thead class="text-stone-500"><tr>${headerCells}</tr></thead><tbody class="divide-y divide-stone-100">${rows.join('')}</tbody></table></div>`
@@ -668,7 +668,7 @@ const updateDashboardSortHeaders = (table, columnIndex, direction) => {
     const active = index === columnIndex
     header.setAttribute('aria-sort', active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none')
     if (button) button.dataset.dashboardSortDir = active ? direction : 'none'
-    if (indicator) indicator.textContent = active ? (direction === 'asc' ? '↑' : '↓') : '↕'
+    if (indicator) indicator.textContent = active ? (direction === 'asc' ? '↑' : '↓') : ''
   })
 }
 
