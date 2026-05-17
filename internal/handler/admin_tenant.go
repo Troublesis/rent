@@ -56,21 +56,57 @@ func NewAdminTenantHandler(renderer Renderer, tenantService *service.TenantServi
 	return &AdminTenantHandler{renderer: renderer, tenantService: tenantService, roomService: roomService}
 }
 
+const (
+	adminTenantViewList = "list"
+	adminTenantViewCard = "card"
+)
+
+func adminTenantViewFromQuery(c *gin.Context) string {
+	if c.Query("view") == adminTenantViewCard {
+		return adminTenantViewCard
+	}
+	return adminTenantViewList
+}
+
+func tenantStatusQueryValue(filter repository.TenantFilter) string {
+	switch filter.Status {
+	case "":
+		return "all"
+	case model.TenantStatusCheckout:
+		return model.TenantStatusCheckout
+	default:
+		return model.TenantStatusActive
+	}
+}
+
+func tenantClearURL(viewMode string) string {
+	if viewMode == "" {
+		return "/admin/tenants"
+	}
+	return "/admin/tenants?view=" + url.QueryEscape(viewMode)
+}
+
 func (h *AdminTenantHandler) List(c *gin.Context) {
 	filter := tenantFilterFromQuery(c)
+	viewMode := adminTenantViewFromQuery(c)
 	tenants, err := h.tenantService.ListTenants(filter)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "读取租客失败")
 		return
 	}
 	h.renderer.Render(c, http.StatusOK, "admin_base.html", "admin/tenants.html", gin.H{
-		"Title":       "租客管理",
-		"Tenants":     tenants,
-		"Statuses":    tenantStatusOptions(),
-		"StatusLinks": tenantStatusLinks(c, filter),
-		"SortLinks":   tenantSortLinks(c, filter),
-		"Filter":      filter,
-		"Error":       queryError(c),
+		"Title":          "租客管理",
+		"Tenants":        tenants,
+		"Statuses":       tenantStatusOptions(),
+		"StatusLinks":    tenantStatusLinks(c, filter),
+		"SortLinks":      tenantSortLinks(c, filter),
+		"Filter":         filter,
+		"CurrentStatus":  tenantStatusQueryValue(filter),
+		"ViewMode":       viewMode,
+		"ListViewURL":    tenantListURL(c, map[string]string{"view": adminTenantViewList}),
+		"CardViewURL":    tenantListURL(c, map[string]string{"view": adminTenantViewCard}),
+		"ClearFilterURL": tenantClearURL(viewMode),
+		"Error":          queryError(c),
 	})
 }
 
@@ -111,17 +147,17 @@ func (h *AdminTenantHandler) APIActive(c *gin.Context) {
 }
 
 func (h *AdminTenantHandler) New(c *gin.Context) {
-	h.renderForm(c, http.StatusOK, service.TenantInput{RentType: model.RentTypeMonthly, PaymentTerms: model.PaymentTerms1M1D}, "")
+	h.renderForm(c, http.StatusOK, service.TenantInput{RentType: model.RentTypeMonthly, PaymentTerms: model.PaymentTerms1M1D}, "/admin/tenants/checkin", "办理入住", "确认入住", "/admin/tenants", "")
 }
 
 func (h *AdminTenantHandler) CheckIn(c *gin.Context) {
 	input, err := tenantInputFromForm(c)
 	if err != nil {
-		h.renderForm(c, http.StatusBadRequest, input, "表单数据不正确")
+		h.renderForm(c, http.StatusBadRequest, input, "/admin/tenants/checkin", "办理入住", "确认入住", "/admin/tenants", "表单数据不正确")
 		return
 	}
 	if _, err := h.tenantService.CheckInTenant(input); err != nil {
-		h.renderForm(c, http.StatusBadRequest, input, userFacingError(err))
+		h.renderForm(c, http.StatusBadRequest, input, "/admin/tenants/checkin", "办理入住", "确认入住", "/admin/tenants", userFacingError(err))
 		return
 	}
 	c.Redirect(http.StatusSeeOther, "/admin/tenants")
@@ -144,6 +180,42 @@ func (h *AdminTenantHandler) Detail(c *gin.Context) {
 	})
 }
 
+func (h *AdminTenantHandler) Edit(c *gin.Context) {
+	id, ok := parseUintParam(c, "id")
+	if !ok {
+		return
+	}
+	tenant, err := h.tenantService.GetTenant(id)
+	if err != nil {
+		c.String(http.StatusNotFound, "租客不存在")
+		return
+	}
+	if tenant.Status != model.TenantStatusActive {
+		redirectWithError(c, "/admin/tenants/"+strconv.FormatUint(uint64(id), 10), "只能编辑在租租客")
+		return
+	}
+	detailURL := "/admin/tenants/" + strconv.FormatUint(uint64(id), 10)
+	h.renderForm(c, http.StatusOK, tenantInputFromTenant(*tenant), detailURL, "编辑租客", "保存修改", detailURL, "")
+}
+
+func (h *AdminTenantHandler) Update(c *gin.Context) {
+	id, ok := parseUintParam(c, "id")
+	if !ok {
+		return
+	}
+	detailURL := "/admin/tenants/" + strconv.FormatUint(uint64(id), 10)
+	input, err := tenantInputFromForm(c)
+	if err != nil {
+		h.renderForm(c, http.StatusBadRequest, input, detailURL, "编辑租客", "保存修改", detailURL, "表单数据不正确")
+		return
+	}
+	if _, err := h.tenantService.UpdateTenant(id, input); err != nil {
+		h.renderForm(c, http.StatusBadRequest, input, detailURL, "编辑租客", "保存修改", detailURL, userFacingError(err))
+		return
+	}
+	c.Redirect(http.StatusSeeOther, detailURL)
+}
+
 func (h *AdminTenantHandler) CheckOut(c *gin.Context) {
 	id, ok := parseUintParam(c, "id")
 	if !ok {
@@ -156,10 +228,10 @@ func (h *AdminTenantHandler) CheckOut(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/admin/tenants/"+strconv.FormatUint(uint64(id), 10))
 }
 
-func (h *AdminTenantHandler) renderForm(c *gin.Context, status int, input service.TenantInput, errorMessage string) {
-	rooms, err := h.roomService.ListRooms(repository.RoomFilter{Status: model.RoomStatusVacant})
+func (h *AdminTenantHandler) renderForm(c *gin.Context, status int, input service.TenantInput, action string, title string, submitLabel string, backURL string, errorMessage string) {
+	rooms, err := h.tenantFormRooms(input.RoomID)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "读取空置房源失败")
+		c.String(http.StatusInternalServerError, "读取房源失败")
 		return
 	}
 	if input.RentType == "" {
@@ -169,14 +241,58 @@ func (h *AdminTenantHandler) renderForm(c *gin.Context, status int, input servic
 		input.PaymentTerms = model.PaymentTerms1M1D
 	}
 	h.renderer.Render(c, status, "admin_base.html", "admin/tenant_form.html", gin.H{
-		"Title":        "办理入住",
+		"Title":        title,
 		"Input":        input,
 		"Rooms":        rooms,
+		"Action":       action,
+		"SubmitLabel":  submitLabel,
+		"BackURL":      backURL,
 		"RentTypes":    rentTypeOptions(),
 		"PaymentTerms": paymentTermsOptions(),
 		"Genders":      tenantGenderOptions(),
 		"Error":        errorMessage,
 	})
+}
+
+func (h *AdminTenantHandler) tenantFormRooms(selectedRoomID uint) ([]model.Room, error) {
+	rooms, err := h.roomService.ListRooms(repository.RoomFilter{Status: model.RoomStatusVacant})
+	if err != nil {
+		return nil, err
+	}
+	if selectedRoomID == 0 {
+		return rooms, nil
+	}
+	for _, room := range rooms {
+		if room.ID == selectedRoomID {
+			return rooms, nil
+		}
+	}
+	selectedRoom, err := h.roomService.GetRoom(selectedRoomID)
+	if err != nil {
+		return rooms, nil
+	}
+	return append([]model.Room{*selectedRoom}, rooms...), nil
+}
+
+func tenantInputFromTenant(tenant model.Tenant) service.TenantInput {
+	leaseEndDate := time.Time{}
+	if tenant.LeaseEndDate != nil {
+		leaseEndDate = *tenant.LeaseEndDate
+	}
+	return service.TenantInput{
+		Name:             tenant.Name,
+		Phone:            tenant.Phone,
+		EmergencyContact: tenant.EmergencyContact,
+		Gender:           tenant.Gender,
+		RoomID:           tenant.RoomID,
+		CheckinDate:      tenant.CheckinDate,
+		LeaseEndDate:     leaseEndDate,
+		RentPriceYuan:    service.FormatFenAsYuanInt(tenant.RentPrice),
+		RentType:         tenant.RentType,
+		PaymentTerms:     tenant.PaymentTerms,
+		DepositYuan:      service.FormatFenAsYuanInt(tenant.Deposit),
+		Notes:            tenant.Notes,
+	}
 }
 
 func tenantInputFromForm(c *gin.Context) (service.TenantInput, error) {

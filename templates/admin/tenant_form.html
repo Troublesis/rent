@@ -1,5 +1,5 @@
 {{define "content"}}
-<form class="card grid gap-6 p-6" method="post" action="/admin/tenants/checkin" data-validate-form>
+<form class="card grid gap-6 p-6" method="post" action="{{.Action}}" data-validate-form>
   <div class="grid gap-5 md:grid-cols-2">
     <label>
       <span class="text-sm font-bold text-stone-600">姓名 <span class="text-red-600">*</span></span>
@@ -25,7 +25,7 @@
     <label>
       <span class="text-sm font-bold text-stone-600">入住房源 <span class="text-red-600">*</span></span>
       <select class="input mt-2" name="room_id" required data-validate="required" data-label="入住房源">
-        <option value="">请选择空置房源</option>
+        <option value="">请选择房源</option>
         {{range .Rooms}}
           <option value="{{.ID}}" {{if eq $.Input.RoomID .ID}}selected{{end}}>{{.RoomNo}} · {{.Title}} · ¥{{formatYuanInt (roomRentPrice .)}} / {{rentUnitLabel .RentType}}</option>
         {{end}}
@@ -70,8 +70,8 @@
     <span id="tenant-notes-counter" class="mt-1 block text-right text-xs text-stone-500">0 / 500 字</span>
   </label>
   <div class="flex gap-3">
-    <button class="btn-primary" type="submit">确认入住</button>
-    <a class="btn-secondary" href="/admin/tenants">返回列表</a>
+    <button class="btn-primary" type="submit">{{.SubmitLabel}}</button>
+    <a class="btn-secondary" href="{{.BackURL}}">返回</a>
   </div>
 </form>
 {{end}}

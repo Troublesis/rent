@@ -13,9 +13,12 @@
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">备注</dt><dd class="mt-1 whitespace-pre-wrap font-black">{{if .Tenant.Notes}}{{.Tenant.Notes}}{{else}}暂无备注{{end}}</dd></div>
     </dl>
     {{if eq .Tenant.Status "active"}}
-      <form class="mt-6" method="post" action="/admin/tenants/{{.Tenant.ID}}/checkout">
-        <button class="btn-primary" data-confirm="确定为该租客办理退租吗？" type="submit">办理退租</button>
-      </form>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <a class="btn-secondary" href="/admin/tenants/{{.Tenant.ID}}/edit">编辑</a>
+        <form method="post" action="/admin/tenants/{{.Tenant.ID}}/checkout">
+          <button class="btn-primary" data-confirm="确定为该租客办理退租吗？" type="submit">办理退租</button>
+        </form>
+      </div>
     {{end}}
   </article>
   <article class="card overflow-hidden">
@@ -24,13 +27,13 @@
     </div>
     <div class="divide-y divide-stone-200/80">
       {{range .Tenant.Payments}}
-        <div class="flex items-center justify-between gap-4 p-5 {{if .Excluded}}bg-stone-200/40 text-stone-500{{end}}">
-          <div>
+        <div class="flex items-start justify-between gap-4 p-5 {{if .Excluded}}bg-stone-200/40 text-stone-500{{end}}">
+          <div class="min-w-0 flex-1">
             <p class="font-black">{{paymentTypeLabel .Type}} · ¥{{formatFen .Amount}}</p>
-            <p class="text-sm text-stone-500">{{formatDate .PayDate}} · {{.Note}}</p>
-            {{if .Excluded}}<p class="mt-1 text-xs font-bold text-stone-500">已排除：{{if .ExclusionNote}}{{.ExclusionNote}}{{else}}未填写原因{{end}}</p>{{end}}
+            <p class="truncate text-sm text-stone-500" title="{{formatDate .PayDate}} · {{.Note}}">{{formatDate .PayDate}} · {{.Note}}</p>
+            {{if .Excluded}}<p class="mt-1 truncate text-xs font-bold text-stone-500" title="已排除：{{if .ExclusionNote}}{{.ExclusionNote}}{{else}}未填写原因{{end}}">已排除：{{if .ExclusionNote}}{{.ExclusionNote}}{{else}}未填写原因{{end}}</p>{{end}}
           </div>
-          <span class="badge">{{if .Paid}}已收{{else}}未收{{end}}</span>
+          <span class="badge shrink-0 whitespace-nowrap">{{if .Paid}}已收{{else}}未收{{end}}</span>
         </div>
       {{else}}
         <p class="p-8 text-center text-stone-500">还没有收款记录。</p>

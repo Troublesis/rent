@@ -201,6 +201,98 @@ func TestCheckInTenantFailsWhenRoomOccupied(t *testing.T) {
 	}
 }
 
+func TestUpdateTenantChangesInfoAndRoomStatus(t *testing.T) {
+	db := newTestDB(t)
+	roomRepo := repository.NewRoomRepository(db)
+	tenantRepo := repository.NewTenantRepository(db)
+	roomService := NewRoomService(roomRepo, tenantRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+
+	oldRoom, err := roomService.CreateRoom(validRoomInput("A107", "旧房源", "1800"))
+	if err != nil {
+		t.Fatalf("CreateRoom old returned error: %v", err)
+	}
+	newRoom, err := roomService.CreateRoom(validRoomInput("A108", "新房源", "2200"))
+	if err != nil {
+		t.Fatalf("CreateRoom new returned error: %v", err)
+	}
+	tenant, err := tenantService.CheckInTenant(TenantInput{Name: "编辑前", Phone: "13800000020", RoomID: oldRoom.ID, RentPriceYuan: "1800", DepositYuan: "1800"})
+	if err != nil {
+		t.Fatalf("CheckInTenant returned error: %v", err)
+	}
+	leaseEndDate := time.Date(2027, time.June, 1, 0, 0, 0, 0, time.Local)
+
+	updatedTenant, err := tenantService.UpdateTenant(tenant.ID, TenantInput{
+		Name:             "编辑后",
+		Phone:            "13800000021",
+		EmergencyContact: "13800000022",
+		Gender:           model.TenantGenderFemale,
+		RoomID:           newRoom.ID,
+		CheckinDate:      time.Date(2026, time.June, 1, 0, 0, 0, 0, time.Local),
+		LeaseEndDate:     leaseEndDate,
+		RentPriceYuan:    "2200",
+		RentType:         model.RentTypeMonthly,
+		PaymentTerms:     model.PaymentTerms3M1D,
+		DepositYuan:      "3000",
+		Notes:            "已更新资料",
+	})
+	if err != nil {
+		t.Fatalf("UpdateTenant returned error: %v", err)
+	}
+	if updatedTenant.Name != "编辑后" || updatedTenant.Phone != "13800000021" || updatedTenant.RoomID != newRoom.ID {
+		t.Fatalf("updated tenant = %#v, want edited identity and room", updatedTenant)
+	}
+	if updatedTenant.Status != model.TenantStatusActive || updatedTenant.CheckoutDate != nil {
+		t.Fatalf("tenant status = %q checkout = %v, want active without checkout", updatedTenant.Status, updatedTenant.CheckoutDate)
+	}
+	if updatedTenant.LeaseEndDate == nil || !updatedTenant.LeaseEndDate.Equal(leaseEndDate) {
+		t.Fatalf("lease end date = %v, want %v", updatedTenant.LeaseEndDate, leaseEndDate)
+	}
+	updatedOldRoom, err := roomRepo.GetRoom(oldRoom.ID)
+	if err != nil {
+		t.Fatalf("GetRoom old returned error: %v", err)
+	}
+	if updatedOldRoom.Status != model.RoomStatusVacant {
+		t.Fatalf("old room status = %q, want vacant", updatedOldRoom.Status)
+	}
+	updatedNewRoom, err := roomRepo.GetRoom(newRoom.ID)
+	if err != nil {
+		t.Fatalf("GetRoom new returned error: %v", err)
+	}
+	if updatedNewRoom.Status != model.RoomStatusOccupied {
+		t.Fatalf("new room status = %q, want occupied", updatedNewRoom.Status)
+	}
+}
+
+func TestUpdateTenantRejectsOccupiedTargetRoom(t *testing.T) {
+	db := newTestDB(t)
+	roomRepo := repository.NewRoomRepository(db)
+	tenantRepo := repository.NewTenantRepository(db)
+	roomService := NewRoomService(roomRepo, tenantRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+
+	firstRoom, err := roomService.CreateRoom(validRoomInput("A109", "第一房源", "1800"))
+	if err != nil {
+		t.Fatalf("CreateRoom first returned error: %v", err)
+	}
+	secondRoom, err := roomService.CreateRoom(validRoomInput("A110", "第二房源", "2200"))
+	if err != nil {
+		t.Fatalf("CreateRoom second returned error: %v", err)
+	}
+	firstTenant, err := tenantService.CheckInTenant(TenantInput{Name: "第一租客", Phone: "13800000023", RoomID: firstRoom.ID, RentPriceYuan: "1800", DepositYuan: "1800"})
+	if err != nil {
+		t.Fatalf("CheckInTenant first returned error: %v", err)
+	}
+	if _, err := tenantService.CheckInTenant(TenantInput{Name: "第二租客", Phone: "13800000024", RoomID: secondRoom.ID, RentPriceYuan: "2200", DepositYuan: "2200"}); err != nil {
+		t.Fatalf("CheckInTenant second returned error: %v", err)
+	}
+
+	_, err = tenantService.UpdateTenant(firstTenant.ID, TenantInput{Name: "第一租客", Phone: "13800000023", RoomID: secondRoom.ID, RentPriceYuan: "1800", DepositYuan: "1800"})
+	if err == nil {
+		t.Fatal("UpdateTenant returned nil error")
+	}
+}
+
 func TestCheckOutTenant(t *testing.T) {
 	db := newTestDB(t)
 	roomRepo := repository.NewRoomRepository(db)

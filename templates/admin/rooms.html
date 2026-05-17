@@ -1,66 +1,160 @@
 {{define "content"}}
 <div id="room-list-section">
-<section class="card overflow-hidden">
-  <div class="space-y-5 border-b border-stone-300/70 p-5">
-    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div>
-        <h3 class="text-2xl font-black">房源管理</h3>
-        <p class="mt-2 text-sm text-stone-600">按房号、标题或状态筛选房源。</p>
+  <section class="card overflow-hidden">
+    <div class="space-y-5 border-b border-stone-300/70 p-5">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h3 class="text-2xl font-black">房源管理</h3>
+          <p class="mt-2 text-sm text-stone-600">按房号、标题或状态筛选房源，并切换列表、网格或卡片浏览方式。</p>
+        </div>
+        <a class="btn-primary text-center" href="/admin/rooms/new">新增房源</a>
       </div>
-      <a class="btn-primary text-center" href="/admin/rooms/new">新增房源</a>
+      <form class="space-y-4" method="get" action="/admin/rooms" hx-boost="true" hx-target="#room-list-section" hx-select="#room-list-section" hx-swap="outerHTML" hx-push-url="true">
+        <input type="hidden" name="view" value="{{.ViewMode}}">
+        {{if .Filter.Status}}<input type="hidden" name="status" value="{{.Filter.Status}}">{{end}}
+        <div class="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+          <label class="block">
+            <span class="sr-only">搜索房源</span>
+            <input class="input" type="search" name="q" value="{{.Filter.Query}}" placeholder="搜索房号或标题">
+          </label>
+          <button class="btn-secondary" type="submit">筛选</button>
+          <a class="btn-secondary text-center" href="{{.ClearFilterURL}}" hx-get="{{.ClearFilterURL}}" hx-target="#room-list-section" hx-select="#room-list-section" hx-swap="outerHTML" hx-push-url="true">清空</a>
+        </div>
+        <div class="flex flex-wrap gap-2 text-sm font-bold text-stone-600" hx-boost="true" hx-target="#room-list-section" hx-select="#room-list-section" hx-swap="outerHTML" hx-push-url="true">
+          <a class="filter-chip-option {{if eq .Filter.Status ""}}filter-chip-active{{end}}" href="/admin/rooms?q={{urlquery .Filter.Query}}&view={{.ViewMode}}">全部</a>
+          {{range .Statuses}}
+            <a class="filter-chip-option {{if eq $.Filter.Status .Value}}filter-chip-active{{end}}" href="/admin/rooms?q={{urlquery $.Filter.Query}}&status={{urlquery .Value}}&view={{$.ViewMode}}">{{.Label}}</a>
+          {{end}}
+        </div>
+      </form>
     </div>
-    <form class="space-y-4" method="get" action="/admin/rooms" hx-boost="true" hx-target="#room-list-section" hx-select="#room-list-section" hx-swap="outerHTML" hx-push-url="true">
-      <div class="grid gap-3 md:grid-cols-[1fr_auto_auto]">
-        <label class="block">
-          <span class="sr-only">搜索房源</span>
-          <input class="input" type="search" name="q" value="{{.Filter.Query}}" placeholder="搜索房号或标题">
-        </label>
-        <button class="btn-secondary" type="submit">筛选</button>
-        <a class="btn-secondary text-center" href="/admin/rooms">清空</a>
-      </div>
-      <div class="flex flex-wrap gap-2 text-sm font-bold text-stone-600">
-        <a class="filter-chip-option {{if eq .Filter.Status ""}}filter-chip-active{{end}}" href="/admin/rooms?q={{urlquery .Filter.Query}}">全部</a>
-        {{range .Statuses}}
-          <a class="filter-chip-option {{if eq $.Filter.Status .Value}}filter-chip-active{{end}}" href="/admin/rooms?q={{urlquery $.Filter.Query}}&status={{.Value}}">{{.Label}}</a>
-        {{end}}
-      </div>
-    </form>
-  </div>
-</section>
+  </section>
 
-<section class="mt-6 grid gap-5 lg:grid-cols-2">
-  {{range .Rooms}}
-    <article class="card overflow-hidden">
-      <div class="p-5 sm:p-6">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div class="min-w-0">
-            <span class="badge">{{roomStatusLabel .Status}}</span>
-            <h3 class="mt-3 break-words text-2xl font-black">{{.RoomNo}} · {{.Title}}</h3>
-          </div>
-          <p class="shrink-0 text-2xl font-black text-amber-800">¥{{formatYuanInt (roomRentPrice .)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .RentType}}</span></p>
-        </div>
-        <p class="mt-4 line-clamp-2 text-sm leading-6 text-stone-600">{{.Description}}</p>
-        <div class="mt-5 flex flex-wrap gap-3 text-sm text-stone-600">
-          <span>{{.Area}}㎡</span>
-          <span>{{.Floor}}层</span>
-          <span>{{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</span>
-          <span>{{paymentTermsLabel .PaymentTerms}}</span>
-          {{if .Tags}}<span class="break-all">{{.Tags}}</span>{{end}}
-        </div>
-        {{if not (isRoomOccupied .Status)}}
-          <div class="mt-6 grid gap-3 sm:grid-cols-3">
-            <a class="admin-action-button btn-secondary" href="/admin/rooms/{{.ID}}">详情</a>
-            <a class="admin-action-button btn-secondary" href="/admin/rooms/{{.ID}}/edit">编辑</a>
-            <form method="post" action="/admin/rooms/{{.ID}}/delete">
-              <button class="admin-action-button btn-secondary" data-confirm="确定删除这个房源吗？" type="submit">删除</button>
-            </form>
-          </div>
-        {{end}}
-      </div>
-    </article>
+  {{template "admin_room_view_switcher" .}}
+  {{template "admin_room_results" .}}
+</div>
+{{end}}
+
+{{define "admin_room_view_switcher"}}
+<div class="card mt-5 flex flex-col gap-3 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3">
+  <p class="px-1 text-xs font-black text-stone-700 sm:px-2 sm:text-sm">浏览方式</p>
+  <nav class="grid grid-cols-3 gap-1.5 sm:gap-2" aria-label="房源浏览方式" hx-boost="true" hx-target="#room-list-section" hx-select="#room-list-section" hx-swap="outerHTML" hx-push-url="true">
+    <a class="public-room-view-button {{if eq .ViewMode "list"}}public-room-view-active{{end}}" href="{{.ListViewURL}}" {{if eq .ViewMode "list"}}aria-current="page"{{end}}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg>
+      <span>列表</span>
+    </a>
+    <a class="public-room-view-button {{if eq .ViewMode "grid"}}public-room-view-active{{end}}" href="{{.GridViewURL}}" {{if eq .ViewMode "grid"}}aria-current="page"{{end}}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z"/></svg>
+      <span>网格</span>
+    </a>
+    <a class="public-room-view-button {{if eq .ViewMode "card"}}public-room-view-active{{end}}" href="{{.CardViewURL}}" {{if eq .ViewMode "card"}}aria-current="page"{{end}}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h5v8H6zM13 4h5v5h-5zM13 11h5v9h-5zM6 14h5v6H6z"/></svg>
+      <span>卡片</span>
+    </a>
+  </nav>
+</div>
+{{end}}
+
+{{define "admin_room_results"}}
+<section class="mt-6 {{if eq .ViewMode "grid"}}grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4{{else if eq .ViewMode "card"}}public-room-masonry{{else}}public-room-list space-y-5{{end}}">
+  {{if eq .ViewMode "grid"}}
+    {{template "admin_room_grid_items" .}}
+  {{else if eq .ViewMode "card"}}
+    {{template "admin_room_card_items" .}}
   {{else}}
-    <div class="card p-10 text-center text-stone-600 lg:col-span-2">还没有房源，先新增一个房间。</div>
+    {{template "admin_room_list_items" .}}
   {{end}}
 </section>
+{{end}}
+
+{{define "admin_room_action_buttons"}}
+<div class="mt-5 grid gap-2 sm:grid-cols-3">
+  <a class="admin-action-button btn-secondary" href="/admin/rooms/{{.ID}}">详情</a>
+  <a class="admin-action-button btn-secondary" href="/admin/rooms/{{.ID}}/edit">编辑</a>
+  {{if not (isRoomOccupied .Status)}}
+    <form method="post" action="/admin/rooms/{{.ID}}/delete">
+      <button class="admin-action-button btn-secondary" data-confirm="确定删除这个房源吗？" type="submit">删除</button>
+    </form>
+  {{end}}
 </div>
+{{end}}
+
+{{define "admin_room_list_items"}}
+{{range .Rooms}}
+  <article class="card public-room-list-card overflow-hidden p-3">
+    <a class="public-room-list-media" href="/admin/rooms/{{.ID}}" aria-label="查看{{.Title}}详情">
+      {{template "public_room_preview_media" .}}
+    </a>
+    <div class="flex min-w-0 flex-1 flex-col p-2 sm:p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="badge">{{roomStatusLabel .Status}}</span>
+        <span class="rounded-full bg-stone-900/5 px-3 py-1 text-xs font-black text-stone-600">{{paymentTermsLabel .PaymentTerms}}</span>
+      </div>
+      <h3 class="mt-3 text-2xl font-black leading-tight">{{.RoomNo}} · {{.Title}}</h3>
+      <p class="mt-3 line-clamp-2 text-sm leading-6 text-stone-600">{{.Description}}</p>
+      <div class="mt-4 flex flex-wrap gap-2 text-sm font-bold text-stone-600">
+        <span>{{.Area}}㎡</span>
+        <span>{{.Floor}}层</span>
+        <span>{{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</span>
+        <span>{{if .Orientation}}{{.Orientation}}{{else}}朝向待确认{{end}}</span>
+        {{if .Tags}}<span class="break-all">{{.Tags}}</span>{{end}}
+      </div>
+      <div class="mt-auto flex flex-col gap-4 pt-5 sm:flex-row sm:items-end sm:justify-between">
+        <p class="text-3xl font-black text-amber-800">¥{{formatYuanInt (roomRentPrice .)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .RentType}}</span></p>
+      </div>
+      {{template "admin_room_action_buttons" .}}
+    </div>
+  </article>
+{{else}}
+  <div class="card public-room-empty p-12 text-center text-stone-600">还没有房源，先新增一个房间。</div>
+{{end}}
+{{end}}
+
+{{define "admin_room_grid_items"}}
+{{range .Rooms}}
+  <article class="card flex h-full flex-col overflow-hidden p-3">
+    <a href="/admin/rooms/{{.ID}}" aria-label="查看{{.Title}}详情">{{template "public_room_preview_media" .}}</a>
+    <div class="flex flex-1 flex-col p-3">
+      <span class="badge w-fit">{{roomStatusLabel .Status}}</span>
+      <h3 class="mt-4 text-xl font-black leading-tight">{{.RoomNo}} · {{.Title}}</h3>
+      <p class="mt-3 line-clamp-3 text-sm leading-6 text-stone-600">{{.Description}}</p>
+      <div class="mt-5 flex flex-wrap gap-2 text-sm font-bold text-stone-600">
+        <span>{{.Area}}㎡</span>
+        <span>{{.Floor}}层</span>
+        <span>{{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</span>
+      </div>
+      <p class="mt-6 text-2xl font-black text-amber-800">¥{{formatYuanInt (roomRentPrice .)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .RentType}}</span></p>
+      <div class="mt-auto pt-5">{{template "admin_room_action_buttons" .}}</div>
+    </div>
+  </article>
+{{else}}
+  <div class="card public-room-empty p-12 text-center text-stone-600 sm:col-span-2 lg:col-span-3 xl:col-span-4">还没有房源，先新增一个房间。</div>
+{{end}}
+{{end}}
+
+{{define "admin_room_card_items"}}
+{{range .Rooms}}
+  <article class="card public-room-masonry-card overflow-hidden p-3">
+    <a href="/admin/rooms/{{.ID}}" aria-label="查看{{.Title}}详情">{{template "public_room_preview_media" .}}</a>
+    <div class="p-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="badge">{{roomStatusLabel .Status}}</span>
+        <span class="text-xs font-black text-stone-500">{{.Floor}}层 · {{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</span>
+      </div>
+      <h3 class="mt-4 text-xl font-black leading-tight">{{.RoomNo}} · {{.Title}}</h3>
+      <p class="mt-3 text-sm leading-6 text-stone-600">{{.Description}}</p>
+      <div class="mt-4 flex flex-wrap gap-2 text-sm font-bold text-stone-600">
+        <span>{{.Area}}㎡</span>
+        <span>{{if .Orientation}}{{.Orientation}}{{else}}朝向待确认{{end}}</span>
+        <span>{{paymentTermsLabel .PaymentTerms}}</span>
+      </div>
+      <div class="mt-5 flex items-end justify-between gap-3">
+        <p class="text-2xl font-black text-amber-800">¥{{formatYuanInt (roomRentPrice .)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .RentType}}</span></p>
+      </div>
+      {{template "admin_room_action_buttons" .}}
+    </div>
+  </article>
+{{else}}
+  <div class="card public-room-empty p-12 text-center text-stone-600">还没有房源，先新增一个房间。</div>
+{{end}}
 {{end}}

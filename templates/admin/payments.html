@@ -48,7 +48,7 @@
     <button class="btn-primary w-full md:w-auto" type="submit">保存收款</button>
   </form>
 
-  <section class="card overflow-hidden" data-payments-table>
+  <section class="card overflow-hidden" data-payments-table data-payment-view="{{.ViewMode}}">
     <div class="space-y-5 border-b border-stone-300/70 p-5">
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-payments-summary>
         <div class="rounded-2xl border border-stone-200 bg-white/55 p-4">
@@ -70,6 +70,7 @@
       </div>
 
       <form class="space-y-4" method="get" action="/admin/payments" data-payments-filter>
+        <input type="hidden" name="view" value="{{.ViewMode}}">
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.3fr_0.75fr_0.75fr_0.75fr_0.9fr_auto]">
           <label class="block">
             <span class="sr-only">搜索租客</span>
@@ -93,13 +94,13 @@
             {{end}}
           </select>
           <select class="input" name="sort" data-payment-sort-select>
-            <option value="next_pay_date:asc">月份升序</option>
-            <option value="next_pay_date:desc">月份降序</option>
-            <option value="amount:desc">金额从高到低</option>
-            <option value="amount:asc">金额从低到高</option>
-            <option value="tenant:asc">租客名称</option>
+            <option value="next_pay_date:asc" {{if eq .SelectedSort "next_pay_date:asc"}}selected{{end}}>月份升序</option>
+            <option value="next_pay_date:desc" {{if eq .SelectedSort "next_pay_date:desc"}}selected{{end}}>月份降序</option>
+            <option value="amount:desc" {{if eq .SelectedSort "amount:desc"}}selected{{end}}>金额从高到低</option>
+            <option value="amount:asc" {{if eq .SelectedSort "amount:asc"}}selected{{end}}>金额从低到高</option>
+            <option value="tenant:asc" {{if eq .SelectedSort "tenant:asc"}}selected{{end}}>租客名称</option>
           </select>
-          <a class="btn-secondary text-center" href="/admin/payments" data-payments-reset>清空</a>
+          <a class="btn-secondary text-center" href="{{.ClearFilterURL}}" data-payments-reset>清空</a>
         </div>
         <fieldset class="flex flex-wrap gap-2 text-sm font-bold text-stone-600" data-payment-excluded-filter>
           <legend class="sr-only">记录范围</legend>
@@ -119,7 +120,11 @@
       </form>
     </div>
 
-    <div class="hidden overflow-x-auto md:block">
+    <div class="border-b border-stone-300/70 px-5 py-4">
+      {{template "admin_payment_view_switcher" .}}
+    </div>
+
+    <div class="hidden overflow-x-auto {{if eq .ViewMode "list"}}md:block{{end}}" data-payments-table-view>
       <table class="payments-table w-full min-w-[920px] table-fixed text-left text-sm">
         <thead class="border-b border-stone-300/70 bg-white/60 text-stone-500">
           <tr>
@@ -137,7 +142,7 @@
       </table>
     </div>
 
-    <div class="space-y-4 p-4 md:hidden" data-payments-cards>
+    <div class="p-4 {{if eq .ViewMode "list"}}md:hidden{{end}}" data-payments-cards>
       <div class="rounded-2xl border border-stone-200 bg-white/60 p-4 text-center text-stone-500">正在加载收款记录...</div>
     </div>
 
@@ -154,5 +159,25 @@
       <button class="btn-primary" type="button" data-payment-exclude-confirm>确认</button>
     </div>
   </div>
+</div>
+{{end}}
+
+{{define "admin_payment_view_switcher"}}
+<div class="card flex flex-col gap-3 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3">
+  <p class="px-1 text-xs font-black text-stone-700 sm:px-2 sm:text-sm">浏览方式</p>
+  <nav class="grid grid-cols-3 gap-1.5 sm:gap-2" aria-label="收款记录浏览方式">
+    <a class="public-room-view-button {{if eq .ViewMode "list"}}public-room-view-active{{end}}" href="{{.ListViewURL}}" data-payment-view-link data-payment-view-value="list" {{if eq .ViewMode "list"}}aria-current="page"{{end}}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg>
+      <span>列表</span>
+    </a>
+    <a class="public-room-view-button {{if eq .ViewMode "grid"}}public-room-view-active{{end}}" href="{{.GridViewURL}}" data-payment-view-link data-payment-view-value="grid" {{if eq .ViewMode "grid"}}aria-current="page"{{end}}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z"/></svg>
+      <span>网格</span>
+    </a>
+    <a class="public-room-view-button {{if eq .ViewMode "card"}}public-room-view-active{{end}}" href="{{.CardViewURL}}" data-payment-view-link data-payment-view-value="card" {{if eq .ViewMode "card"}}aria-current="page"{{end}}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h5v8H6zM13 4h5v5h-5zM13 11h5v9h-5zM6 14h5v6H6z"/></svg>
+      <span>卡片</span>
+    </a>
+  </nav>
 </div>
 {{end}}

@@ -81,6 +81,64 @@ func (s *TenantService) CheckInTenant(input TenantInput) (*model.Tenant, error) 
 	return tenant, nil
 }
 
+func (s *TenantService) UpdateTenant(id uint, input TenantInput) (*model.Tenant, error) {
+	var tenant *model.Tenant
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		tenantRepo := s.tenantRepo.WithDB(tx)
+		roomRepo := s.roomRepo.WithDB(tx)
+		current, err := tenantRepo.GetTenant(id)
+		if err != nil {
+			return err
+		}
+		if current.Status != model.TenantStatusActive {
+			return fmt.Errorf("只能编辑在租租客")
+		}
+		selectedRoom, err := roomRepo.GetRoom(input.RoomID)
+		if err != nil {
+			return err
+		}
+		if input.RoomID != current.RoomID {
+			if selectedRoom.Status != model.RoomStatusVacant {
+				return fmt.Errorf("目标房源不是空置状态")
+			}
+			if activeTenant, err := tenantRepo.GetActiveTenantByRoomID(input.RoomID); err == nil && activeTenant.ID != current.ID {
+				return fmt.Errorf("目标房源已有在租租客")
+			} else if err != nil && !repository.IsNotFound(err) {
+				return err
+			}
+		}
+		builtTenant, err := buildTenant(input)
+		if err != nil {
+			return err
+		}
+		updatedTenant := tenantWithEdits(*current, *builtTenant)
+		if err := tenantRepo.UpdateTenant(&updatedTenant); err != nil {
+			return err
+		}
+		if input.RoomID != current.RoomID {
+			currentRoom, err := roomRepo.GetRoom(current.RoomID)
+			if err != nil {
+				return err
+			}
+			vacatedRoom := *currentRoom
+			vacatedRoom.Status = model.RoomStatusVacant
+			if err := roomRepo.UpdateRoom(&vacatedRoom); err != nil {
+				return err
+			}
+			occupiedRoom := *selectedRoom
+			occupiedRoom.Status = model.RoomStatusOccupied
+			if err := roomRepo.UpdateRoom(&occupiedRoom); err != nil {
+				return err
+			}
+		}
+		tenant, err = tenantRepo.GetTenant(id)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	return tenant, nil
+}
+
 func (s *TenantService) CheckOutTenant(id uint) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		tenantRepo := s.tenantRepo.WithDB(tx)
@@ -107,6 +165,28 @@ func (s *TenantService) CheckOutTenant(id uint) error {
 		updatedRoom.Status = model.RoomStatusVacant
 		return roomRepo.UpdateRoom(&updatedRoom)
 	})
+}
+
+func tenantWithEdits(current model.Tenant, edited model.Tenant) model.Tenant {
+	return model.Tenant{
+		ID:               current.ID,
+		Name:             edited.Name,
+		Phone:            edited.Phone,
+		EmergencyContact: edited.EmergencyContact,
+		Gender:           edited.Gender,
+		RoomID:           edited.RoomID,
+		CheckinDate:      edited.CheckinDate,
+		LeaseEndDate:     edited.LeaseEndDate,
+		CheckoutDate:     current.CheckoutDate,
+		RentPrice:        edited.RentPrice,
+		RentType:         edited.RentType,
+		PaymentTerms:     edited.PaymentTerms,
+		Deposit:          edited.Deposit,
+		Notes:            edited.Notes,
+		Status:           current.Status,
+		CreatedAt:        current.CreatedAt,
+		UpdatedAt:        current.UpdatedAt,
+	}
 }
 
 func tenantInputWithRoomDefaults(input TenantInput, room model.Room) TenantInput {

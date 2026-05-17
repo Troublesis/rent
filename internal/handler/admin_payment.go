@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -81,6 +82,71 @@ func NewAdminPaymentHandler(renderer Renderer, paymentService *service.PaymentSe
 	return &AdminPaymentHandler{renderer: renderer, paymentService: paymentService, tenantService: tenantService}
 }
 
+const (
+	adminPaymentViewList = "list"
+	adminPaymentViewGrid = "grid"
+	adminPaymentViewCard = "card"
+)
+
+func adminPaymentViewFromQuery(c *gin.Context) string {
+	switch c.Query("view") {
+	case adminPaymentViewGrid:
+		return adminPaymentViewGrid
+	case adminPaymentViewCard:
+		return adminPaymentViewCard
+	default:
+		return adminPaymentViewList
+	}
+}
+
+func paymentListURL(c *gin.Context, overrides map[string]string) string {
+	values := url.Values{}
+	for key, vals := range c.Request.URL.Query() {
+		for _, value := range vals {
+			values.Add(key, value)
+		}
+	}
+	for key, value := range overrides {
+		if value == "" {
+			values.Del(key)
+			continue
+		}
+		values.Set(key, value)
+	}
+	encoded := values.Encode()
+	if encoded == "" {
+		return "/admin/payments"
+	}
+	return "/admin/payments?" + encoded
+}
+
+func paymentClearURL(viewMode string) string {
+	if viewMode == "" {
+		return "/admin/payments"
+	}
+	return "/admin/payments?view=" + url.QueryEscape(viewMode)
+}
+
+func paymentSortValue(filter repository.PaymentFilter) string {
+	sortBy := filter.SortBy
+	if sortBy == "" {
+		sortBy = "next_pay_date"
+	}
+	sortDir := filter.SortDir
+	if sortDir == "" {
+		sortDir = "asc"
+	}
+	return sortBy + ":" + sortDir
+}
+
+func paymentRedirectTarget(c *gin.Context) string {
+	target := c.PostForm("return_to")
+	if strings.HasPrefix(target, "/admin/payments") {
+		return target
+	}
+	return "/admin/payments"
+}
+
 func (h *AdminPaymentHandler) List(c *gin.Context) {
 	now := time.Now()
 	if _, err := h.paymentService.GenerateDueRecordsForActiveTenants(now); err != nil {
@@ -88,6 +154,7 @@ func (h *AdminPaymentHandler) List(c *gin.Context) {
 		return
 	}
 	filter := paymentFilterFromQuery(c)
+	viewMode := adminPaymentViewFromQuery(c)
 	items, err := h.paymentService.ListPaymentItems(filter, now)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "读取收款记录失败")
@@ -106,6 +173,12 @@ func (h *AdminPaymentHandler) List(c *gin.Context) {
 		"FilterPaid":     c.Query("paid"),
 		"FilterExcluded": excludedFilterValue(c.Query("excluded")),
 		"PaymentTypes":   paymentTypeOptions(),
+		"ViewMode":       viewMode,
+		"ListViewURL":    paymentListURL(c, map[string]string{"view": adminPaymentViewList}),
+		"GridViewURL":    paymentListURL(c, map[string]string{"view": adminPaymentViewGrid}),
+		"CardViewURL":    paymentListURL(c, map[string]string{"view": adminPaymentViewCard}),
+		"ClearFilterURL": paymentClearURL(viewMode),
+		"SelectedSort":   paymentSortValue(filter),
 		"Error":          queryError(c),
 	})
 }
@@ -161,11 +234,12 @@ func (h *AdminPaymentHandler) Toggle(c *gin.Context) {
 	if !ok {
 		return
 	}
+	redirectTarget := paymentRedirectTarget(c)
 	if err := h.paymentService.TogglePaid(id); err != nil {
-		redirectWithError(c, "/admin/payments", userFacingError(err))
+		redirectWithError(c, redirectTarget, userFacingError(err))
 		return
 	}
-	c.Redirect(http.StatusSeeOther, "/admin/payments")
+	c.Redirect(http.StatusSeeOther, redirectTarget)
 }
 
 func (h *AdminPaymentHandler) UpdateExclusion(c *gin.Context) {
@@ -173,12 +247,13 @@ func (h *AdminPaymentHandler) UpdateExclusion(c *gin.Context) {
 	if !ok {
 		return
 	}
+	redirectTarget := paymentRedirectTarget(c)
 	excluded := c.PostForm("excluded") == "true"
 	if err := h.paymentService.SetExcluded(id, excluded, c.PostForm("exclusion_note")); err != nil {
-		redirectWithError(c, "/admin/payments", userFacingError(err))
+		redirectWithError(c, redirectTarget, userFacingError(err))
 		return
 	}
-	c.Redirect(http.StatusSeeOther, "/admin/payments")
+	c.Redirect(http.StatusSeeOther, redirectTarget)
 }
 
 func (h *AdminPaymentHandler) Exclude(c *gin.Context) {

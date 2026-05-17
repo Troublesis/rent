@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -38,19 +39,60 @@ func NewAdminRoomHandler(renderer Renderer, roomService *service.RoomService, te
 	return &AdminRoomHandler{renderer: renderer, roomService: roomService, tenantService: tenantService}
 }
 
+const (
+	adminRoomViewList = "list"
+	adminRoomViewGrid = "grid"
+	adminRoomViewCard = "card"
+)
+
+func adminRoomViewFromQuery(c *gin.Context) string {
+	switch c.Query("view") {
+	case adminRoomViewGrid:
+		return adminRoomViewGrid
+	case adminRoomViewCard:
+		return adminRoomViewCard
+	default:
+		return adminRoomViewList
+	}
+}
+
+func adminRoomsURL(filter repository.RoomFilter, viewMode string) string {
+	values := url.Values{}
+	if filter.Query != "" {
+		values.Set("q", filter.Query)
+	}
+	if filter.Status != "" {
+		values.Set("status", filter.Status)
+	}
+	if viewMode != "" {
+		values.Set("view", viewMode)
+	}
+	query := values.Encode()
+	if query == "" {
+		return "/admin/rooms"
+	}
+	return "/admin/rooms?" + query
+}
+
 func (h *AdminRoomHandler) List(c *gin.Context) {
 	filter := repository.RoomFilter{Status: c.Query("status"), Query: c.Query("q")}
+	viewMode := adminRoomViewFromQuery(c)
 	rooms, err := h.roomService.ListRooms(filter)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "读取房源失败")
 		return
 	}
 	h.renderer.Render(c, http.StatusOK, "admin_base.html", "admin/rooms.html", gin.H{
-		"Title":    "房源管理",
-		"Rooms":    rooms,
-		"Statuses": roomStatusOptions(),
-		"Filter":   filter,
-		"Error":    queryError(c),
+		"Title":          "房源管理",
+		"Rooms":          rooms,
+		"Statuses":       roomStatusOptions(),
+		"Filter":         filter,
+		"ViewMode":       viewMode,
+		"ListViewURL":    adminRoomsURL(filter, adminRoomViewList),
+		"GridViewURL":    adminRoomsURL(filter, adminRoomViewGrid),
+		"CardViewURL":    adminRoomsURL(filter, adminRoomViewCard),
+		"ClearFilterURL": adminRoomsURL(repository.RoomFilter{}, viewMode),
+		"Error":          queryError(c),
 	})
 }
 

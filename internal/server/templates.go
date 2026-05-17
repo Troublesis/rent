@@ -20,28 +20,30 @@ type TemplateRenderer struct {
 
 func NewTemplateRenderer(root string) *TemplateRenderer {
 	return &TemplateRenderer{root: root, funcMap: template.FuncMap{
-		"formatFen":         service.FormatFen,
-		"formatYuanInt":     formatYuanInt,
-		"divideBy100":       service.FormatFen,
-		"formatDate":        formatDate,
-		"formatInputDate":   formatInputDate,
-		"formatDateTime":    formatDateTime,
-		"roomStatusLabel":   roomStatusLabel,
-		"tenantStatusLabel": tenantStatusLabel,
-		"paymentTypeLabel":  paymentTypeLabel,
-		"mediaTypeLabel":    mediaTypeLabel,
-		"rentTypeLabel":     rentTypeLabel,
-		"rentUnitLabel":     rentUnitLabel,
-		"paymentTermsLabel": paymentTermsLabel,
-		"isRoomOccupied":    isRoomOccupied,
-		"tenantGenderLabel": tenantGenderLabel,
-		"roomRentPrice":     model.RoomRentPrice,
-		"floorPlanLabel":    floorPlanLabel,
-		"firstImageURL":     firstImageURL,
-		"mediaPosterURL":    mediaPosterURL,
-		"isPlayableMedia":   isPlayableMedia,
-		"isOverdue":         isOverdue,
-		"seq":               seq,
+		"formatFen":          service.FormatFen,
+		"formatYuanInt":      formatYuanInt,
+		"divideBy100":        service.FormatFen,
+		"formatDate":         formatDate,
+		"formatOptionalDate": formatOptionalDate,
+		"formatInputDate":    formatInputDate,
+		"formatDateTime":     formatDateTime,
+		"roomStatusLabel":    roomStatusLabel,
+		"tenantStatusLabel":  tenantStatusLabel,
+		"paymentTypeLabel":   paymentTypeLabel,
+		"mediaTypeLabel":     mediaTypeLabel,
+		"rentTypeLabel":      rentTypeLabel,
+		"rentUnitLabel":      rentUnitLabel,
+		"paymentTermsLabel":  paymentTermsLabel,
+		"isRoomOccupied":     isRoomOccupied,
+		"tenantGenderLabel":  tenantGenderLabel,
+		"roomRentPrice":      model.RoomRentPrice,
+		"floorPlanLabel":     floorPlanLabel,
+		"firstImageURL":      firstImageURL,
+		"mediaPosterURL":     mediaPosterURL,
+		"isPlayableMedia":    isPlayableMedia,
+		"isOverdue":          isOverdue,
+		"firstRune":          firstRune,
+		"seq":                seq,
 	}}
 }
 
@@ -120,6 +122,13 @@ func formatDate(value time.Time) string {
 		return "-"
 	}
 	return value.Format("2006/01/02")
+}
+
+func formatOptionalDate(value *time.Time) string {
+	if value == nil {
+		return "-"
+	}
+	return formatDate(*value)
 }
 
 func formatInputDate(value time.Time) string {
@@ -273,6 +282,13 @@ func isOverdue(value time.Time) bool {
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	valueDate := time.Date(localValue.Year(), localValue.Month(), localValue.Day(), 0, 0, 0, 0, loc)
 	return valueDate.Before(today)
+}
+
+func firstRune(value string) string {
+	for _, item := range value {
+		return string(item)
+	}
+	return "租"
 }
 
 func seq(start int, end int) []int {
