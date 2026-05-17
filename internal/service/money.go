@@ -73,3 +73,7 @@ func FormatFen(fen int) string {
 	}
 	return fmt.Sprintf("%s%d.%02d", sign, value/100, value%100)
 }
+
+func FormatFenAsYuanInt(fen int) string {
+	return strconv.Itoa(fen / 100)
+}

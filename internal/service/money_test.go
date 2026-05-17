@@ -43,3 +43,23 @@ func TestFormatFen(t *testing.T) {
 		t.Fatalf("FormatFen = %q, want 1500.50", got)
 	}
 }
+
+func TestFormatFenAsYuanInt(t *testing.T) {
+	tests := []struct {
+		name string
+		fen  int
+		want string
+	}{
+		{name: "whole yuan", fen: 150000, want: "1500"},
+		{name: "positive fen remainder", fen: 150050, want: "1500"},
+		{name: "negative fen remainder", fen: -150050, want: "-1500"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FormatFenAsYuanInt(tt.fen); got != tt.want {
+				t.Fatalf("FormatFenAsYuanInt(%d) = %q, want %q", tt.fen, got, tt.want)
+			}
+		})
+	}
+}

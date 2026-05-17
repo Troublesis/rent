@@ -111,8 +111,8 @@ func (r *TemplateRenderer) partialTemplateFiles(page string) ([]string, error) {
 	return files, nil
 }
 
-func formatYuanInt(fen int) int {
-	return fen / 100
+func formatYuanInt(fen int) string {
+	return service.FormatFenAsYuanInt(fen)
 }
 
 func formatDate(value time.Time) string {

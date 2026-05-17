@@ -293,7 +293,7 @@ func paymentToAPIItem(payment model.Payment, now time.Time) paymentAPIItem {
 		TenantStatus:      payment.Tenant.Status,
 		Phone:             payment.Tenant.Phone,
 		RentPriceFen:      payment.Tenant.RentPrice,
-		RentPriceText:     service.FormatFen(payment.Tenant.RentPrice),
+		RentPriceText:     service.FormatFenAsYuanInt(payment.Tenant.RentPrice),
 		RentType:          payment.Tenant.RentType,
 		RentTypeLabel:     rentTypeLabelText(payment.Tenant.RentType),
 		PaymentTerms:      payment.Tenant.PaymentTerms,

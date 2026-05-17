@@ -279,7 +279,7 @@ func roomToAPIItem(room model.Room, tenant model.Tenant) roomAPIItem {
 		Status:        room.Status,
 		StatusLabel:   roomStatusLabelText(room.Status),
 		RentPriceFen:  model.RoomRentPrice(room),
-		RentPriceText: service.FormatFen(model.RoomRentPrice(room)),
+		RentPriceText: service.FormatFenAsYuanInt(model.RoomRentPrice(room)),
 		RentType:      room.RentType,
 		RentTypeLabel: rentTypeLabelText(room.RentType),
 		Floor:         room.Floor,

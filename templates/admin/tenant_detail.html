@@ -7,7 +7,7 @@
     <dl class="mt-8 grid gap-4">
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">房源</dt><dd class="mt-1 font-black">{{.Tenant.Room.RoomNo}} · {{.Tenant.Room.Title}}</dd></div>
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">入住日期</dt><dd class="mt-1 font-black">{{formatDate .Tenant.CheckinDate}}</dd></div>
-      <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">租金 / 押金</dt><dd class="mt-1 font-black">¥{{formatFen .Tenant.RentPrice}} / {{rentUnitLabel .Tenant.RentType}} · 押金 ¥{{formatFen .Tenant.Deposit}}</dd></div>
+      <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">租金 / 押金</dt><dd class="mt-1 font-black">¥{{formatYuanInt .Tenant.RentPrice}} / {{rentUnitLabel .Tenant.RentType}} · 押金 ¥{{formatYuanInt .Tenant.Deposit}}</dd></div>
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">付款方式</dt><dd class="mt-1 font-black">{{paymentTermsLabel .Tenant.PaymentTerms}}</dd></div>
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">紧急联系人</dt><dd class="mt-1 font-black">{{if .Tenant.EmergencyContact}}{{.Tenant.EmergencyContact}}{{else}}未填写{{end}}</dd></div>
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">备注</dt><dd class="mt-1 whitespace-pre-wrap font-black">{{if .Tenant.Notes}}{{.Tenant.Notes}}{{else}}暂无备注{{end}}</dd></div>

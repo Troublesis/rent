@@ -722,7 +722,7 @@ const renderRoomsDetail = (rooms, fullURL) => dashboardTable(
 
 const renderVacantRoomsDetail = (rooms, fullURL) => {
   const totalLoss = rooms.reduce((sum, room) => sum + Number(room.rent_price_fen || 0), 0)
-  const summary = `<p class="mb-4 text-sm font-bold text-stone-600">共空置 ${rooms.length} 间，每月潜在损失：¥${formatFenText(totalLoss)}</p>`
+  const summary = `<p class="mb-4 text-sm font-bold text-stone-600">共空置 ${rooms.length} 间，每月潜在损失：¥${formatYuanIntText(totalLoss)}</p>`
   return dashboardTable(
     ['房间号', '标题', '租金', '楼层', '面积'],
     rooms.map((room) => `<tr><td class="px-3 py-3">${dashboardRoomLink(room)}</td><td class="px-3 py-3">${escapeHTML(room.title)}</td><td class="px-3 py-3">¥${escapeHTML(room.rent_price_text)} / ${escapeHTML(room.rent_type_label)}</td><td class="px-3 py-3">${escapeHTML(room.floor)}层</td><td class="px-3 py-3">${escapeHTML(room.area)}㎡</td></tr>`),
@@ -788,5 +788,6 @@ const renderProjectionMonthsDetail = (projection, fullURL) => {
 const fullListLink = (url) => `<div class="mt-5"><a class="btn-primary inline-flex" href="${escapeHTML(url)}">查看完整列表</a></div>`
 
 const formatFenText = (fen) => (Number(fen || 0) / 100).toFixed(2)
+const formatYuanIntText = (fen) => String(Math.trunc(Number(fen || 0) / 100))
 
 initDashboardDetails()

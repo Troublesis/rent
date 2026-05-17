@@ -300,7 +300,7 @@ func tenantToAPIItem(tenant model.Tenant, now time.Time) tenantAPIItem {
 		LeaseEndDate:      formatOptionalAPIDate(tenant.LeaseEndDate),
 		OverdueDays:       overdueDays,
 		RentPriceFen:      tenant.RentPrice,
-		RentPriceText:     service.FormatFen(tenant.RentPrice),
+		RentPriceText:     service.FormatFenAsYuanInt(tenant.RentPrice),
 		RentType:          tenant.RentType,
 		RentTypeLabel:     rentTypeLabelText(tenant.RentType),
 		PaymentTerms:      tenant.PaymentTerms,

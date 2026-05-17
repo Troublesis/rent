@@ -8,11 +8,11 @@
           <h3 class="mt-3 text-3xl font-black">{{.Room.RoomNo}} · {{.Room.Title}}</h3>
           <p class="mt-3 text-stone-600">{{.Room.Description}}</p>
         </div>
-        <p class="text-4xl font-black text-amber-800">¥{{formatFen (roomRentPrice .Room)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .Room.RentType}}</span></p>
+        <p class="text-4xl font-black text-amber-800">¥{{formatYuanInt (roomRentPrice .Room)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .Room.RentType}}</span></p>
       </div>
       <dl class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">付款方式</dt><dd class="mt-1 font-black">{{paymentTermsLabel .Room.PaymentTerms}}</dd></div>
-        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">押金</dt><dd class="mt-1 font-black">¥{{formatFen .Room.Deposit}}</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">押金</dt><dd class="mt-1 font-black">¥{{formatYuanInt .Room.Deposit}}</dd></div>
         <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">面积</dt><dd class="mt-1 font-black">{{.Room.Area}}㎡</dd></div>
         <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">楼层</dt><dd class="mt-1 font-black">{{.Room.Floor}}层</dd></div>
         <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">户型</dt><dd class="mt-1 font-black">{{floorPlanLabel .Room.Bedrooms .Room.LivingRooms .Room.Bathrooms}}</dd></div>

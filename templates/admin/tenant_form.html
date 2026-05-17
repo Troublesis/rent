@@ -27,7 +27,7 @@
       <select class="input mt-2" name="room_id" required data-validate="required" data-label="入住房源">
         <option value="">请选择空置房源</option>
         {{range .Rooms}}
-          <option value="{{.ID}}" {{if eq $.Input.RoomID .ID}}selected{{end}}>{{.RoomNo}} · {{.Title}} · ¥{{formatFen (roomRentPrice .)}} / {{rentUnitLabel .RentType}}</option>
+          <option value="{{.ID}}" {{if eq $.Input.RoomID .ID}}selected{{end}}>{{.RoomNo}} · {{.Title}} · ¥{{formatYuanInt (roomRentPrice .)}} / {{rentUnitLabel .RentType}}</option>
         {{end}}
       </select>
     </label>

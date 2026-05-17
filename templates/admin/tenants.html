@@ -41,7 +41,7 @@
           <tr>
             <td class="px-5 py-4"><p class="font-black">{{.Name}}</p><p class="text-stone-500">{{.Phone}}</p></td>
             <td class="px-5 py-4"><p class="font-bold">{{.Room.RoomNo}}</p><p class="text-stone-500">{{.Room.Title}}</p></td>
-            <td class="px-5 py-4">¥{{formatFen .RentPrice}} / {{rentUnitLabel .RentType}}</td>
+            <td class="px-5 py-4">¥{{formatYuanInt .RentPrice}} / {{rentUnitLabel .RentType}}</td>
             <td class="px-5 py-4">{{formatDate .CheckinDate}}</td>
             <td class="px-5 py-4"><span class="badge">{{tenantStatusLabel .Status}}</span></td>
             <td class="px-5 py-4"><a class="font-bold text-amber-800" href="/admin/tenants/{{.ID}}">详情</a></td>
@@ -71,7 +71,7 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <p class="text-xs font-black tracking-[0.2em] text-stone-400">租金</p>
-              <p class="mt-1 font-bold text-stone-800">¥{{formatFen .RentPrice}} / {{rentUnitLabel .RentType}}</p>
+              <p class="mt-1 font-bold text-stone-800">¥{{formatYuanInt .RentPrice}} / {{rentUnitLabel .RentType}}</p>
             </div>
             <div>
               <p class="text-xs font-black tracking-[0.2em] text-stone-400">入住日期</p>
