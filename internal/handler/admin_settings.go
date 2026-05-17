@@ -20,7 +20,7 @@ func NewAdminSettingsHandler(renderer Renderer, settingsService *service.Setting
 func (h *AdminSettingsHandler) Page(c *gin.Context) {
 	settings, err := h.settingsService.GetSettings()
 	if err != nil {
-		c.String(http.StatusInternalServerError, "读取设置失败: %v", err)
+		c.String(http.StatusInternalServerError, "读取设置失败")
 		return
 	}
 	h.render(c, http.StatusOK, settings, queryError(c))
@@ -36,7 +36,7 @@ func (h *AdminSettingsHandler) Update(c *gin.Context) {
 		return
 	}
 	if err := h.settingsService.UpdateSettings(settings); err != nil {
-		h.render(c, http.StatusInternalServerError, settings, "保存设置失败")
+		h.render(c, http.StatusInternalServerError, settings, userFacingError(err))
 		return
 	}
 	c.Redirect(http.StatusSeeOther, "/admin/settings")

@@ -38,9 +38,26 @@ func (r *TenantRepository) ListTenants(filter TenantFilter) ([]model.Tenant, err
 	return tenants, nil
 }
 
+func (r *TenantRepository) ListActiveTenantsWithPayments() ([]model.Tenant, error) {
+	var tenants []model.Tenant
+	if err := r.db.Model(&model.Tenant{}).
+		Preload("Room").
+		Preload("Payments", func(db *gorm.DB) *gorm.DB {
+			return db.Order("pay_date ASC, created_at ASC")
+		}).
+		Where("status = ?", model.TenantStatusActive).
+		Order("checkin_date ASC, created_at ASC").
+		Find(&tenants).Error; err != nil {
+		return nil, err
+	}
+	return tenants, nil
+}
+
 func (r *TenantRepository) GetTenant(id uint) (*model.Tenant, error) {
 	var tenant model.Tenant
-	if err := r.db.Preload("Room").Preload("Payments").First(&tenant, id).Error; err != nil {
+	if err := r.db.Preload("Room").Preload("Payments", func(db *gorm.DB) *gorm.DB {
+		return db.Order("pay_date DESC, created_at DESC")
+	}).First(&tenant, id).Error; err != nil {
 		return nil, err
 	}
 	return &tenant, nil

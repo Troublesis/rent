@@ -21,12 +21,12 @@ func NewPublicHandler(renderer Renderer, roomService *service.RoomService, setti
 func (h *PublicHandler) Index(c *gin.Context) {
 	rooms, err := h.roomService.ListAvailableRooms(6, 0)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "读取房源失败: %v", err)
+		c.String(http.StatusInternalServerError, "读取房源失败")
 		return
 	}
 	settings, err := h.settingsService.GetSettings()
 	if err != nil {
-		c.String(http.StatusInternalServerError, "读取联系信息失败: %v", err)
+		c.String(http.StatusInternalServerError, "读取联系信息失败")
 		return
 	}
 	h.renderer.Render(c, http.StatusOK, "public_base.html", "public/index.html", gin.H{
@@ -39,12 +39,12 @@ func (h *PublicHandler) Index(c *gin.Context) {
 func (h *PublicHandler) Rooms(c *gin.Context) {
 	rooms, err := h.roomService.ListAvailableRooms(0, 0)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "读取房源失败: %v", err)
+		c.String(http.StatusInternalServerError, "读取房源失败")
 		return
 	}
 	settings, err := h.settingsService.GetSettings()
 	if err != nil {
-		c.String(http.StatusInternalServerError, "读取联系信息失败: %v", err)
+		c.String(http.StatusInternalServerError, "读取联系信息失败")
 		return
 	}
 	h.renderer.Render(c, http.StatusOK, "public_base.html", "public/rooms.html", gin.H{
@@ -66,7 +66,7 @@ func (h *PublicHandler) RoomDetail(c *gin.Context) {
 	}
 	settings, err := h.settingsService.GetSettings()
 	if err != nil {
-		c.String(http.StatusInternalServerError, "读取联系信息失败: %v", err)
+		c.String(http.StatusInternalServerError, "读取联系信息失败")
 		return
 	}
 	h.renderer.Render(c, http.StatusOK, "public_base.html", "public/room_detail.html", gin.H{

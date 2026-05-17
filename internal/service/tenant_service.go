@@ -16,8 +16,12 @@ type TenantInput struct {
 	EmergencyContact string
 	RoomID           uint
 	CheckinDate      time.Time
+	LeaseEndDate     time.Time
 	RentPriceYuan    string
+	RentType         string
+	PaymentTerms     string
 	DepositYuan      string
+	Notes            string
 }
 
 type TenantService struct {
@@ -39,11 +43,7 @@ func (s *TenantService) GetTenant(id uint) (*model.Tenant, error) {
 }
 
 func (s *TenantService) CheckInTenant(input TenantInput) (*model.Tenant, error) {
-	tenant, err := buildTenant(input)
-	if err != nil {
-		return nil, err
-	}
-
+	var tenant *model.Tenant
 	if err := s.db.Transaction(func(tx *gorm.DB) error {
 		roomRepo := s.roomRepo.WithDB(tx)
 		tenantRepo := s.tenantRepo.WithDB(tx)
@@ -52,23 +52,31 @@ func (s *TenantService) CheckInTenant(input TenantInput) (*model.Tenant, error) 
 			return err
 		}
 		if room.Status != model.RoomStatusVacant {
-			return fmt.Errorf("room is not vacant")
+			return fmt.Errorf("房源不是空置状态")
 		}
 		if _, err := tenantRepo.GetActiveTenantByRoomID(input.RoomID); err == nil {
-			return fmt.Errorf("room already has an active tenant")
+			return fmt.Errorf("该房源已有在租租客")
 		} else if !repository.IsNotFound(err) {
 			return err
 		}
-		if err := tenantRepo.CreateTenant(tenant); err != nil {
+		resolvedInput := tenantInputWithRoomDefaults(input, *room)
+		builtTenant, err := buildTenant(resolvedInput)
+		if err != nil {
+			return err
+		}
+		if err := tenantRepo.CreateTenant(builtTenant); err != nil {
 			return err
 		}
 		updatedRoom := *room
 		updatedRoom.Status = model.RoomStatusOccupied
-		return roomRepo.UpdateRoom(&updatedRoom)
+		if err := roomRepo.UpdateRoom(&updatedRoom); err != nil {
+			return err
+		}
+		tenant = builtTenant
+		return nil
 	}); err != nil {
 		return nil, err
 	}
-
 	return tenant, nil
 }
 
@@ -81,7 +89,7 @@ func (s *TenantService) CheckOutTenant(id uint) error {
 			return err
 		}
 		if tenant.Status != model.TenantStatusActive {
-			return fmt.Errorf("tenant is not active")
+			return fmt.Errorf("租客不是在租状态")
 		}
 		now := time.Now()
 		updatedTenant := *tenant
@@ -100,38 +108,95 @@ func (s *TenantService) CheckOutTenant(id uint) error {
 	})
 }
 
-func buildTenant(input TenantInput) (*model.Tenant, error) {
-	name := strings.TrimSpace(input.Name)
-	phone := strings.TrimSpace(input.Phone)
-	if name == "" {
-		return nil, fmt.Errorf("tenant name is required")
+func tenantInputWithRoomDefaults(input TenantInput, room model.Room) TenantInput {
+	resolvedInput := input
+	if strings.TrimSpace(resolvedInput.RentType) == "" {
+		resolvedInput.RentType = model.RentTypeOrDefault(room.RentType)
 	}
-	if phone == "" {
-		return nil, fmt.Errorf("tenant phone is required")
+	if strings.TrimSpace(resolvedInput.PaymentTerms) == "" {
+		resolvedInput.PaymentTerms = model.PaymentTermsOrDefault(room.PaymentTerms)
+	}
+	if strings.TrimSpace(resolvedInput.RentPriceYuan) == "" {
+		resolvedInput.RentPriceYuan = fmt.Sprintf("%d", model.RoomRentPrice(room)/100)
+	}
+	if strings.TrimSpace(resolvedInput.DepositYuan) == "" {
+		resolvedInput.DepositYuan = fmt.Sprintf("%d", room.Deposit/100)
+	}
+	return resolvedInput
+}
+
+func buildTenant(input TenantInput) (*model.Tenant, error) {
+	name, err := validateName(input.Name)
+	if err != nil {
+		return nil, err
+	}
+	phone, err := validatePhone(input.Phone, true, "手机号")
+	if err != nil {
+		return nil, err
+	}
+	emergencyContact, err := validatePhone(input.EmergencyContact, false, "紧急联系人")
+	if err != nil {
+		return nil, err
 	}
 	if input.RoomID == 0 {
-		return nil, fmt.Errorf("room is required")
+		return nil, fmt.Errorf("请选择入住房源")
 	}
-	rentPrice, err := ParseYuanToFen(input.RentPriceYuan)
+	rentPrice, err := ParseIntegerYuanToFen(input.RentPriceYuan)
 	if err != nil {
-		return nil, fmt.Errorf("invalid rent price: %w", err)
+		return nil, fmt.Errorf("租金金额不正确：%w", err)
 	}
-	deposit, err := ParseYuanToFen(input.DepositYuan)
+	if rentPrice <= 0 {
+		return nil, fmt.Errorf("租金金额需大于 0")
+	}
+	deposit, err := ParseIntegerYuanToFen(input.DepositYuan)
 	if err != nil {
-		return nil, fmt.Errorf("invalid deposit: %w", err)
+		return nil, fmt.Errorf("押金金额不正确：%w", err)
+	}
+	if deposit < 0 {
+		return nil, fmt.Errorf("押金需大于或等于 0")
+	}
+	rentType := strings.TrimSpace(input.RentType)
+	if rentType == "" {
+		rentType = model.RentTypeMonthly
+	}
+	if !model.ValidRentType(rentType) {
+		return nil, fmt.Errorf("租金类型不正确")
+	}
+	paymentTerms := strings.TrimSpace(input.PaymentTerms)
+	if paymentTerms == "" {
+		paymentTerms = model.PaymentTerms1M1D
+	}
+	if !model.ValidPaymentTerms(paymentTerms) {
+		return nil, fmt.Errorf("付款方式不正确")
+	}
+	notes, err := validateNotes(input.Notes, "备注")
+	if err != nil {
+		return nil, err
 	}
 	checkinDate := input.CheckinDate
 	if checkinDate.IsZero() {
 		checkinDate = time.Now()
 	}
+	var leaseEndDate *time.Time
+	if !input.LeaseEndDate.IsZero() {
+		leaseEnd := input.LeaseEndDate
+		if dateOnly(leaseEnd).Before(dateOnly(checkinDate)) {
+			return nil, fmt.Errorf("租约到期日不能早于入住日期")
+		}
+		leaseEndDate = &leaseEnd
+	}
 	return &model.Tenant{
 		Name:             name,
 		Phone:            phone,
-		EmergencyContact: strings.TrimSpace(input.EmergencyContact),
+		EmergencyContact: emergencyContact,
 		RoomID:           input.RoomID,
 		CheckinDate:      checkinDate,
+		LeaseEndDate:     leaseEndDate,
 		RentPrice:        rentPrice,
+		RentType:         rentType,
+		PaymentTerms:     paymentTerms,
 		Deposit:          deposit,
+		Notes:            notes,
 		Status:           model.TenantStatusActive,
 	}, nil
 }

@@ -1,41 +1,65 @@
 {{define "content"}}
-<section class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-  <div class="card p-6">
+<section class="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+  <button class="card p-6 text-left transition hover:-translate-y-0.5 hover:shadow-xl" type="button" data-dashboard-detail="rooms-total">
     <p class="text-sm font-bold text-stone-500">总房源</p>
     <p class="mt-4 text-5xl font-black">{{.Summary.TotalRooms}}</p>
     <p class="mt-3 text-sm text-stone-600">当前登记的全部房间</p>
-  </div>
-  <div class="card p-6">
+  </button>
+  <button class="card p-6 text-left transition hover:-translate-y-0.5 hover:shadow-xl" type="button" data-dashboard-detail="rooms-vacant">
     <p class="text-sm font-bold text-stone-500">空置房源</p>
     <p class="mt-4 text-5xl font-black text-emerald-700">{{.Summary.VacantRooms}}</p>
     <p class="mt-3 text-sm text-stone-600">会显示在公开房源页</p>
-  </div>
-  <div class="card p-6">
+  </button>
+  <button class="card p-6 text-left transition hover:-translate-y-0.5 hover:shadow-xl" type="button" data-dashboard-detail="rooms-occupied">
     <p class="text-sm font-bold text-stone-500">已出租</p>
     <p class="mt-4 text-5xl font-black text-amber-800">{{.Summary.OccupiedRooms}}</p>
     <p class="mt-3 text-sm text-stone-600">正在出租的房间数量</p>
-  </div>
-  <div class="card p-6">
+  </button>
+  <button class="card p-6 text-left transition hover:-translate-y-0.5 hover:shadow-xl" type="button" data-dashboard-detail="tenants-active">
     <p class="text-sm font-bold text-stone-500">在租租客</p>
     <p class="mt-4 text-5xl font-black">{{.Summary.ActiveTenants}}</p>
-    <p class="mt-3 text-sm text-stone-600">尚未办理退租的租客</p>
-  </div>
-  <div class="card p-6">
+    <p class="mt-3 text-sm text-stone-600">当前仍在租住的租客</p>
+  </button>
+  <button class="card p-6 text-left transition hover:-translate-y-0.5 hover:shadow-xl" type="button" data-dashboard-detail="tenants-expired">
+    <p class="text-sm font-bold text-stone-500">尚未办理退租的租客</p>
+    <p class="mt-4 text-5xl font-black text-red-700">{{.Summary.OverdueCheckoutTenants}}</p>
+    <p class="mt-3 text-sm text-stone-600">租约已到期但仍在租</p>
+  </button>
+</section>
+
+<section class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+  <button class="card p-6 text-left transition hover:-translate-y-0.5 hover:shadow-xl" type="button" data-dashboard-detail="income-month">
     <p class="text-sm font-bold text-stone-500">本月已收</p>
     <p class="mt-4 text-4xl font-black text-emerald-700">¥{{formatFen .Summary.CurrentMonthIncome}}</p>
     <p class="mt-3 text-sm text-stone-600">按付款日期统计</p>
-  </div>
-  <div class="card p-6">
+  </button>
+  <button class="card p-6 text-left transition hover:-translate-y-0.5 hover:shadow-xl" type="button" data-dashboard-detail="payments-overdue">
     <p class="text-sm font-bold text-stone-500">未收金额</p>
     <p class="mt-4 text-4xl font-black text-red-700">¥{{formatFen .Summary.UnpaidAmount}}</p>
-    <p class="mt-3 text-sm text-stone-600">所有未标记已收的记录</p>
-  </div>
+    <p class="mt-3 text-sm text-stone-600">到期未收且未排除</p>
+  </button>
+  <button class="card border-dashed p-6 text-left text-stone-600 transition hover:-translate-y-0.5 hover:shadow-xl" type="button" data-dashboard-detail="projection-month">
+    <p class="text-sm font-bold">本月应收</p>
+    <p class="mt-4 text-4xl font-black text-stone-700">¥{{formatFen .Summary.CurrentMonthReceivable}}</p>
+    <p class="mt-3 text-sm">本月在租租客应收</p>
+  </button>
+  <button class="card border-dashed p-6 text-left text-stone-600 transition hover:-translate-y-0.5 hover:shadow-xl" type="button" data-dashboard-detail="projection-6months">
+    <p class="text-sm font-bold">半年应收</p>
+    <p class="mt-4 text-4xl font-black text-stone-700">¥{{formatFen .Summary.NextSixMonthsReceivable}}</p>
+    <p class="mt-3 text-sm">未来 6 个自然月预测</p>
+  </button>
+  <button class="card border-dashed p-6 text-left text-stone-600 transition hover:-translate-y-0.5 hover:shadow-xl" type="button" data-dashboard-detail="projection-12months">
+    <p class="text-sm font-bold">全年应收</p>
+    <p class="mt-4 text-4xl font-black text-stone-700">¥{{formatFen .Summary.NextTwelveMonthsReceivable}}</p>
+    <p class="mt-3 text-sm">未来 12 个自然月预测</p>
+  </button>
 </section>
+
 <section class="card mt-8 p-6">
   <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
     <div>
       <h3 class="text-2xl font-black">今日建议</h3>
-      <p class="mt-2 text-sm text-stone-600">先录入房源，再办理入住，最后补齐收款记录。</p>
+      <p class="mt-2 text-sm text-stone-600">先查看到期和未收明细，再处理新增房源或办理入住。</p>
     </div>
     <div class="flex gap-3">
       <a class="btn-secondary" href="/admin/rooms/new">新增房源</a>
@@ -43,4 +67,20 @@
     </div>
   </div>
 </section>
+
+<div class="fixed inset-0 z-50 hidden" data-dashboard-panel>
+  <button class="absolute inset-0 bg-stone-950/40" type="button" aria-label="关闭明细" data-dashboard-close></button>
+  <aside class="absolute bottom-0 left-0 right-0 max-h-[86vh] overflow-hidden rounded-t-[2rem] bg-[var(--paper)] shadow-2xl lg:bottom-0 lg:left-auto lg:top-0 lg:h-full lg:max-h-none lg:w-[42rem] lg:rounded-l-[2rem] lg:rounded-tr-none">
+    <header class="flex items-start justify-between gap-4 border-b border-stone-200 p-6">
+      <div>
+        <p class="text-xs font-bold tracking-[0.35em] text-amber-700">明细</p>
+        <h3 class="mt-2 text-2xl font-black" data-dashboard-panel-title>数据明细</h3>
+      </div>
+      <button class="rounded-full bg-stone-200 px-4 py-2 text-sm font-black text-stone-700" type="button" data-dashboard-close>关闭</button>
+    </header>
+    <div class="max-h-[calc(86vh-6rem)] overflow-y-auto p-6 lg:max-h-[calc(100vh-6rem)]" data-dashboard-panel-body>
+      <p class="text-sm text-stone-500">请选择卡片查看明细。</p>
+    </div>
+  </aside>
+</div>
 {{end}}

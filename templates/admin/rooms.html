@@ -23,12 +23,14 @@
             <span class="badge">{{roomStatusLabel .Status}}</span>
             <h3 class="mt-3 text-2xl font-black">{{.RoomNo}} · {{.Title}}</h3>
           </div>
-          <p class="text-2xl font-black text-amber-800">¥{{formatFen .Price}}</p>
+          <p class="text-2xl font-black text-amber-800">¥{{formatFen (roomRentPrice .)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .RentType}}</span></p>
         </div>
         <p class="mt-4 line-clamp-2 text-sm leading-6 text-stone-600">{{.Description}}</p>
         <div class="mt-5 flex flex-wrap gap-3 text-sm text-stone-600">
           <span>{{.Area}}㎡</span>
           <span>{{.Floor}}层</span>
+          <span>{{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</span>
+          <span>{{paymentTermsLabel .PaymentTerms}}</span>
           <span>{{.Tags}}</span>
         </div>
         <div class="mt-6 flex flex-wrap gap-3">

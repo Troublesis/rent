@@ -6,30 +6,48 @@ import (
 	"strings"
 )
 
+func ParseIntegerYuanToFen(value string) (int, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return 0, fmt.Errorf("金额不能为空")
+	}
+	if strings.HasPrefix(trimmed, "-") || strings.HasPrefix(trimmed, "+") {
+		return 0, fmt.Errorf("金额不能为负数")
+	}
+	if strings.Contains(trimmed, ".") {
+		return 0, fmt.Errorf("金额需为整数")
+	}
+	yuan, err := strconv.Atoi(trimmed)
+	if err != nil {
+		return 0, fmt.Errorf("金额需为整数")
+	}
+	return yuan * 100, nil
+}
+
 func ParseYuanToFen(value string) (int, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
-		return 0, fmt.Errorf("amount is required")
+		return 0, fmt.Errorf("金额不能为空")
 	}
 	if strings.HasPrefix(trimmed, "-") || strings.HasPrefix(trimmed, "+") {
-		return 0, fmt.Errorf("amount must be positive")
+		return 0, fmt.Errorf("金额不能为负数")
 	}
 
 	parts := strings.Split(trimmed, ".")
 	if len(parts) > 2 || parts[0] == "" {
-		return 0, fmt.Errorf("invalid amount format")
+		return 0, fmt.Errorf("金额格式不正确")
 	}
 
 	yuan, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return 0, fmt.Errorf("invalid yuan amount")
+		return 0, fmt.Errorf("金额格式不正确")
 	}
 
 	fen := 0
 	if len(parts) == 2 {
 		fraction := parts[1]
 		if len(fraction) > 2 {
-			return 0, fmt.Errorf("amount supports at most two decimal places")
+			return 0, fmt.Errorf("金额最多支持两位小数")
 		}
 		if fraction == "" {
 			fraction = "0"
@@ -39,7 +57,7 @@ func ParseYuanToFen(value string) (int, error) {
 		}
 		fen, err = strconv.Atoi(fraction)
 		if err != nil {
-			return 0, fmt.Errorf("invalid fen amount")
+			return 0, fmt.Errorf("金额格式不正确")
 		}
 	}
 

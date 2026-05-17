@@ -17,10 +17,11 @@
         <div class="mt-5 flex flex-wrap gap-3 text-sm text-stone-600">
           <span>{{.Area}}㎡</span>
           <span>{{.Floor}}层</span>
-          <span>{{.Tags}}</span>
+          <span>{{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</span>
+          <span>{{if .Orientation}}{{.Orientation}}{{else}}朝向待确认{{end}}</span>
         </div>
         <div class="mt-6 flex items-center justify-between gap-4">
-          <p class="text-3xl font-black text-amber-800">¥{{formatFen .Price}}</p>
+          <p class="text-3xl font-black text-amber-800">¥{{formatFen (roomRentPrice .)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .RentType}}</span></p>
           <a class="btn-primary" href="/room/{{.ID}}">查看详情</a>
         </div>
       </div>

@@ -1,26 +1,55 @@
 {{define "content"}}
 <section class="grid gap-7 xl:grid-cols-[1.25fr_0.75fr]">
   <article class="card overflow-hidden">
-    {{if .Room.Media}}
-      <div class="grid gap-3 bg-stone-950 p-3 md:grid-cols-2">
-        {{range .Room.Media}}
-          {{if eq .MediaType "image"}}
-            <img class="h-72 w-full rounded-2xl object-cover" src="{{.URL}}" alt="房源图片">
-          {{else}}
-            <video class="h-72 w-full rounded-2xl object-cover" src="{{.URL}}" controls></video>
+    <div class="p-4" data-gallery>
+      {{if .Room.Media}}
+        <div class="relative overflow-hidden rounded-3xl bg-stone-950">
+          {{range $index, $media := .Room.Media}}
+            <div class="{{if ne $index 0}}hidden {{end}}p-3" data-gallery-main="{{$index}}">
+              {{if eq .MediaType "image"}}
+                <button class="block w-full" type="button" data-lightbox-src="{{.URL}}">
+                  <img class="max-h-[34rem] w-full rounded-2xl object-contain" src="{{.URL}}" alt="房源图片">
+                </button>
+              {{else if eq .MediaType "video"}}
+                <video class="max-h-[34rem] w-full rounded-2xl object-contain" src="{{.URL}}" controls></video>
+              {{else}}
+                <a class="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-white/20 bg-stone-900 p-8 text-center text-stone-100" href="{{.URL}}" target="_blank" rel="noopener noreferrer">
+                  <span class="text-5xl">▶</span>
+                  <span class="mt-4 text-lg font-black">打开视频链接</span>
+                  <span class="mt-2 break-all text-sm text-stone-300">{{.URL}}</span>
+                </a>
+              {{end}}
+            </div>
           {{end}}
-        {{end}}
-      </div>
-    {{end}}
+        </div>
+        <div class="mt-4 flex gap-3 overflow-x-auto pb-2">
+          {{range $index, $media := .Room.Media}}
+            <button class="gallery-thumb min-w-28 rounded-2xl border border-stone-300 bg-white/70 p-2 text-left text-xs font-bold text-stone-600" type="button" data-gallery-thumb="{{$index}}">
+              {{if eq .MediaType "image"}}
+                <img class="h-16 w-full rounded-xl object-cover" src="{{.URL}}" alt="房源缩略图">
+              {{else}}
+                <span class="flex h-16 items-center justify-center rounded-xl bg-stone-900 text-stone-100">{{mediaTypeLabel .MediaType}}</span>
+              {{end}}
+            </button>
+          {{end}}
+        </div>
+      {{else}}
+        <div class="flex min-h-80 items-center justify-center rounded-3xl bg-white/50 text-stone-500">暂无媒体</div>
+      {{end}}
+    </div>
     <div class="p-7">
       <span class="badge">可租</span>
       <h2 class="mt-4 text-4xl font-black">{{.Room.RoomNo}} · {{.Room.Title}}</h2>
       <p class="mt-4 leading-8 text-stone-700">{{.Room.Description}}</p>
       <dl class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">月租</dt><dd class="mt-1 text-xl font-black text-amber-800">¥{{formatFen .Room.Price}}</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">{{rentTypeLabel .Room.RentType}}</dt><dd class="mt-1 text-xl font-black text-amber-800">¥{{formatFen (roomRentPrice .Room)}} / {{rentUnitLabel .Room.RentType}}</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">付款方式</dt><dd class="mt-1 font-black">{{paymentTermsLabel .Room.PaymentTerms}}</dd></div>
         <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">押金</dt><dd class="mt-1 font-black">¥{{formatFen .Room.Deposit}}</dd></div>
         <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">面积</dt><dd class="mt-1 font-black">{{.Room.Area}}㎡</dd></div>
         <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">楼层</dt><dd class="mt-1 font-black">{{.Room.Floor}}层</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">户型</dt><dd class="mt-1 font-black">{{floorPlanLabel .Room.Bedrooms .Room.LivingRooms .Room.Bathrooms}}</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">朝向</dt><dd class="mt-1 font-black">{{if .Room.Orientation}}{{.Room.Orientation}}{{else}}未填写{{end}}</dd></div>
+        <div class="rounded-2xl bg-white/50 p-4 sm:col-span-2"><dt class="text-xs text-stone-500">地址</dt><dd class="mt-1 font-black">{{if .Room.Address}}{{.Room.Address}}{{else}}看房时确认{{end}}</dd></div>
       </dl>
     </div>
   </article>

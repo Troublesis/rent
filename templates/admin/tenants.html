@@ -21,7 +21,7 @@
         <tr>
           <th class="px-5 py-4">租客</th>
           <th class="px-5 py-4">房源</th>
-          <th class="px-5 py-4">月租</th>
+          <th class="px-5 py-4">租金</th>
           <th class="px-5 py-4">入住日期</th>
           <th class="px-5 py-4">状态</th>
           <th class="px-5 py-4">操作</th>
@@ -32,7 +32,7 @@
           <tr>
             <td class="px-5 py-4"><p class="font-black">{{.Name}}</p><p class="text-stone-500">{{.Phone}}</p></td>
             <td class="px-5 py-4">{{.Room.RoomNo}} · {{.Room.Title}}</td>
-            <td class="px-5 py-4">¥{{formatFen .RentPrice}}</td>
+            <td class="px-5 py-4">¥{{formatFen .RentPrice}} / {{rentUnitLabel .RentType}}</td>
             <td class="px-5 py-4">{{formatDate .CheckinDate}}</td>
             <td class="px-5 py-4"><span class="badge">{{tenantStatusLabel .Status}}</span></td>
             <td class="px-5 py-4"><a class="font-bold text-amber-800" href="/admin/tenants/{{.ID}}">详情</a></td>

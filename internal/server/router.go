@@ -1,7 +1,9 @@
 package server
 
 import (
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -37,13 +39,16 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	roomService := service.NewRoomService(roomRepo, tenantRepo)
 	tenantService := service.NewTenantService(db, tenantRepo, roomRepo)
 	paymentService := service.NewPaymentService(paymentRepo, tenantRepo)
+	if cfg.AppEnv != "test" {
+		startPaymentGenerationTicker(paymentService)
+	}
 	dashboardService := service.NewDashboardService(roomRepo, tenantRepo, paymentRepo)
 	settingsService := service.NewSettingsService(cfg, settingsRepo)
 
 	publicHandler := handler.NewPublicHandler(renderer, roomService, settingsService)
 	authHandler := handler.NewAuthHandler(renderer, cfg)
 	dashboardHandler := handler.NewAdminDashboardHandler(renderer, dashboardService)
-	roomHandler := handler.NewAdminRoomHandler(renderer, roomService)
+	roomHandler := handler.NewAdminRoomHandler(renderer, roomService, tenantService)
 	tenantHandler := handler.NewAdminTenantHandler(renderer, tenantService, roomService)
 	paymentHandler := handler.NewAdminPaymentHandler(renderer, paymentService, tenantService)
 	statsHandler := handler.NewAdminStatsHandler(renderer, paymentService)
@@ -72,6 +77,7 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	admin.GET("/rooms/:id/edit", roomHandler.Edit)
 	admin.POST("/rooms/:id", roomHandler.Update)
 	admin.POST("/rooms/:id/delete", roomHandler.Delete)
+	admin.POST("/rooms/:id/video-link", roomHandler.AddVideoLink)
 	admin.GET("/tenants", tenantHandler.List)
 	admin.GET("/tenants/new", tenantHandler.New)
 	admin.POST("/tenants/checkin", tenantHandler.CheckIn)
@@ -80,6 +86,7 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	admin.GET("/payments", paymentHandler.List)
 	admin.POST("/payments", paymentHandler.Create)
 	admin.POST("/payments/:id/toggle", paymentHandler.Toggle)
+	admin.POST("/payments/:id/exclusion", paymentHandler.UpdateExclusion)
 	admin.GET("/stats", statsHandler.Page)
 	admin.GET("/settings", settingsHandler.Page)
 	admin.POST("/settings", settingsHandler.Update)
@@ -87,7 +94,24 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	api := router.Group("/api")
 	api.Use(auth.RequireLogin())
 	api.POST("/upload", uploadHandler.UploadRoomMedia)
+	api.GET("/rooms", roomHandler.APIList)
+	api.GET("/tenants", tenantHandler.APIList)
+	api.GET("/tenants/active", tenantHandler.APIActive)
+	api.GET("/payments", paymentHandler.APIList)
+	api.GET("/stats/summary", dashboardHandler.APISummary)
+	api.GET("/stats/projection", dashboardHandler.APIProjection)
 	api.GET("/dashboard/stats", statsHandler.DashboardStats)
 
 	return router
+}
+
+func startPaymentGenerationTicker(paymentService *service.PaymentService) {
+	ticker := time.NewTicker(24 * time.Hour)
+	go func() {
+		for range ticker.C {
+			if _, err := paymentService.GenerateDueRecordsForActiveTenants(time.Now()); err != nil {
+				log.Printf("generate due records: %v", err)
+			}
+		}
+	}()
 }

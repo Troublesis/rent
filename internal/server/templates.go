@@ -21,13 +21,21 @@ type TemplateRenderer struct {
 func NewTemplateRenderer(root string) *TemplateRenderer {
 	return &TemplateRenderer{root: root, funcMap: template.FuncMap{
 		"formatFen":         service.FormatFen,
+		"formatYuanInt":     formatYuanInt,
 		"divideBy100":       service.FormatFen,
 		"formatDate":        formatDate,
+		"formatInputDate":   formatInputDate,
 		"formatDateTime":    formatDateTime,
 		"roomStatusLabel":   roomStatusLabel,
 		"tenantStatusLabel": tenantStatusLabel,
 		"paymentTypeLabel":  paymentTypeLabel,
 		"mediaTypeLabel":    mediaTypeLabel,
+		"rentTypeLabel":     rentTypeLabel,
+		"rentUnitLabel":     rentUnitLabel,
+		"paymentTermsLabel": paymentTermsLabel,
+		"roomRentPrice":     model.RoomRentPrice,
+		"floorPlanLabel":    floorPlanLabel,
+		"isOverdue":         isOverdue,
 		"seq":               seq,
 	}}
 }
@@ -51,9 +59,20 @@ func (r *TemplateRenderer) Render(c *gin.Context, status int, layout string, pag
 	}
 }
 
+func formatYuanInt(fen int) int {
+	return fen / 100
+}
+
 func formatDate(value time.Time) string {
 	if value.IsZero() {
 		return "-"
+	}
+	return value.Format("2006-01-02")
+}
+
+func formatInputDate(value time.Time) string {
+	if value.IsZero() {
+		return ""
 	}
 	return value.Format("2006-01-02")
 }
@@ -110,9 +129,56 @@ func mediaTypeLabel(mediaType string) string {
 		return "图片"
 	case model.MediaTypeVideo:
 		return "视频"
+	case model.MediaTypeVideoLink:
+		return "视频链接"
 	default:
 		return "文件"
 	}
+}
+
+func rentTypeLabel(rentType string) string {
+	switch model.RentTypeOrDefault(rentType) {
+	case model.RentTypeDaily:
+		return "日租"
+	default:
+		return "月租"
+	}
+}
+
+func rentUnitLabel(rentType string) string {
+	switch model.RentTypeOrDefault(rentType) {
+	case model.RentTypeDaily:
+		return "天"
+	default:
+		return "月"
+	}
+}
+
+func paymentTermsLabel(paymentTerms string) string {
+	switch model.PaymentTermsOrDefault(paymentTerms) {
+	case model.PaymentTerms1M2D:
+		return "付一押二"
+	case model.PaymentTerms3M1D:
+		return "付三押一"
+	case model.PaymentTerms6M0D:
+		return "半年付"
+	case model.PaymentTerms12M0D:
+		return "年付"
+	default:
+		return "付一押一"
+	}
+}
+
+func floorPlanLabel(bedrooms int, livingRooms int, bathrooms int) string {
+	return fmt.Sprintf("%d室%d厅%d卫", bedrooms, livingRooms, bathrooms)
+}
+
+func isOverdue(value time.Time) bool {
+	if value.IsZero() {
+		return false
+	}
+	today := time.Now().Truncate(24 * time.Hour)
+	return value.Before(today)
 }
 
 func seq(start int, end int) []int {

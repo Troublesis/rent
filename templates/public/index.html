@@ -24,8 +24,8 @@
         <div class="p-6">
           <span class="badge">可租</span>
           <h4 class="mt-4 text-2xl font-black">{{.Title}}</h4>
-          <p class="mt-2 text-sm text-stone-500">{{.RoomNo}} · {{.Area}}㎡ · {{.Floor}}层</p>
-          <p class="mt-6 text-3xl font-black text-amber-800">¥{{formatFen .Price}}<span class="text-sm text-stone-500"> / 月</span></p>
+          <p class="mt-2 text-sm text-stone-500">{{.RoomNo}} · {{.Area}}㎡ · {{.Floor}}层 · {{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</p>
+          <p class="mt-6 text-3xl font-black text-amber-800">¥{{formatFen (roomRentPrice .)}}<span class="text-sm text-stone-500"> / {{rentUnitLabel .RentType}}</span></p>
         </div>
       </a>
     {{else}}

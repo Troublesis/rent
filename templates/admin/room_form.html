@@ -1,45 +1,91 @@
 {{define "content"}}
-<form class="card grid gap-6 p-6" method="post" action="{{.Action}}">
+<form class="card grid gap-6 p-6" method="post" action="{{.Action}}" data-validate-form>
   <div class="grid gap-5 md:grid-cols-2">
     <label>
-      <span class="text-sm font-bold text-stone-600">房号</span>
-      <input class="input mt-2" name="room_no" value="{{.Room.RoomNo}}" placeholder="101室" required>
+      <span class="text-sm font-bold text-stone-600">房间号 <span class="text-red-600">*</span></span>
+      <input class="input mt-2" name="room_no" value="{{.Room.RoomNo}}" placeholder="A101" required maxlength="10" pattern="[A-Za-z0-9]{1,10}" data-validate="room_no">
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">标题</span>
-      <input class="input mt-2" name="title" value="{{.Room.Title}}" placeholder="南向一居室" required>
+      <span class="text-sm font-bold text-stone-600">标题 <span class="text-red-600">*</span></span>
+      <input class="input mt-2" name="title" value="{{.Room.Title}}" placeholder="南向一居室" required data-validate="required" data-label="标题">
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">月租（元）</span>
-      <input class="input mt-2" name="price" value="{{formatFen .Room.Price}}" inputmode="decimal" required>
+      <span class="text-sm font-bold text-stone-600">租金类型 <span class="text-red-600">*</span></span>
+      <select class="input mt-2" name="rent_type" required data-rent-type>
+        {{range .RentTypes}}
+          <option value="{{.Value}}" {{if eq $.Room.RentType .Value}}selected{{end}}>{{.Label}}</option>
+        {{end}}
+      </select>
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">押金（元）</span>
-      <input class="input mt-2" name="deposit" value="{{formatFen .Room.Deposit}}" inputmode="decimal" required>
+      <span id="rentAmountLabel" class="text-sm font-bold text-stone-600">租金金额（元/月） <span class="text-red-600">*</span></span>
+      <input class="input mt-2" type="number" name="rent_price" value="{{formatYuanInt (roomRentPrice .Room)}}" inputmode="numeric" pattern="[0-9]*" min="1" step="1" required data-validate="positive_integer" data-label="租金金额">
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">面积（㎡）</span>
-      <input class="input mt-2" name="area" value="{{.Room.Area}}" inputmode="numeric">
+      <span class="text-sm font-bold text-stone-600">付款方式 <span class="text-red-600">*</span></span>
+      <select class="input mt-2" name="payment_terms" required>
+        {{range .PaymentTerms}}
+          <option value="{{.Value}}" {{if eq $.Room.PaymentTerms .Value}}selected{{end}}>{{.Label}}</option>
+        {{end}}
+      </select>
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">楼层</span>
-      <input class="input mt-2" name="floor" value="{{.Room.Floor}}" inputmode="numeric">
+      <span class="text-sm font-bold text-stone-600">押金（元） <span class="text-red-600">*</span></span>
+      <input class="input mt-2" type="number" name="deposit" value="{{formatYuanInt .Room.Deposit}}" inputmode="numeric" pattern="[0-9]*" min="0" step="1" required data-validate="non_negative_integer" data-label="押金">
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">状态</span>
-      <select class="input mt-2" name="status">
+      <span class="text-sm font-bold text-stone-600">面积（㎡） <span class="text-red-600">*</span></span>
+      <input class="input mt-2" type="number" name="area" value="{{.Room.Area}}" inputmode="numeric" min="1" max="9999" step="1" required data-validate="area">
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">楼层 <span class="text-red-600">*</span></span>
+      <input class="input mt-2" type="number" name="floor" value="{{.Room.Floor}}" inputmode="numeric" step="1" required data-validate="integer" data-label="楼层">
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">状态 <span class="text-red-600">*</span></span>
+      <select class="input mt-2" name="status" required>
         {{range .Statuses}}
           <option value="{{.Value}}" {{if eq $.Room.Status .Value}}selected{{end}}>{{.Label}}</option>
         {{end}}
       </select>
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">标签</span>
-      <input class="input mt-2" name="tags" value="{{.Room.Tags}}" placeholder="电梯,阳台,空调">
+      <span class="text-sm font-bold text-stone-600">房屋朝向 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
+      <select class="input mt-2" name="orientation">
+        <option value="">请选择朝向</option>
+        {{range .Orientations}}
+          <option value="{{.Value}}" {{if eq $.Room.Orientation .Value}}selected{{end}}>{{.Label}}</option>
+        {{end}}
+      </select>
     </label>
   </div>
   <label>
-    <span class="text-sm font-bold text-stone-600">描述</span>
+    <span class="text-sm font-bold text-stone-600">地址 <span class="text-red-600">*</span></span>
+    <input class="input mt-2" name="address" value="{{.Room.Address}}" minlength="5" required data-validate="address" placeholder="请输入不少于 5 个字符的详细地址">
+  </label>
+  <div>
+    <span class="text-sm font-bold text-stone-600">房屋户型 <span class="text-red-600">*</span></span>
+    <div class="mt-2 grid gap-3 sm:grid-cols-3">
+      <label class="flex items-center gap-2">
+        <input class="input" type="number" name="bedrooms" value="{{.Room.Bedrooms}}" min="0" max="20" step="1" inputmode="numeric" required data-validate="range_0_20" data-label="室数量">
+        <span class="font-bold text-stone-600">室</span>
+      </label>
+      <label class="flex items-center gap-2">
+        <input class="input" type="number" name="living_rooms" value="{{.Room.LivingRooms}}" min="0" max="20" step="1" inputmode="numeric" required data-validate="range_0_20" data-label="厅数量">
+        <span class="font-bold text-stone-600">厅</span>
+      </label>
+      <label class="flex items-center gap-2">
+        <input class="input" type="number" name="bathrooms" value="{{.Room.Bathrooms}}" min="0" max="20" step="1" inputmode="numeric" required data-validate="range_0_20" data-label="卫数量">
+        <span class="font-bold text-stone-600">卫</span>
+      </label>
+    </div>
+  </div>
+  <label>
+    <span class="text-sm font-bold text-stone-600">标签 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
+    <input class="input mt-2" name="tags" value="{{.Room.Tags}}" placeholder="电梯,阳台,空调">
+  </label>
+  <label>
+    <span class="text-sm font-bold text-stone-600">描述 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
     <textarea class="input mt-2 min-h-32" name="description" placeholder="采光、交通、家具等信息">{{.Room.Description}}</textarea>
   </label>
   <div class="flex gap-3">

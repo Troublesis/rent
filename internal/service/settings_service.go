@@ -1,6 +1,9 @@
 package service
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/troublesis/rent/config"
 	"github.com/troublesis/rent/internal/repository"
 )
@@ -36,10 +39,18 @@ func (s *SettingsService) GetSettings() (Settings, error) {
 }
 
 func (s *SettingsService) UpdateSettings(settings Settings) error {
-	if err := s.settingsRepo.Set(SettingLandlordName, settings.LandlordName); err != nil {
+	landlordName := strings.TrimSpace(settings.LandlordName)
+	if landlordName == "" {
+		return fmt.Errorf("房东姓名不能为空")
+	}
+	landlordPhone, err := validatePhone(settings.LandlordPhone, true, "联系电话")
+	if err != nil {
 		return err
 	}
-	return s.settingsRepo.Set(SettingLandlordPhone, settings.LandlordPhone)
+	if err := s.settingsRepo.Set(SettingLandlordName, landlordName); err != nil {
+		return err
+	}
+	return s.settingsRepo.Set(SettingLandlordPhone, landlordPhone)
 }
 
 func valueOrDefault(value string, fallback string) string {

@@ -1,40 +1,65 @@
 {{define "content"}}
-<form class="card grid gap-6 p-6" method="post" action="/admin/tenants/checkin">
+<form class="card grid gap-6 p-6" method="post" action="/admin/tenants/checkin" data-validate-form>
   <div class="grid gap-5 md:grid-cols-2">
     <label>
-      <span class="text-sm font-bold text-stone-600">租客姓名</span>
-      <input class="input mt-2" name="name" value="{{.Input.Name}}" required>
+      <span class="text-sm font-bold text-stone-600">姓名 <span class="text-red-600">*</span></span>
+      <input class="input mt-2" name="name" value="{{.Input.Name}}" required maxlength="20" data-validate="name">
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">联系电话</span>
-      <input class="input mt-2" name="phone" value="{{.Input.Phone}}" required>
+      <span class="text-sm font-bold text-stone-600">手机号 <span class="text-red-600">*</span></span>
+      <input class="input mt-2" name="phone" value="{{.Input.Phone}}" required inputmode="numeric" pattern="1[3-9][0-9]{9}" data-validate="phone">
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">紧急联系人</span>
-      <input class="input mt-2" name="emergency_contact" value="{{.Input.EmergencyContact}}">
+      <span class="text-sm font-bold text-stone-600">紧急联系人 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
+      <input class="input mt-2" name="emergency_contact" value="{{.Input.EmergencyContact}}" inputmode="numeric" pattern="1[3-9][0-9]{9}" data-validate="optional_phone">
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">入住房源</span>
-      <select class="input mt-2" name="room_id" required>
+      <span class="text-sm font-bold text-stone-600">入住房源 <span class="text-red-600">*</span></span>
+      <select class="input mt-2" name="room_id" required data-validate="required" data-label="入住房源">
         <option value="">请选择空置房源</option>
         {{range .Rooms}}
-          <option value="{{.ID}}" {{if eq $.Input.RoomID .ID}}selected{{end}}>{{.RoomNo}} · {{.Title}} · ¥{{formatFen .Price}}</option>
+          <option value="{{.ID}}" {{if eq $.Input.RoomID .ID}}selected{{end}}>{{.RoomNo}} · {{.Title}} · ¥{{formatFen (roomRentPrice .)}} / {{rentUnitLabel .RentType}}</option>
         {{end}}
       </select>
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">入住日期</span>
-      <input class="input mt-2" type="date" name="checkin_date">
+      <span class="text-sm font-bold text-stone-600">入住日期 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
+      <input class="input mt-2" type="date" name="checkin_date" value="{{formatInputDate .Input.CheckinDate}}">
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">约定月租（元）</span>
-      <input class="input mt-2" name="rent_price" value="{{.Input.RentPriceYuan}}" inputmode="decimal" required>
+      <span class="text-sm font-bold text-stone-600">租约到期日 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">长期可不填</span></span>
+      <input class="input mt-2" type="date" name="lease_end_date" value="{{formatInputDate .Input.LeaseEndDate}}">
     </label>
     <label>
-      <span class="text-sm font-bold text-stone-600">已收押金（元）</span>
-      <input class="input mt-2" name="deposit" value="{{.Input.DepositYuan}}" inputmode="decimal" required>
+      <span class="text-sm font-bold text-stone-600">租金类型 <span class="text-red-600">*</span></span>
+      <select class="input mt-2" name="rent_type" required data-rent-type>
+        {{range .RentTypes}}
+          <option value="{{.Value}}" {{if eq $.Input.RentType .Value}}selected{{end}}>{{.Label}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label>
+      <span id="tenantRentAmountLabel" class="text-sm font-bold text-stone-600">约定租金（元/月） <span class="text-red-600">*</span></span>
+      <input class="input mt-2" type="number" name="rent_price" value="{{.Input.RentPriceYuan}}" inputmode="numeric" pattern="[0-9]*" min="1" step="1" required data-validate="positive_integer" data-label="约定租金">
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">付款方式 <span class="text-red-600">*</span></span>
+      <select class="input mt-2" name="payment_terms" required>
+        {{range .PaymentTerms}}
+          <option value="{{.Value}}" {{if eq $.Input.PaymentTerms .Value}}selected{{end}}>{{.Label}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label>
+      <span class="text-sm font-bold text-stone-600">已收押金（元） <span class="text-red-600">*</span></span>
+      <input class="input mt-2" type="number" name="deposit" value="{{.Input.DepositYuan}}" inputmode="numeric" pattern="[0-9]*" min="0" step="1" required data-validate="non_negative_integer" data-label="已收押金">
     </label>
   </div>
+  <label>
+    <span class="text-sm font-bold text-stone-600">备注 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
+    <textarea class="input mt-2 min-h-28" name="notes" maxlength="1000" data-validate="notes" data-counter-target="tenant-notes-counter">{{.Input.Notes}}</textarea>
+    <span id="tenant-notes-counter" class="mt-1 block text-right text-xs text-stone-500">0 / 500 字</span>
+  </label>
   <div class="flex gap-3">
     <button class="btn-primary" type="submit">确认入住</button>
     <a class="btn-secondary" href="/admin/tenants">返回列表</a>
