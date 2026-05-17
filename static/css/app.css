@@ -49,6 +49,11 @@ h1, h2, h3, .display-font {
   backdrop-filter: blur(14px);
 }
 
+.card label:not([class]) {
+  display: block;
+  min-width: 0;
+}
+
 .dashboard-action-row {
   display: flex;
   width: 100%;
@@ -129,12 +134,59 @@ h1, h2, h3, .display-font {
 }
 
 .input {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border-radius: 1rem;
   border: 1px solid rgba(120, 113, 108, 0.35);
   background: rgba(255, 255, 255, 0.62);
+  color: inherit;
+  font: inherit;
+  line-height: 1.5;
   padding: 0.75rem 0.95rem;
   outline: none;
+}
+
+input.input,
+select.input {
+  height: 3.25rem;
+}
+
+select.input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(37, 31, 24, 0.72) 50%),
+    linear-gradient(135deg, rgba(37, 31, 24, 0.72) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.15rem) 50%,
+    calc(100% - 0.8rem) 50%;
+  background-size: 0.38rem 0.38rem, 0.38rem 0.38rem;
+  background-repeat: no-repeat;
+  padding-right: 2.4rem;
+}
+
+input[type="date"].input {
+  appearance: none;
+  -webkit-appearance: none;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  text-align: left;
+}
+
+input[type="date"].input::-webkit-date-and-time-value {
+  display: block;
+  min-inline-size: 0;
+  min-block-size: 1.5em;
+  line-height: 1.5;
+  text-align: left;
+}
+
+input[type="date"].input::-webkit-calendar-picker-indicator {
+  margin-inline-start: 0;
 }
 
 .input:focus {

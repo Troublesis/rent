@@ -1,6 +1,6 @@
 {{define "content"}}
 <form class="card grid gap-6 p-6" method="post" action="{{.Action}}" data-validate-form>
-  <div class="grid gap-5 md:grid-cols-2">
+  <div class="grid min-w-0 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
     <label>
       <span class="text-sm font-bold text-stone-600">房间号 <span class="text-red-600">*</span></span>
       <input class="input mt-2" name="room_no" value="{{.Room.RoomNo}}" placeholder="A101" required maxlength="10" pattern="[A-Za-z0-9]{1,10}" data-validate="room_no">
