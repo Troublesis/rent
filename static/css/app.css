@@ -49,6 +49,57 @@ h1, h2, h3, .display-font {
   backdrop-filter: blur(14px);
 }
 
+.dashboard-action-row {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+
+.dashboard-action-row .btn-primary,
+.dashboard-action-row .btn-secondary {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.72rem clamp(0.6rem, 2.4vw, 1.1rem);
+  font-size: clamp(0.8rem, 3.4vw, 0.95rem);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dashboard-count-value,
+.dashboard-money-value {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+
+.dashboard-count-value {
+  font-size: clamp(2rem, 10vw, 3rem);
+}
+
+.dashboard-money-value {
+  font-size: clamp(1.05rem, 5.25vw, 2.25rem);
+}
+
+@media (min-width: 768px) {
+  .dashboard-action-row {
+    width: auto;
+    gap: 0.75rem;
+  }
+
+  .dashboard-action-row .btn-primary,
+  .dashboard-action-row .btn-secondary {
+    flex: 0 0 auto;
+  }
+}
+
 .btn-primary {
   border-radius: 999px;
   background: var(--ink);
