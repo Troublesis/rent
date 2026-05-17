@@ -3,7 +3,7 @@
   {{if .ViewMode}}<input type="hidden" name="view" value="{{.ViewMode}}">{{end}}
   <label class="block">
     <select class="input" name="floor">
-      <option value="">选择楼层</option>
+      <option value="">全部楼层</option>
       {{range .Filter.Floors}}
         <option value="{{.Value}}" {{if eq $.Filter.Floor .Value}}selected{{end}}>{{.Label}}</option>
       {{end}}
