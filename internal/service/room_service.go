@@ -55,6 +55,19 @@ func (s *RoomService) ListAvailableRooms(limit int, offset int) ([]model.Room, e
 	return roomsWithOrderedMedia(rooms), nil
 }
 
+func (s *RoomService) ListAvailableRoomsFiltered(filter repository.RoomFilter) ([]model.Room, error) {
+	filter.Status = model.RoomStatusVacant
+	rooms, err := s.roomRepo.ListRooms(filter)
+	if err != nil {
+		return nil, err
+	}
+	return roomsWithOrderedMedia(rooms), nil
+}
+
+func (s *RoomService) ListAvailableRoomFacets() ([]model.Room, error) {
+	return s.roomRepo.ListPublicAvailableRoomFacets()
+}
+
 func (s *RoomService) GetRoom(id uint) (*model.Room, error) {
 	room, err := s.roomRepo.GetRoomWithMedia(id)
 	if err != nil {

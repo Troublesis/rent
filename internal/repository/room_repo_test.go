@@ -69,3 +69,71 @@ func TestRoomRepositoryCountByStatus(t *testing.T) {
 		t.Fatalf("count = %d, want 1", count)
 	}
 }
+
+func TestRoomRepositoryListRoomsFiltersByFloorAndLayout(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewRoomRepository(db)
+	rooms := []*model.Room{
+		{RoomNo: "A101", Title: "一楼一居", Status: model.RoomStatusVacant, Floor: 1, Bedrooms: 1, LivingRooms: 1, Bathrooms: 1},
+		{RoomNo: "A202", Title: "二楼两居", Status: model.RoomStatusVacant, Floor: 2, Bedrooms: 2, LivingRooms: 1, Bathrooms: 1},
+		{RoomNo: "A203", Title: "二楼三居", Status: model.RoomStatusVacant, Floor: 2, Bedrooms: 3, LivingRooms: 1, Bathrooms: 2},
+	}
+	for _, room := range rooms {
+		if err := repo.CreateRoom(room); err != nil {
+			t.Fatalf("CreateRoom returned error: %v", err)
+		}
+	}
+
+	filteredRooms, err := repo.ListRooms(RoomFilter{Status: model.RoomStatusVacant, Floor: 2, Bedrooms: 3, LivingRooms: 1, Bathrooms: 2})
+	if err != nil {
+		t.Fatalf("ListRooms returned error: %v", err)
+	}
+	if len(filteredRooms) != 1 || filteredRooms[0].RoomNo != "A203" {
+		t.Fatalf("filteredRooms = %#v, want only A203", filteredRooms)
+	}
+}
+
+func TestRoomRepositoryListRoomsFiltersZeroValuedLayoutParts(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewRoomRepository(db)
+	rooms := []*model.Room{
+		{RoomNo: "B101", Title: "一室无厅", Status: model.RoomStatusVacant, Floor: 1, Bedrooms: 1, LivingRooms: 0, Bathrooms: 1},
+		{RoomNo: "B102", Title: "一室一厅", Status: model.RoomStatusVacant, Floor: 1, Bedrooms: 1, LivingRooms: 1, Bathrooms: 1},
+	}
+	for _, room := range rooms {
+		if err := repo.CreateRoom(room); err != nil {
+			t.Fatalf("CreateRoom returned error: %v", err)
+		}
+	}
+
+	filteredRooms, err := repo.ListRooms(RoomFilter{Status: model.RoomStatusVacant, Bedrooms: 1, HasBedrooms: true, LivingRooms: 0, HasLivingRooms: true, Bathrooms: 1, HasBathrooms: true})
+	if err != nil {
+		t.Fatalf("ListRooms returned error: %v", err)
+	}
+	if len(filteredRooms) != 1 || filteredRooms[0].RoomNo != "B101" {
+		t.Fatalf("filteredRooms = %#v, want only B101", filteredRooms)
+	}
+}
+
+func TestRoomRepositoryListRoomsUsesLimitAndOffset(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewRoomRepository(db)
+	rooms := []*model.Room{
+		{RoomNo: "A101", Title: "第一间", Status: model.RoomStatusVacant},
+		{RoomNo: "A102", Title: "第二间", Status: model.RoomStatusVacant},
+		{RoomNo: "A103", Title: "第三间", Status: model.RoomStatusVacant},
+	}
+	for _, room := range rooms {
+		if err := repo.CreateRoom(room); err != nil {
+			t.Fatalf("CreateRoom returned error: %v", err)
+		}
+	}
+
+	pagedRooms, err := repo.ListRooms(RoomFilter{Status: model.RoomStatusVacant, Limit: 1, Offset: 1})
+	if err != nil {
+		t.Fatalf("ListRooms returned error: %v", err)
+	}
+	if len(pagedRooms) != 1 {
+		t.Fatalf("len(pagedRooms) = %d, want 1", len(pagedRooms))
+	}
+}

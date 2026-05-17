@@ -12,6 +12,7 @@ tenants, leases, and payment records. Has two surfaces: a password-protected adm
 - All UI-facing text must be Simplified Chinese only.
 - Do not render English labels, headings, badges, placeholders, button text, chart labels, nav copy, or decorative microcopy.
 - Public pages must not show admin/login links or buttons.
+- Button, filter, tab, pagination, and view-switching interactions should update dynamically with HTMX or existing fetch-based patterns when practical; avoid whole-page refreshes for in-page UI state changes. Keep normal links/forms as progressive-enhancement fallbacks.
 
 Built in Go as a learning project transitioning from Python/FastAPI. Keep things simple
 and idiomatic — prefer the standard library before reaching for a package.

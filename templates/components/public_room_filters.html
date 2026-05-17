@@ -1,0 +1,27 @@
+{{define "public_room_filters"}}
+<form class="card mt-6 grid gap-4 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end" method="get" action="{{.FilterAction}}" hx-get="{{.FilterAction}}" hx-trigger="change, submit" hx-target="#public-room-browser-dynamic" hx-select="#public-room-browser-dynamic" hx-swap="outerHTML" hx-push-url="true">
+  {{if .ViewMode}}<input type="hidden" name="view" value="{{.ViewMode}}">{{end}}
+  <label class="block">
+    <select class="input" name="floor">
+      <option value="">选择楼层</option>
+      {{range .Filter.Floors}}
+        <option value="{{.Value}}" {{if eq $.Filter.Floor .Value}}selected{{end}}>{{.Label}}</option>
+      {{end}}
+    </select>
+  </label>
+  <label class="block">
+    <select class="input" name="layout">
+      <option value="">全部户型</option>
+      {{range .Filter.Layouts}}
+        <option value="{{.Value}}" {{if eq $.Filter.Layout .Value}}selected{{end}}>{{.Label}}</option>
+      {{end}}
+    </select>
+  </label>
+  <div class="flex gap-2 md:justify-end">
+    <button class="btn-primary w-full md:w-auto" type="submit">筛选</button>
+    {{if .Filter.HasActive}}
+      <a class="btn-secondary w-full text-center md:w-auto" href="{{if .ClearFilterURL}}{{.ClearFilterURL}}{{else}}{{.FilterAction}}{{end}}" hx-get="{{if .ClearFilterURL}}{{.ClearFilterURL}}{{else}}{{.FilterAction}}{{end}}" hx-target="#public-room-browser-dynamic" hx-select="#public-room-browser-dynamic" hx-swap="outerHTML" hx-push-url="true">清空</a>
+    {{end}}
+  </div>
+</form>
+{{end}}

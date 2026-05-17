@@ -68,6 +68,28 @@ func (r *TemplateRenderer) Render(c *gin.Context, status int, layout string, pag
 	}
 }
 
+func (r *TemplateRenderer) RenderPartial(c *gin.Context, status int, page string, templateName string, data gin.H) {
+	if data == nil {
+		data = gin.H{}
+	}
+	data["CurrentPath"] = c.Request.URL.Path
+	files, err := r.partialTemplateFiles(page)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "模板加载失败: %v", err)
+		return
+	}
+	tmpl, err := template.New(templateName).Funcs(r.funcMap).ParseFiles(files...)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "模板加载失败: %v", err)
+		return
+	}
+	c.Status(status)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(c.Writer, templateName, data); err != nil {
+		c.String(http.StatusInternalServerError, "模板渲染失败: %v", err)
+	}
+}
+
 func (r *TemplateRenderer) templateFiles(layout string, page string) ([]string, error) {
 	componentFiles, err := filepath.Glob(filepath.Join(r.root, "components", "*.html"))
 	if err != nil {
@@ -75,6 +97,16 @@ func (r *TemplateRenderer) templateFiles(layout string, page string) ([]string, 
 	}
 	files := []string{filepath.Join(r.root, "layout", layout)}
 	files = append(files, componentFiles...)
+	files = append(files, filepath.Join(r.root, page))
+	return files, nil
+}
+
+func (r *TemplateRenderer) partialTemplateFiles(page string) ([]string, error) {
+	componentFiles, err := filepath.Glob(filepath.Join(r.root, "components", "*.html"))
+	if err != nil {
+		return nil, err
+	}
+	files := append([]string{}, componentFiles...)
 	files = append(files, filepath.Join(r.root, page))
 	return files, nil
 }

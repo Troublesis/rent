@@ -1,0 +1,137 @@
+{{define "public_room_view_switcher"}}
+<div class="card mt-5 flex flex-col gap-3 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3">
+  <p class="px-1 text-xs font-black text-stone-700 sm:px-2 sm:text-sm">浏览方式</p>
+  <nav class="grid grid-cols-3 gap-1.5 sm:gap-2" aria-label="房源浏览方式" hx-boost="true" hx-target="#public-room-browser-dynamic" hx-select="#public-room-browser-dynamic" hx-swap="outerHTML" hx-push-url="true">
+    <a class="public-room-view-button {{if eq .ViewMode "list"}}public-room-view-active{{end}}" href="{{.ListViewURL}}" {{if eq .ViewMode "list"}}aria-current="page"{{end}}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg>
+      <span>列表</span>
+    </a>
+    <a class="public-room-view-button {{if eq .ViewMode "grid"}}public-room-view-active{{end}}" href="{{.GridViewURL}}" {{if eq .ViewMode "grid"}}aria-current="page"{{end}}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z"/></svg>
+      <span>网格</span>
+    </a>
+    <a class="public-room-view-button {{if eq .ViewMode "card"}}public-room-view-active{{end}}" href="{{.CardViewURL}}" {{if eq .ViewMode "card"}}aria-current="page"{{end}}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h5v8H6zM13 4h5v5h-5zM13 11h5v9h-5zM6 14h5v6H6z"/></svg>
+      <span>卡片</span>
+    </a>
+  </nav>
+</div>
+{{end}}
+
+{{define "public_room_results"}}
+<section id="public-room-results" class="mt-6 {{if eq .ViewMode "grid"}}grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4{{else if eq .ViewMode "card"}}public-room-masonry{{else}}public-room-list space-y-5{{end}}">
+  {{template "public_room_page" .}}
+</section>
+{{end}}
+
+{{define "public_room_page"}}
+{{if eq .ViewMode "grid"}}
+  {{template "public_room_grid_items" .}}
+{{else if eq .ViewMode "card"}}
+  {{template "public_room_card_items" .}}
+{{else}}
+  {{template "public_room_list_items" .}}
+{{end}}
+{{template "public_room_load_more" .}}
+{{end}}
+
+{{define "public_room_preview_media"}}
+{{$image := firstImageURL .Media}}
+<div class="public-room-preview-media">
+  {{if $image}}
+    <img src="{{$image}}" alt="{{.Title}}" loading="lazy">
+  {{else}}
+    <span>暂无图片</span>
+  {{end}}
+</div>
+{{end}}
+
+{{define "public_room_list_items"}}
+{{range .Rooms}}
+  <article class="card public-room-list-card overflow-hidden p-3">
+    <a class="public-room-list-media" href="/room/{{.ID}}" aria-label="查看{{.Title}}详情">
+      {{template "public_room_preview_media" .}}
+    </a>
+    <div class="flex min-w-0 flex-1 flex-col p-2 sm:p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="badge">可租</span>
+        <span class="rounded-full bg-stone-900/5 px-3 py-1 text-xs font-black text-stone-600">{{paymentTermsLabel .PaymentTerms}}</span>
+      </div>
+      <h3 class="mt-3 text-2xl font-black leading-tight">{{.RoomNo}} · {{.Title}}</h3>
+      <p class="mt-3 line-clamp-2 text-sm leading-6 text-stone-600">{{.Description}}</p>
+      <div class="mt-4 flex flex-wrap gap-2 text-sm font-bold text-stone-600">
+        <span>{{.Area}}㎡</span>
+        <span>{{.Floor}}层</span>
+        <span>{{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</span>
+        <span>{{if .Orientation}}{{.Orientation}}{{else}}朝向待确认{{end}}</span>
+      </div>
+      <div class="mt-auto flex flex-col gap-4 pt-5 sm:flex-row sm:items-end sm:justify-between">
+        <p class="text-3xl font-black text-amber-800">¥{{formatFen (roomRentPrice .)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .RentType}}</span></p>
+        <a class="btn-primary text-center" href="/room/{{.ID}}">查看详情</a>
+      </div>
+    </div>
+  </article>
+{{else}}
+  <div class="card public-room-empty p-12 text-center text-stone-600">暂时没有空置房源。</div>
+{{end}}
+{{end}}
+
+{{define "public_room_grid_items"}}
+{{range .Rooms}}
+  <article class="card flex h-full flex-col overflow-hidden p-3">
+    <a href="/room/{{.ID}}" aria-label="查看{{.Title}}详情">{{template "public_room_preview_media" .}}</a>
+    <div class="flex flex-1 flex-col p-3">
+      <span class="badge w-fit">可租</span>
+      <h3 class="mt-4 text-xl font-black leading-tight">{{.RoomNo}} · {{.Title}}</h3>
+      <p class="mt-3 line-clamp-3 text-sm leading-6 text-stone-600">{{.Description}}</p>
+      <div class="mt-5 flex flex-wrap gap-2 text-sm font-bold text-stone-600">
+        <span>{{.Area}}㎡</span>
+        <span>{{.Floor}}层</span>
+        <span>{{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</span>
+      </div>
+      <p class="mt-6 text-2xl font-black text-amber-800">¥{{formatFen (roomRentPrice .)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .RentType}}</span></p>
+      <a class="btn-primary mt-auto text-center" href="/room/{{.ID}}">查看详情</a>
+    </div>
+  </article>
+{{else}}
+  <div class="card public-room-empty p-12 text-center text-stone-600 sm:col-span-2 lg:col-span-3 xl:col-span-4">暂时没有空置房源。</div>
+{{end}}
+{{end}}
+
+{{define "public_room_card_items"}}
+{{range .Rooms}}
+  <article class="card public-room-masonry-card overflow-hidden p-3">
+    <a href="/room/{{.ID}}" aria-label="查看{{.Title}}详情">{{template "public_room_preview_media" .}}</a>
+    <div class="p-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="badge">可租</span>
+        <span class="text-xs font-black text-stone-500">{{.Floor}}层 · {{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</span>
+      </div>
+      <h3 class="mt-4 text-xl font-black leading-tight">{{.RoomNo}} · {{.Title}}</h3>
+      <p class="mt-3 text-sm leading-6 text-stone-600">{{.Description}}</p>
+      <div class="mt-4 flex flex-wrap gap-2 text-sm font-bold text-stone-600">
+        <span>{{.Area}}㎡</span>
+        <span>{{if .Orientation}}{{.Orientation}}{{else}}朝向待确认{{end}}</span>
+        <span>{{paymentTermsLabel .PaymentTerms}}</span>
+      </div>
+      <div class="mt-5 flex items-end justify-between gap-3">
+        <p class="text-2xl font-black text-amber-800">¥{{formatFen (roomRentPrice .)}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .RentType}}</span></p>
+        <a class="btn-secondary shrink-0" href="/room/{{.ID}}">详情</a>
+      </div>
+    </div>
+  </article>
+{{else}}
+  <div class="card public-room-empty p-12 text-center text-stone-600">暂时没有空置房源。</div>
+{{end}}
+{{end}}
+
+{{define "public_room_load_more"}}
+{{if .HasMore}}
+  <div id="public-room-load-more" class="public-room-load-more" hx-get="{{.NextPageURL}}" hx-trigger="intersect once threshold:0.1" hx-swap="outerHTML">
+    <a class="btn-secondary inline-flex" href="{{.NextPageFullURL}}">加载更多房源</a>
+    <p class="mt-2 text-xs font-bold text-stone-500">正在预加载更多房源……</p>
+  </div>
+{{else if gt (len .Rooms) 0}}
+  <p class="public-room-load-more text-sm font-bold text-stone-500">已显示全部房源</p>
+{{end}}
+{{end}}

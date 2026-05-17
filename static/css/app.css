@@ -102,6 +102,150 @@ h1, h2, h3, .display-font {
   font-weight: 800;
 }
 
+.public-room-view-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  min-width: 0;
+  border: 1px solid rgba(87, 83, 78, 0.22);
+  border-radius: 999px;
+  padding: 0.55rem 0.48rem;
+  color: rgba(37, 31, 24, 0.72);
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  transition: 160ms ease;
+}
+
+.public-room-view-button:hover,
+.public-room-view-active {
+  border-color: rgba(159, 58, 34, 0.55);
+  background: rgba(159, 58, 34, 0.1);
+  color: var(--seal);
+  transform: translateY(-1px);
+}
+
+.public-room-view-button svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.public-room-view-button svg path[d*="h5v5"],
+.public-room-view-button svg path[d*="h5v8"] {
+  fill: currentColor;
+  stroke: none;
+}
+
+.public-room-list-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.public-room-list-media {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.public-room-preview-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border: 1px solid rgba(120, 113, 108, 0.22);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(201, 141, 56, 0.22), transparent 16rem),
+    linear-gradient(145deg, rgba(255, 249, 237, 0.96), rgba(237, 224, 205, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42), 0 14px 32px rgba(37, 31, 24, 0.1);
+}
+
+.public-room-preview-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 220ms ease;
+}
+
+.public-room-preview-media span {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: rgba(37, 31, 24, 0.45);
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+
+.card:hover .public-room-preview-media img {
+  transform: scale(1.035);
+}
+
+.public-room-masonry {
+  column-count: 1;
+  column-gap: 1.25rem;
+}
+
+.public-room-masonry-card,
+.public-room-load-more,
+.public-room-empty {
+  break-inside: avoid;
+}
+
+.public-room-masonry-card {
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 1.25rem;
+}
+
+.public-room-load-more {
+  width: 100%;
+  padding: 1.5rem 0;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .public-room-view-button {
+    gap: 0.45rem;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.875rem;
+  }
+
+  .public-room-view-button svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .public-room-list-card {
+    flex-direction: row;
+  }
+
+  .public-room-list-media {
+    width: min(34vw, 15rem);
+  }
+}
+
+@media (min-width: 768px) {
+  .public-room-masonry {
+    column-count: 2;
+  }
+}
+
+@media (min-width: 1280px) {
+  .public-room-masonry {
+    column-count: 3;
+  }
+}
+
 .room-media-shell {
   padding: 1rem 1rem 0.35rem;
 }

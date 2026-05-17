@@ -12,6 +12,7 @@ import (
 
 type Renderer interface {
 	Render(c *gin.Context, status int, layout string, page string, data gin.H)
+	RenderPartial(c *gin.Context, status int, page string, templateName string, data gin.H)
 }
 
 type SelectOption struct {

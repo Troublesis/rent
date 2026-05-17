@@ -8,10 +8,18 @@ import (
 )
 
 type RoomFilter struct {
-	Status string
-	Query  string
-	Limit  int
-	Offset int
+	Status         string
+	Query          string
+	Floor          int
+	HasFloor       bool
+	Bedrooms       int
+	HasBedrooms    bool
+	LivingRooms    int
+	HasLivingRooms bool
+	Bathrooms      int
+	HasBathrooms   bool
+	Limit          int
+	Offset         int
 }
 
 type RoomRepository struct {
@@ -27,7 +35,7 @@ func (r *RoomRepository) WithDB(db *gorm.DB) *RoomRepository {
 }
 
 func (r *RoomRepository) ListRooms(filter RoomFilter) ([]model.Room, error) {
-	query := r.db.Model(&model.Room{}).Preload("Media").Order("created_at DESC")
+	query := r.db.Model(&model.Room{}).Preload("Media").Order("created_at DESC, id DESC")
 	query = applyRoomFilter(query, filter)
 	var rooms []model.Room
 	if err := query.Find(&rooms).Error; err != nil {
@@ -38,6 +46,18 @@ func (r *RoomRepository) ListRooms(filter RoomFilter) ([]model.Room, error) {
 
 func (r *RoomRepository) ListPublicAvailableRooms(limit int, offset int) ([]model.Room, error) {
 	return r.ListRooms(RoomFilter{Status: model.RoomStatusVacant, Limit: limit, Offset: offset})
+}
+
+func (r *RoomRepository) ListPublicAvailableRoomFacets() ([]model.Room, error) {
+	var rooms []model.Room
+	if err := r.db.Model(&model.Room{}).
+		Select("floor", "bedrooms", "living_rooms", "bathrooms").
+		Where("status = ?", model.RoomStatusVacant).
+		Order("floor ASC, bedrooms ASC, living_rooms ASC, bathrooms ASC").
+		Find(&rooms).Error; err != nil {
+		return nil, err
+	}
+	return rooms, nil
 }
 
 func (r *RoomRepository) GetRoom(id uint) (*model.Room, error) {
@@ -109,6 +129,18 @@ func applyRoomFilter(query *gorm.DB, filter RoomFilter) *gorm.DB {
 	if filter.Query != "" {
 		like := "%" + filter.Query + "%"
 		query = query.Where("room_no LIKE ? OR title LIKE ?", like, like)
+	}
+	if filter.HasFloor || filter.Floor > 0 {
+		query = query.Where("floor = ?", filter.Floor)
+	}
+	if filter.HasBedrooms || filter.Bedrooms > 0 {
+		query = query.Where("bedrooms = ?", filter.Bedrooms)
+	}
+	if filter.HasLivingRooms || filter.LivingRooms > 0 {
+		query = query.Where("living_rooms = ?", filter.LivingRooms)
+	}
+	if filter.HasBathrooms || filter.Bathrooms > 0 {
+		query = query.Where("bathrooms = ?", filter.Bathrooms)
 	}
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)

@@ -2,8 +2,14 @@ package server
 
 import (
 	"html/template"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/troublesis/rent/internal/model"
 )
 
 func TestTemplateDateHelpers(t *testing.T) {
@@ -52,5 +58,43 @@ func TestTemplatesParse(t *testing.T) {
 				t.Fatalf("parse template: %v", err)
 			}
 		})
+	}
+}
+
+func TestRenderPartialExecutesNamedTemplate(t *testing.T) {
+	withProjectRoot(t)
+	gin.SetMode(gin.TestMode)
+	renderer := NewTemplateRenderer("templates")
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/?partial=1", nil)
+
+	renderer.RenderPartial(c, http.StatusOK, "public/index.html", "public_room_page", gin.H{
+		"ViewMode":        "list",
+		"HasMore":         true,
+		"NextPageURL":     "/?page=2&partial=1&view=list",
+		"NextPageFullURL": "/?page=2&view=list",
+		"Rooms": []model.Room{{
+			ID:           1,
+			RoomNo:       "A101",
+			Title:        "南向单间",
+			Description:  "采光好，近地铁。",
+			RentType:     model.RentTypeMonthly,
+			RentPrice:    180000,
+			Area:         35,
+			Floor:        2,
+			Bedrooms:     1,
+			LivingRooms:  1,
+			Bathrooms:    1,
+			Orientation:  "南",
+			PaymentTerms: model.PaymentTerms1M1D,
+		}},
+	})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "A101") {
+		t.Fatalf("partial body does not contain room content: %s", w.Body.String())
 	}
 }
