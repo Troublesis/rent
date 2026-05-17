@@ -575,6 +575,7 @@ const initDashboardDetails = () => {
         .then((response) => response.ok ? response.json() : Promise.reject(new Error('读取明细失败')))
         .then((payload) => {
           body.innerHTML = renderDashboardDetail(config, payload)
+          initDashboardSortableTables(body)
         })
         .catch(() => {
           body.innerHTML = '<p class="text-sm font-bold text-red-700">读取明细失败，请稍后重试。</p>'
@@ -596,14 +597,90 @@ const renderDashboardDetail = (config, payload) => {
   return '<p class="text-sm text-stone-500">暂无明细。</p>'
 }
 
-const dashboardTable = (headers, rows, footer = '') => {
+const dashboardTable = (headers, rows, footer = '', options = {}) => {
   if (!rows.length) return `${footer}<p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">暂无记录。</p>`
-  return `${footer}<div class="overflow-x-auto"><table class="w-full min-w-[620px] text-left text-sm"><thead class="text-stone-500"><tr>${headers.map((header) => `<th class="border-b border-stone-200 px-3 py-3">${header}</th>`).join('')}</tr></thead><tbody class="divide-y divide-stone-100">${rows.join('')}</tbody></table></div>`
+  const defaultSortIndex = Number.isInteger(options.defaultSortIndex) ? options.defaultSortIndex : 0
+  const defaultSortDir = options.defaultSortDir === 'desc' ? 'desc' : 'asc'
+  const headerCells = headers.map((header, index) => {
+    const isDefault = index === defaultSortIndex
+    const indicator = isDefault ? (defaultSortDir === 'asc' ? '↑' : '↓') : '↕'
+    return `<th class="border-b border-stone-200 px-3 py-3" aria-sort="${isDefault ? (defaultSortDir === 'asc' ? 'ascending' : 'descending') : 'none'}"><button class="inline-flex items-center gap-1 font-black text-stone-600 transition hover:text-stone-950" type="button" data-dashboard-sort-column="${index}" data-dashboard-sort-dir="${isDefault ? defaultSortDir : 'none'}" aria-label="按${escapeHTML(header)}排序"><span>${escapeHTML(header)}</span><span data-dashboard-sort-indicator>${indicator}</span></button></th>`
+  }).join('')
+  return `${footer}<div class="overflow-x-auto"><table class="w-full min-w-[620px] text-left text-sm" data-dashboard-sortable data-dashboard-default-sort-index="${defaultSortIndex}" data-dashboard-default-sort-dir="${defaultSortDir}"><thead class="text-stone-500"><tr>${headerCells}</tr></thead><tbody class="divide-y divide-stone-100">${rows.join('')}</tbody></table></div>`
+}
+
+const initDashboardSortableTables = (root) => {
+  root.querySelectorAll('[data-dashboard-sortable]').forEach((table) => {
+    table.querySelectorAll('[data-dashboard-sort-column]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const currentDir = button.dataset.dashboardSortDir
+        const nextDir = currentDir === 'asc' ? 'desc' : 'asc'
+        sortDashboardTable(table, Number(button.dataset.dashboardSortColumn), nextDir)
+      })
+    })
+    sortDashboardTable(table, Number(table.dataset.dashboardDefaultSortIndex), table.dataset.dashboardDefaultSortDir)
+  })
+}
+
+const sortDashboardTable = (table, columnIndex, direction) => {
+  const tbody = table.querySelector('tbody')
+  if (!tbody) return
+  const rows = Array.from(tbody.querySelectorAll('tr'))
+  const sortedRows = rows
+    .map((row, originalIndex) => ({ row, originalIndex, value: dashboardCellSortValue(row.children[columnIndex]) }))
+    .sort((left, right) => {
+      const result = compareDashboardSortValues(left.value, right.value)
+      return result === 0 ? left.originalIndex - right.originalIndex : (direction === 'desc' ? -result : result)
+    })
+    .map((item) => item.row)
+  sortedRows.forEach((row) => tbody.appendChild(row))
+  updateDashboardSortHeaders(table, columnIndex, direction)
+}
+
+const dashboardCellSortValue = (cell) => (cell?.dataset.sortValue || cell?.textContent || '').trim()
+
+const compareDashboardSortValues = (left, right) => {
+  const leftDate = dashboardDateSortValue(left)
+  const rightDate = dashboardDateSortValue(right)
+  if (leftDate !== null && rightDate !== null) return leftDate - rightDate
+  const leftNumber = dashboardNumberSortValue(left)
+  const rightNumber = dashboardNumberSortValue(right)
+  if (leftNumber !== null && rightNumber !== null) return leftNumber - rightNumber
+  return String(left).localeCompare(String(right), 'zh-Hans-CN', { numeric: true, sensitivity: 'base' })
+}
+
+const dashboardDateSortValue = (value) => {
+  const text = String(value).trim()
+  if (!/^\d{4}[/-]\d{2}[/-]\d{2}/.test(text)) return null
+  const time = Date.parse(text.replaceAll('/', '-'))
+  return Number.isNaN(time) ? null : time
+}
+
+const dashboardNumberSortValue = (value) => {
+  const match = String(value).replaceAll(',', '').trim().match(/^-?¥?\s*(\d+(?:\.\d+)?)/)
+  return match ? Number(match[1]) : null
+}
+
+const updateDashboardSortHeaders = (table, columnIndex, direction) => {
+  table.querySelectorAll('th').forEach((header, index) => {
+    const button = header.querySelector('[data-dashboard-sort-column]')
+    const indicator = header.querySelector('[data-dashboard-sort-indicator]')
+    const active = index === columnIndex
+    header.setAttribute('aria-sort', active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none')
+    if (button) button.dataset.dashboardSortDir = active ? direction : 'none'
+    if (indicator) indicator.textContent = active ? (direction === 'asc' ? '↑' : '↓') : '↕'
+  })
+}
+
+const dashboardRoomLink = (room) => {
+  const roomNo = escapeHTML(room.room_no)
+  if (!room.detail_url) return `<span class="font-black">${roomNo}</span>`
+  return `<a class="font-black text-amber-800" href="${escapeHTML(room.detail_url)}">${roomNo}</a>`
 }
 
 const renderRoomsDetail = (rooms, fullURL) => dashboardTable(
   ['房间号', '标题', '状态', '楼层', '面积'],
-  rooms.map((room) => `<tr><td class="px-3 py-3 font-black">${escapeHTML(room.room_no)}</td><td class="px-3 py-3">${escapeHTML(room.title)}</td><td class="px-3 py-3">${escapeHTML(room.status_label)}</td><td class="px-3 py-3">${escapeHTML(room.floor)}层</td><td class="px-3 py-3">${escapeHTML(room.area)}㎡</td></tr>`),
+  rooms.map((room) => `<tr><td class="px-3 py-3">${dashboardRoomLink(room)}</td><td class="px-3 py-3">${escapeHTML(room.title)}</td><td class="px-3 py-3">${escapeHTML(room.status_label)}</td><td class="px-3 py-3">${escapeHTML(room.floor)}层</td><td class="px-3 py-3">${escapeHTML(room.area)}㎡</td></tr>`),
   `<p class="mb-4 text-sm font-bold text-stone-600">共 ${rooms.length} 间</p>`
 ) + fullListLink(fullURL)
 
@@ -612,19 +689,21 @@ const renderVacantRoomsDetail = (rooms, fullURL) => {
   const summary = `<p class="mb-4 text-sm font-bold text-stone-600">共空置 ${rooms.length} 间，每月潜在损失：¥${formatFenText(totalLoss)}</p>`
   return dashboardTable(
     ['房间号', '标题', '租金', '楼层', '面积'],
-    rooms.map((room) => `<tr><td class="px-3 py-3"><a class="font-black text-amber-800" href="${escapeHTML(room.detail_url)}">${escapeHTML(room.room_no)}</a></td><td class="px-3 py-3">${escapeHTML(room.title)}</td><td class="px-3 py-3">¥${escapeHTML(room.rent_price_text)} / ${escapeHTML(room.rent_type_label)}</td><td class="px-3 py-3">${escapeHTML(room.floor)}层</td><td class="px-3 py-3">${escapeHTML(room.area)}㎡</td></tr>`),
+    rooms.map((room) => `<tr><td class="px-3 py-3">${dashboardRoomLink(room)}</td><td class="px-3 py-3">${escapeHTML(room.title)}</td><td class="px-3 py-3">¥${escapeHTML(room.rent_price_text)} / ${escapeHTML(room.rent_type_label)}</td><td class="px-3 py-3">${escapeHTML(room.floor)}层</td><td class="px-3 py-3">${escapeHTML(room.area)}㎡</td></tr>`),
     summary
   ) + fullListLink(fullURL)
 }
 
 const renderOccupiedRoomsDetail = (rooms, fullURL) => dashboardTable(
   ['房间号', '当前租客', '租约到期日', '租金'],
-  rooms.map((room) => `<tr><td class="px-3 py-3"><a class="font-black text-amber-800" href="${escapeHTML(room.detail_url)}">${escapeHTML(room.room_no)}</a></td><td class="px-3 py-3">${escapeHTML(room.tenant_name || '-')}</td><td class="px-3 py-3">${escapeHTML(room.lease_end_date ? formatDisplayDate(room.lease_end_date) : '长期')}</td><td class="px-3 py-3">¥${escapeHTML(room.rent_price_text)} / ${escapeHTML(room.rent_type_label)}</td></tr>`)
+  rooms.map((room) => `<tr><td class="px-3 py-3">${dashboardRoomLink(room)}</td><td class="px-3 py-3">${escapeHTML(room.tenant_name || '-')}</td><td class="px-3 py-3">${escapeHTML(room.lease_end_date ? formatDisplayDate(room.lease_end_date) : '长期')}</td><td class="px-3 py-3">¥${escapeHTML(room.rent_price_text)} / ${escapeHTML(room.rent_type_label)}</td></tr>`)
 ) + fullListLink(fullURL)
 
 const renderTenantsDetail = (tenants, fullURL) => dashboardTable(
   ['姓名', '手机号', '房间号', '入住日期', '租金'],
-  tenants.map((tenant) => `<tr><td class="px-3 py-3"><a class="font-black text-amber-800" href="${escapeHTML(tenant.detail_url)}">${escapeHTML(tenant.name)}</a></td><td class="px-3 py-3">${escapeHTML(tenant.phone)}</td><td class="px-3 py-3">${escapeHTML(tenant.room_no)}</td><td class="px-3 py-3">${escapeHTML(formatDisplayDate(tenant.checkin_date))}</td><td class="px-3 py-3">¥${escapeHTML(tenant.rent_price_text)} / ${escapeHTML(tenant.rent_type_label)}</td></tr>`)
+  tenants.map((tenant) => `<tr><td class="px-3 py-3"><a class="font-black text-amber-800" href="${escapeHTML(tenant.detail_url)}">${escapeHTML(tenant.name)}</a></td><td class="px-3 py-3">${escapeHTML(tenant.phone)}</td><td class="px-3 py-3">${escapeHTML(tenant.room_no)}</td><td class="px-3 py-3">${escapeHTML(formatDisplayDate(tenant.checkin_date))}</td><td class="px-3 py-3">¥${escapeHTML(tenant.rent_price_text)} / ${escapeHTML(tenant.rent_type_label)}</td></tr>`),
+  '',
+  { defaultSortIndex: 3, defaultSortDir: 'desc' }
 ) + fullListLink(fullURL)
 
 const renderExpiredTenantsDetail = (tenants, fullURL) => dashboardTable(
