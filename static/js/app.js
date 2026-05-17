@@ -153,6 +153,13 @@ const escapeHTML = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => 
   '"': '&quot;'
 }[char]))
 
+const formatDisplayDate = (value) => {
+  if (!value || value === '-') return '-'
+  const text = String(value)
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10).replaceAll('-', '/')
+  return text
+}
+
 let activeTenantsRequest
 const loadActiveTenants = () => {
   if (!activeTenantsRequest) {
@@ -608,17 +615,17 @@ const renderVacantRoomsDetail = (rooms, fullURL) => {
 
 const renderOccupiedRoomsDetail = (rooms, fullURL) => dashboardTable(
   ['房间号', '当前租客', '租约到期日', '租金'],
-  rooms.map((room) => `<tr><td class="px-3 py-3"><a class="font-black text-amber-800" href="${escapeHTML(room.detail_url)}">${escapeHTML(room.room_no)}</a></td><td class="px-3 py-3">${escapeHTML(room.tenant_name || '-')}</td><td class="px-3 py-3">${escapeHTML(room.lease_end_date || '长期')}</td><td class="px-3 py-3">¥${escapeHTML(room.rent_price_text)} / ${escapeHTML(room.rent_type_label)}</td></tr>`)
+  rooms.map((room) => `<tr><td class="px-3 py-3"><a class="font-black text-amber-800" href="${escapeHTML(room.detail_url)}">${escapeHTML(room.room_no)}</a></td><td class="px-3 py-3">${escapeHTML(room.tenant_name || '-')}</td><td class="px-3 py-3">${escapeHTML(room.lease_end_date ? formatDisplayDate(room.lease_end_date) : '长期')}</td><td class="px-3 py-3">¥${escapeHTML(room.rent_price_text)} / ${escapeHTML(room.rent_type_label)}</td></tr>`)
 ) + fullListLink(fullURL)
 
 const renderTenantsDetail = (tenants, fullURL) => dashboardTable(
   ['姓名', '手机号', '房间号', '入住日期', '租金'],
-  tenants.map((tenant) => `<tr><td class="px-3 py-3"><a class="font-black text-amber-800" href="${escapeHTML(tenant.detail_url)}">${escapeHTML(tenant.name)}</a></td><td class="px-3 py-3">${escapeHTML(tenant.phone)}</td><td class="px-3 py-3">${escapeHTML(tenant.room_no)}</td><td class="px-3 py-3">${escapeHTML(tenant.checkin_date)}</td><td class="px-3 py-3">¥${escapeHTML(tenant.rent_price_text)} / ${escapeHTML(tenant.rent_type_label)}</td></tr>`)
+  tenants.map((tenant) => `<tr><td class="px-3 py-3"><a class="font-black text-amber-800" href="${escapeHTML(tenant.detail_url)}">${escapeHTML(tenant.name)}</a></td><td class="px-3 py-3">${escapeHTML(tenant.phone)}</td><td class="px-3 py-3">${escapeHTML(tenant.room_no)}</td><td class="px-3 py-3">${escapeHTML(formatDisplayDate(tenant.checkin_date))}</td><td class="px-3 py-3">¥${escapeHTML(tenant.rent_price_text)} / ${escapeHTML(tenant.rent_type_label)}</td></tr>`)
 ) + fullListLink(fullURL)
 
 const renderExpiredTenantsDetail = (tenants, fullURL) => dashboardTable(
   ['姓名', '房间号', '原租约到期日', '已超期天数', '操作'],
-  tenants.map((tenant) => `<tr><td class="px-3 py-3"><a class="font-black text-amber-800" href="${escapeHTML(tenant.detail_url)}">${escapeHTML(tenant.name)}</a></td><td class="px-3 py-3">${escapeHTML(tenant.room_no)}</td><td class="px-3 py-3">${escapeHTML(tenant.lease_end_date)}</td><td class="px-3 py-3 font-black text-red-700">${escapeHTML(tenant.overdue_days)} 天</td><td class="px-3 py-3"><a class="btn-secondary text-xs" href="${escapeHTML(tenant.checkout_url)}">立即办理退租</a></td></tr>`)
+  tenants.map((tenant) => `<tr><td class="px-3 py-3"><a class="font-black text-amber-800" href="${escapeHTML(tenant.detail_url)}">${escapeHTML(tenant.name)}</a></td><td class="px-3 py-3">${escapeHTML(tenant.room_no)}</td><td class="px-3 py-3">${escapeHTML(formatDisplayDate(tenant.lease_end_date))}</td><td class="px-3 py-3 font-black text-red-700">${escapeHTML(tenant.overdue_days)} 天</td><td class="px-3 py-3"><a class="btn-secondary text-xs" href="${escapeHTML(tenant.checkout_url)}">立即办理退租</a></td></tr>`)
 ) + fullListLink(fullURL)
 
 const renderPaymentsDetail = (payments, fullURL) => {
@@ -626,7 +633,7 @@ const renderPaymentsDetail = (payments, fullURL) => {
   const summary = `<p class="mb-4 text-sm font-bold text-stone-600">共收款 ${payments.length} 笔，合计 ¥${formatFenText(total)}</p>`
   return dashboardTable(
     ['租客姓名', '房间号', '类型', '金额', '收款日期'],
-    payments.map((payment) => `<tr><td class="px-3 py-3 font-black">${escapeHTML(payment.tenant_name)}</td><td class="px-3 py-3">${escapeHTML(payment.room_no)}</td><td class="px-3 py-3">${escapeHTML(payment.type_label)}</td><td class="px-3 py-3">¥${escapeHTML(payment.amount_text)}</td><td class="px-3 py-3">${escapeHTML(payment.pay_date)}</td></tr>`),
+    payments.map((payment) => `<tr><td class="px-3 py-3 font-black">${escapeHTML(payment.tenant_name)}</td><td class="px-3 py-3">${escapeHTML(payment.room_no)}</td><td class="px-3 py-3">${escapeHTML(payment.type_label)}</td><td class="px-3 py-3">¥${escapeHTML(payment.amount_text)}</td><td class="px-3 py-3">${escapeHTML(formatDisplayDate(payment.pay_date))}</td></tr>`),
     summary
   ) + fullListLink(fullURL)
 }
@@ -636,7 +643,7 @@ const renderOverduePaymentsDetail = (payments, fullURL) => {
   const summary = `<p class="mb-4 text-sm font-bold text-stone-600">共 ${payments.length} 笔欠款，合计 ¥${formatFenText(total)}</p>`
   return dashboardTable(
     ['租客姓名', '房间号', '类型', '欠款金额', '应付日期', '逾期天数', '操作'],
-    payments.map((payment) => `<tr><td class="px-3 py-3 font-black">${escapeHTML(payment.tenant_name)}</td><td class="px-3 py-3">${escapeHTML(payment.room_no)}</td><td class="px-3 py-3">${escapeHTML(payment.type_label)}</td><td class="px-3 py-3">¥${escapeHTML(payment.amount_text)}</td><td class="px-3 py-3 text-red-700">${escapeHTML(payment.pay_date)}</td><td class="px-3 py-3 font-black text-red-700">${escapeHTML(payment.overdue_days)} 天</td><td class="px-3 py-3"><form method="post" action="/admin/payments/${payment.id}/toggle"><button class="btn-secondary text-xs" type="submit">标记已收</button></form></td></tr>`),
+    payments.map((payment) => `<tr><td class="px-3 py-3 font-black">${escapeHTML(payment.tenant_name)}</td><td class="px-3 py-3">${escapeHTML(payment.room_no)}</td><td class="px-3 py-3">${escapeHTML(payment.type_label)}</td><td class="px-3 py-3">¥${escapeHTML(payment.amount_text)}</td><td class="px-3 py-3 text-red-700">${escapeHTML(formatDisplayDate(payment.pay_date))}</td><td class="px-3 py-3 font-black text-red-700">${escapeHTML(payment.overdue_days)} 天</td><td class="px-3 py-3"><form method="post" action="/admin/payments/${payment.id}/toggle"><button class="btn-secondary text-xs" type="submit">标记已收</button></form></td></tr>`),
     summary
   ) + fullListLink(fullURL)
 }
@@ -645,7 +652,7 @@ const renderProjectionDetail = (projection, fullURL) => {
   const summary = `<div class="mb-4 rounded-2xl bg-white/60 p-4 text-sm font-bold text-stone-700">已收：¥${formatFenText(projection.collected_fen)}｜未收：¥${formatFenText(projection.unpaid_fen)}｜未到期：¥${formatFenText(projection.not_due_fen)}</div>`
   return dashboardTable(
     ['租客姓名', '房间号', '应收金额', '支付状态', '应付日期'],
-    (projection.items || []).map((item) => `<tr><td class="px-3 py-3 font-black">${escapeHTML(item.tenant_name)}</td><td class="px-3 py-3">${escapeHTML(item.room_no)}</td><td class="px-3 py-3">¥${escapeHTML(item.amount_text)}</td><td class="px-3 py-3">${escapeHTML(item.status)}</td><td class="px-3 py-3">${escapeHTML(item.due_date)}</td></tr>`),
+    (projection.items || []).map((item) => `<tr><td class="px-3 py-3 font-black">${escapeHTML(item.tenant_name)}</td><td class="px-3 py-3">${escapeHTML(item.room_no)}</td><td class="px-3 py-3">¥${escapeHTML(item.amount_text)}</td><td class="px-3 py-3">${escapeHTML(item.status)}</td><td class="px-3 py-3">${escapeHTML(formatDisplayDate(item.due_date))}</td></tr>`),
     summary
   ) + fullListLink(fullURL)
 }

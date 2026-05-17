@@ -100,6 +100,32 @@ func TestPaymentRepositorySummarizePayments(t *testing.T) {
 	}
 }
 
+func TestPaymentRepositoryMonthlyIncomeRange(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewPaymentRepository(db)
+	tenant := createPaymentRepoTenant(t, db, "P105", "跨年租客", "13800001005")
+
+	createPaymentRepoPayment(t, db, tenant.ID, 100000, time.Date(2025, time.December, 15, 0, 0, 0, 0, time.Local), true, false)
+	createPaymentRepoPayment(t, db, tenant.ID, 200000, time.Date(2026, time.January, 15, 0, 0, 0, 0, time.Local), true, false)
+	createPaymentRepoPayment(t, db, tenant.ID, 300000, time.Date(2026, time.January, 16, 0, 0, 0, 0, time.Local), false, false)
+	createPaymentRepoPayment(t, db, tenant.ID, 400000, time.Date(2026, time.January, 17, 0, 0, 0, 0, time.Local), true, true)
+	createPaymentRepoPayment(t, db, tenant.ID, 500000, time.Date(2026, time.February, 1, 0, 0, 0, 0, time.Local), true, false)
+
+	rows, err := repo.MonthlyIncomeRange(time.Date(2025, time.December, 1, 0, 0, 0, 0, time.Local), time.Date(2026, time.February, 1, 0, 0, 0, 0, time.Local))
+	if err != nil {
+		t.Fatalf("MonthlyIncomeRange returned error: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("len(rows) = %d, want 2", len(rows))
+	}
+	if rows[0].Year != 2025 || rows[0].Month != 12 || rows[0].Total != 100000 {
+		t.Fatalf("rows[0] = %#v, want 2025-12 total 100000", rows[0])
+	}
+	if rows[1].Year != 2026 || rows[1].Month != 1 || rows[1].Total != 200000 {
+		t.Fatalf("rows[1] = %#v, want 2026-01 total 200000", rows[1])
+	}
+}
+
 func createPaymentRepoTenant(t *testing.T, db interface {
 	Create(value interface{}) *gorm.DB
 }, roomNo string, name string, phone string) model.Tenant {

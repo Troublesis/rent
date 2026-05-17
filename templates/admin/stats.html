@@ -1,39 +1,254 @@
 {{define "content"}}
-<section class="card p-6">
-  <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-    <div>
-      <h3 class="text-2xl font-black">{{.Year}} 年已收收入</h3>
-      <p class="mt-2 text-sm text-stone-600">只统计已标记“已收”的付款记录。</p>
+<div class="space-y-6" data-stats-page data-default-year="{{.Year}}">
+  <section class="card p-5 shadow-lg shadow-stone-200/60 md:sticky md:top-4 md:z-10">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p class="text-xs font-black tracking-[0.35em] text-amber-700">统计筛选</p>
+        <h3 class="mt-2 text-2xl font-black">收租数据分析</h3>
+        <p class="mt-2 text-sm text-stone-600">当前先提供收入、出租率估算和未来应收预测，更多分析会分阶段补齐。</p>
+      </div>
+      <form class="flex flex-col gap-3 sm:flex-row sm:items-end" data-stats-filter>
+        <label class="block">
+          <span class="mb-2 block text-xs font-black text-stone-500">年份</span>
+          <select id="statsYear" class="input min-w-[9rem]" name="year">
+            <option value="{{.Year}}">{{.Year}} 年</option>
+          </select>
+        </label>
+        <button class="btn-primary" type="submit">应用筛选</button>
+        <button class="btn-secondary" type="button" data-stats-reset>重置</button>
+      </form>
     </div>
-    <span class="badge">按月汇总</span>
-  </div>
-  <div class="mt-8 rounded-[1.5rem] bg-white/55 p-4">
-    <canvas id="incomeChart" height="120"></canvas>
-  </div>
-</section>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </section>
+
+  <section class="card p-6" id="statsOverviewSection">
+    <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h3 class="text-2xl font-black">收入总览</h3>
+        <p class="mt-2 text-sm text-stone-600">按当前筛选范围汇总已收金额和当前经营状态。</p>
+      </div>
+      <span class="badge">核心指标</span>
+    </div>
+    <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" id="statsOverviewGrid">
+      <div class="rounded-[1.5rem] bg-white/60 p-5 text-sm text-stone-500">正在加载...</div>
+    </div>
+  </section>
+
+  <section class="card p-6" id="statsIncomeSection">
+    <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h3 class="text-2xl font-black">月度收入明细</h3>
+        <p class="mt-2 text-sm text-stone-600">只统计已标记“已收”且未排除的收款记录。</p>
+      </div>
+      <span class="badge">按月汇总</span>
+    </div>
+    <div class="mt-6 rounded-[1.5rem] bg-white/55 p-4">
+      <div class="relative h-[260px] sm:h-[320px]">
+        <canvas id="incomeChart"></canvas>
+      </div>
+      <p class="mt-4 hidden rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" id="incomeError">数据加载失败，请刷新重试</p>
+    </div>
+    <div class="mt-6 overflow-x-auto" id="incomeTableWrap">
+      <p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">正在加载...</p>
+    </div>
+  </section>
+
+  <section class="card p-6" id="statsOccupancySection">
+    <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h3 class="text-2xl font-black">出租率分析</h3>
+        <p class="mt-2 text-sm text-stone-600">出租率根据租客入住和退租日期估算，未包含房态历史变更。</p>
+      </div>
+      <span class="badge">估算数据</span>
+    </div>
+    <div class="mt-6 rounded-[1.5rem] bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800" id="occupancyNote">出租率根据租客入住和退租日期估算，未包含房态历史变更。</div>
+    <div class="mt-6 rounded-[1.5rem] bg-white/55 p-4">
+      <div class="relative h-[260px] sm:h-[320px]">
+        <canvas id="occupancyChart"></canvas>
+      </div>
+      <p class="mt-4 hidden rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" id="occupancyError">数据加载失败，请刷新重试</p>
+    </div>
+    <div class="mt-6 overflow-x-auto" id="occupancyTableWrap">
+      <p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">正在加载...</p>
+    </div>
+  </section>
+
+  <section class="card p-6" id="statsProjectionSection">
+    <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h3 class="text-2xl font-black">收益预测</h3>
+        <p class="mt-2 text-sm text-stone-600">基于当前在租租客和租金周期估算未来十二个月应收。</p>
+      </div>
+      <span class="badge">预测值</span>
+    </div>
+    <div class="mt-6 rounded-[1.5rem] bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800" id="projectionNote">以下数据为预测值，基于当前在租租客和租金周期估算，不含未来新增租约。</div>
+    <div class="mt-6 grid gap-4 md:grid-cols-4" id="projectionSummary">
+      <div class="rounded-[1.5rem] bg-white/60 p-5 text-sm text-stone-500">正在加载...</div>
+    </div>
+    <div class="mt-6 grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
+      <div class="rounded-[1.5rem] bg-white/55 p-4">
+        <div class="relative h-[260px] sm:h-[320px]">
+          <canvas id="projectionChart"></canvas>
+        </div>
+        <p class="mt-4 hidden rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" id="projectionError">数据加载失败，请刷新重试</p>
+      </div>
+      <div class="rounded-[1.5rem] bg-white/55 p-4">
+        <h4 class="px-2 text-sm font-black text-stone-600">收款构成</h4>
+        <div class="relative mt-3 h-[260px] sm:h-[320px]">
+          <canvas id="projectionBreakdownChart"></canvas>
+          <p class="absolute inset-0 hidden items-center justify-center rounded-2xl bg-white/70 text-sm font-bold text-stone-500" id="projectionBreakdownEmpty">暂无构成数据</p>
+        </div>
+      </div>
+    </div>
+    <div class="mt-6 overflow-x-auto" id="projectionTableWrap">
+      <p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">正在加载...</p>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
-  fetch('/api/dashboard/stats?year={{.Year}}')
-    .then((response) => response.json())
-    .then((data) => {
-      const context = document.getElementById('incomeChart')
-      new Chart(context, {
-        type: 'bar',
-        data: {
-          labels: data.labels,
-          datasets: [{
-            label: '已收金额（元）',
-            data: data.totalsFen.map((value) => value / 100),
-            backgroundColor: '#9f3a22',
-            borderRadius: 14,
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true } }
-        }
-      })
+  const statsPage = document.querySelector('[data-stats-page]')
+  const statsForm = document.querySelector('[data-stats-filter]')
+  const statsYear = document.getElementById('statsYear')
+  const charts = { income: null, occupancy: null, projection: null, projectionBreakdown: null }
+
+  const formatFen = (fen) => (Number(fen || 0) / 100).toFixed(2)
+  const formatPercent = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`
+  const escapeText = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]))
+  const fillYearOptions = () => {
+    const defaultYear = Number(statsPage.dataset.defaultYear)
+    statsYear.innerHTML = Array.from({ length: 4 }, (_, index) => defaultYear - index)
+      .map((year) => `<option value="${year}">${year} 年</option>`)
+      .join('')
+  }
+  const currentYear = () => Number(statsYear.value || statsPage.dataset.defaultYear)
+  const statsPath = (path) => `${path}?year=${encodeURIComponent(currentYear())}`
+
+  const fetchJSON = (path) => fetch(path).then((response) => response.ok ? response.json() : Promise.reject(new Error('读取失败')))
+
+  const tileHTML = (label, value, note = '') => `
+    <div class="rounded-[1.5rem] bg-white/65 p-5 shadow-sm shadow-stone-200/70">
+      <p class="text-xs font-black tracking-[0.25em] text-stone-500">${escapeText(label)}</p>
+      <p class="mt-3 text-3xl font-black text-stone-950">${escapeText(value)}</p>
+      ${note ? `<p class="mt-2 text-sm font-semibold text-stone-500">${escapeText(note)}</p>` : ''}
+    </div>`
+
+  const renderOverview = (data) => {
+    document.getElementById('statsOverviewGrid').innerHTML = [
+      tileHTML('已收总额', `¥${formatFen(data.total_paid_fen)}`, '当前筛选范围'),
+      tileHTML('平均月收', `¥${formatFen(data.average_monthly_fen)}`, '按月份平均'),
+      tileHTML('最高单月', data.peak_month ? `¥${formatFen(data.peak_month_paid_fen)}` : '暂无数据', data.peak_month || ''),
+      tileHTML('当前房间数', `${data.total_rooms || 0} 间`, `已出租 ${data.occupied_rooms || 0} 间`),
+      tileHTML('当前在租', `${data.active_tenants || 0} 人`, '当前有效租客'),
+      tileHTML('估算出租率', formatPercent(data.occupancy_rate), '基于当前房态')
+    ].join('')
+  }
+
+  const dataTable = (headers, rows) => {
+    if (!rows.length) return '<p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">暂无数据</p>'
+    return `<table class="w-full min-w-[620px] text-left text-sm"><thead class="text-stone-500"><tr>${headers.map((header) => `<th class="border-b border-stone-200 px-3 py-3">${escapeText(header)}</th>`).join('')}</tr></thead><tbody class="divide-y divide-stone-100">${rows.join('')}</tbody></table>`
+  }
+
+  const replaceChart = (name, canvasID, config) => {
+    if (charts[name]) charts[name].destroy()
+    charts[name] = new Chart(document.getElementById(canvasID), config)
+  }
+
+  const renderIncome = (data) => {
+    document.getElementById('incomeError').classList.add('hidden')
+    replaceChart('income', 'incomeChart', {
+      type: 'bar',
+      data: {
+        labels: data.labels || [],
+        datasets: [{ label: '已收金额（元）', data: (data.totals_fen || []).map((value) => Number(value || 0) / 100), backgroundColor: '#3B82F6', borderRadius: 12 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
     })
+    document.getElementById('incomeTableWrap').innerHTML = dataTable(
+      ['月份', '已收金额'],
+      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(month.month)}</td><td class="px-3 py-3">¥${formatFen(month.paid_fen)}</td></tr>`)
+    )
+  }
+
+  const renderOccupancy = (data) => {
+    document.getElementById('occupancyError').classList.add('hidden')
+    document.getElementById('occupancyNote').textContent = data.note || '出租率根据租客入住和退租日期估算，未包含房态历史变更。'
+    replaceChart('occupancy', 'occupancyChart', {
+      type: 'line',
+      data: {
+        labels: data.labels || [],
+        datasets: [{ label: '估算出租率', data: (data.rates || []).map((value) => Number(value || 0) * 100), borderColor: '#22C55E', backgroundColor: 'rgba(34, 197, 94, 0.16)', fill: true, tension: 0.3 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (value) => `${value}%` } } } }
+    })
+    document.getElementById('occupancyTableWrap').innerHTML = dataTable(
+      ['月份', '估算出租房间', '房间总数', '估算出租率'],
+      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(month.month)}</td><td class="px-3 py-3">${escapeText(month.occupied_rooms)} 间</td><td class="px-3 py-3">${escapeText(month.total_rooms)} 间</td><td class="px-3 py-3">${formatPercent(month.rate)}</td></tr>`)
+    )
+  }
+
+  const renderProjection = (data) => {
+    document.getElementById('projectionError').classList.add('hidden')
+    document.getElementById('projectionNote').textContent = data.note || '以下数据为预测值，基于当前在租租客和租金周期估算，不含未来新增租约。'
+    document.getElementById('projectionSummary').innerHTML = [
+      tileHTML('预测应收', `¥${formatFen(data.total_fen)}`, '未来十二个月'),
+      tileHTML('已收', `¥${formatFen(data.collected_fen)}`, '已登记付款'),
+      tileHTML('未收', `¥${formatFen(data.unpaid_fen)}`, '已到期未收'),
+      tileHTML('未到期', `¥${formatFen(data.not_due_fen)}`, '尚未到期')
+    ].join('')
+    replaceChart('projection', 'projectionChart', {
+      type: 'bar',
+      data: {
+        labels: (data.months || []).map((month) => month.month),
+        datasets: [{ label: '预测应收（元）', data: (data.months || []).map((month) => Number(month.total_fen || 0) / 100), backgroundColor: '#93C5FD', borderRadius: 12 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    })
+    const breakdownValues = [data.collected_fen, data.unpaid_fen, data.not_due_fen].map((value) => Number(value || 0) / 100)
+    const breakdownEmpty = document.getElementById('projectionBreakdownEmpty')
+    breakdownEmpty.classList.toggle('hidden', breakdownValues.some((value) => value > 0))
+    breakdownEmpty.classList.toggle('flex', !breakdownValues.some((value) => value > 0))
+    replaceChart('projectionBreakdown', 'projectionBreakdownChart', {
+      type: 'doughnut',
+      data: {
+        labels: ['已收', '未收', '未到期'],
+        datasets: [{ data: breakdownValues, backgroundColor: ['#22C55E', '#EF4444', '#F59E0B'], borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom' } } }
+    })
+    document.getElementById('projectionTableWrap').innerHTML = dataTable(
+      ['月份', '预测应收', '涉及租客数'],
+      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(month.month)}</td><td class="px-3 py-3">¥${formatFen(month.total_fen)}</td><td class="px-3 py-3">${escapeText(month.tenant_count)} 人</td></tr>`)
+    )
+  }
+
+  const showError = (id) => document.getElementById(id).classList.remove('hidden')
+
+  const loadStats = () => {
+    document.getElementById('statsOverviewGrid').innerHTML = '<div class="rounded-[1.5rem] bg-white/60 p-5 text-sm text-stone-500">正在加载...</div>'
+    document.getElementById('incomeTableWrap').innerHTML = '<p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">正在加载...</p>'
+    document.getElementById('occupancyTableWrap').innerHTML = '<p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">正在加载...</p>'
+    document.getElementById('projectionTableWrap').innerHTML = '<p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">正在加载...</p>'
+
+    fetchJSON(statsPath('/api/stats/overview')).then(renderOverview).catch(() => {
+      document.getElementById('statsOverviewGrid').innerHTML = '<div class="rounded-[1.5rem] bg-red-50 p-5 text-sm font-bold text-red-700">数据加载失败，请刷新重试</div>'
+    })
+    fetchJSON(statsPath('/api/stats/income/monthly')).then(renderIncome).catch(() => showError('incomeError'))
+    fetchJSON(statsPath('/api/stats/occupancy/monthly')).then(renderOccupancy).catch(() => showError('occupancyError'))
+    fetchJSON('/api/stats/projection/detail?period=12months').then(renderProjection).catch(() => showError('projectionError'))
+  }
+
+  fillYearOptions()
+
+  statsForm.addEventListener('submit', (event) => {
+    event.preventDefault()
+    loadStats()
+  })
+  document.querySelector('[data-stats-reset]').addEventListener('click', () => {
+    statsYear.value = statsPage.dataset.defaultYear
+    loadStats()
+  })
+
+  loadStats()
 </script>
 {{end}}

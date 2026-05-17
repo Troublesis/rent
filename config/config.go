@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -19,6 +20,7 @@ type Config struct {
 	UploadDir     string
 	LandlordName  string
 	LandlordPhone string
+	AppTimezone   string
 }
 
 func Load() (Config, error) {
@@ -34,6 +36,7 @@ func Load() (Config, error) {
 		UploadDir:     getEnv("UPLOAD_DIR", "./data/uploads"),
 		LandlordName:  getEnv("LANDLORD_NAME", "房东"),
 		LandlordPhone: getEnv("LANDLORD_PHONE", "13800000000"),
+		AppTimezone:   getEnv("APP_TIMEZONE", "Asia/Shanghai"),
 	}
 
 	if cfg.IsProduction() {
@@ -51,6 +54,10 @@ func (c Config) Addr() string {
 
 func (c Config) IsProduction() bool {
 	return strings.EqualFold(c.AppEnv, "production")
+}
+
+func (c Config) Location() (*time.Location, error) {
+	return time.LoadLocation(c.AppTimezone)
 }
 
 func (c Config) validateProduction() error {

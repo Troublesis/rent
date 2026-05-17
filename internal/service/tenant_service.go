@@ -14,6 +14,7 @@ type TenantInput struct {
 	Name             string
 	Phone            string
 	EmergencyContact string
+	Gender           string
 	RoomID           uint
 	CheckinDate      time.Time
 	LeaseEndDate     time.Time
@@ -138,6 +139,10 @@ func buildTenant(input TenantInput) (*model.Tenant, error) {
 	if err != nil {
 		return nil, err
 	}
+	gender := strings.TrimSpace(input.Gender)
+	if !model.ValidTenantGender(gender) {
+		return nil, fmt.Errorf("性别不正确")
+	}
 	if input.RoomID == 0 {
 		return nil, fmt.Errorf("请选择入住房源")
 	}
@@ -189,6 +194,7 @@ func buildTenant(input TenantInput) (*model.Tenant, error) {
 		Name:             name,
 		Phone:            phone,
 		EmergencyContact: emergencyContact,
+		Gender:           gender,
 		RoomID:           input.RoomID,
 		CheckinDate:      checkinDate,
 		LeaseEndDate:     leaseEndDate,

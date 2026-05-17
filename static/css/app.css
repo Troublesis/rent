@@ -146,6 +146,38 @@ h1, h2, h3, .display-font {
   padding: 1rem;
 }
 
+.admin-mobile-card {
+  border: 1px solid rgba(120, 113, 108, 0.24);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.64);
+  padding: 1rem;
+}
+
+.admin-action-button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  text-align: center;
+}
+
+.filter-chip-option {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  border: 1px solid rgba(120, 113, 108, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 0.55rem 0.9rem;
+  transition: 160ms ease;
+}
+
+.filter-chip-active,
+.filter-chip-option:hover {
+  border-color: var(--seal);
+  background: rgba(159, 58, 34, 0.1);
+  color: var(--seal);
+}
+
 .payment-scope-option span {
   display: inline-flex;
   align-items: center;

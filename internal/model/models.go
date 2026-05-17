@@ -14,6 +14,11 @@ const (
 )
 
 const (
+	TenantGenderMale   = "male"
+	TenantGenderFemale = "female"
+)
+
+const (
 	PaymentTypeRent        = "rent"
 	PaymentTypeWater       = "water"
 	PaymentTypeElectricity = "electricity"
@@ -76,7 +81,8 @@ type Tenant struct {
 	Name             string `gorm:"not null"`
 	Phone            string `gorm:"not null"`
 	EmergencyContact string
-	RoomID           uint `gorm:"not null;index"`
+	Gender           string `gorm:"index"`
+	RoomID           uint   `gorm:"not null;index"`
 	Room             Room
 	CheckinDate      time.Time
 	LeaseEndDate     *time.Time `gorm:"index"`
@@ -128,6 +134,15 @@ func ValidRoomStatus(status string) bool {
 func ValidTenantStatus(status string) bool {
 	switch status {
 	case TenantStatusActive, TenantStatusCheckout:
+		return true
+	default:
+		return false
+	}
+}
+
+func ValidTenantGender(gender string) bool {
+	switch gender {
+	case "", TenantGenderMale, TenantGenderFemale:
 		return true
 	default:
 		return false

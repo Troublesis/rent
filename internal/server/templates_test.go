@@ -4,7 +4,21 @@ import (
 	"html/template"
 	"path/filepath"
 	"testing"
+	"time"
 )
+
+func TestTemplateDateHelpers(t *testing.T) {
+	value := time.Date(2026, time.May, 17, 9, 30, 0, 0, time.Local)
+	if got := formatDate(value); got != "2026/05/17" {
+		t.Fatalf("formatDate = %q, want 2026/05/17", got)
+	}
+	if got := formatDateTime(value); got != "2026/05/17 09:30" {
+		t.Fatalf("formatDateTime = %q, want 2026/05/17 09:30", got)
+	}
+	if got := formatInputDate(value); got != "2026-05-17" {
+		t.Fatalf("formatInputDate = %q, want 2026-05-17", got)
+	}
+}
 
 func TestTemplatesParse(t *testing.T) {
 	withProjectRoot(t)

@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/troublesis/rent/config"
 	"github.com/troublesis/rent/internal/model"
@@ -17,6 +18,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("load config: %v", err)
 	}
+	loc, err := cfg.Location()
+	if err != nil {
+		log.Fatalf("load timezone: %v", err)
+	}
+	time.Local = loc
 	if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
 		log.Fatalf("create upload directory: %v", err)
 	}

@@ -41,6 +41,12 @@ type MonthlyIncomeRow struct {
 	Total int
 }
 
+type MonthlyIncomeRangeRow struct {
+	Year  int
+	Month int
+	Total int
+}
+
 type PaymentRepository struct {
 	db *gorm.DB
 }
@@ -170,13 +176,24 @@ func (r *PaymentRepository) SumUnpaid() (int, error) {
 
 func (r *PaymentRepository) MonthlyIncome(year int) ([]MonthlyIncomeRow, error) {
 	start := time.Date(year, time.January, 1, 0, 0, 0, 0, time.Local)
-	end := start.AddDate(1, 0, 0)
-	rows := make([]MonthlyIncomeRow, 0, 12)
+	rangeRows, err := r.MonthlyIncomeRange(start, start.AddDate(1, 0, 0))
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]MonthlyIncomeRow, 0, len(rangeRows))
+	for _, row := range rangeRows {
+		rows = append(rows, MonthlyIncomeRow{Month: row.Month, Total: row.Total})
+	}
+	return rows, nil
+}
+
+func (r *PaymentRepository) MonthlyIncomeRange(start time.Time, end time.Time) ([]MonthlyIncomeRangeRow, error) {
+	rows := make([]MonthlyIncomeRangeRow, 0)
 	if err := r.db.Model(&model.Payment{}).
-		Select("CAST(strftime('%m', pay_date) AS INTEGER) AS month, COALESCE(SUM(amount), 0) AS total").
+		Select("CAST(strftime('%Y', pay_date) AS INTEGER) AS year, CAST(strftime('%m', pay_date) AS INTEGER) AS month, COALESCE(SUM(amount), 0) AS total").
 		Where("paid = ? AND excluded = ? AND pay_date >= ? AND pay_date < ?", true, false, start, end).
-		Group("month").
-		Order("month ASC").
+		Group("year, month").
+		Order("year ASC, month ASC").
 		Scan(&rows).Error; err != nil {
 		return nil, err
 	}

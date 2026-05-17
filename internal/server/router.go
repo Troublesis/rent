@@ -43,6 +43,7 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 		startPaymentGenerationTicker(paymentService)
 	}
 	dashboardService := service.NewDashboardService(roomRepo, tenantRepo, paymentRepo)
+	statsService := service.NewStatsService(roomRepo, tenantRepo, paymentRepo, dashboardService)
 	settingsService := service.NewSettingsService(cfg, settingsRepo)
 
 	publicHandler := handler.NewPublicHandler(renderer, roomService, settingsService)
@@ -51,7 +52,7 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	roomHandler := handler.NewAdminRoomHandler(renderer, roomService, tenantService)
 	tenantHandler := handler.NewAdminTenantHandler(renderer, tenantService, roomService)
 	paymentHandler := handler.NewAdminPaymentHandler(renderer, paymentService, tenantService)
-	statsHandler := handler.NewAdminStatsHandler(renderer, paymentService)
+	statsHandler := handler.NewAdminStatsHandler(renderer, paymentService, statsService)
 	settingsHandler := handler.NewAdminSettingsHandler(renderer, settingsService)
 	uploadHandler := handler.NewUploadHandler(cfg.UploadDir, roomService)
 
@@ -101,6 +102,10 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	api.GET("/payments", paymentHandler.APIList)
 	api.GET("/stats/summary", dashboardHandler.APISummary)
 	api.GET("/stats/projection", dashboardHandler.APIProjection)
+	api.GET("/stats/overview", statsHandler.Overview)
+	api.GET("/stats/income/monthly", statsHandler.MonthlyIncome)
+	api.GET("/stats/occupancy/monthly", statsHandler.MonthlyOccupancy)
+	api.GET("/stats/projection/detail", statsHandler.Projection)
 	api.GET("/dashboard/stats", statsHandler.DashboardStats)
 
 	return router

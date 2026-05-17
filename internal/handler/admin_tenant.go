@@ -2,7 +2,9 @@ package handler
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +17,20 @@ type AdminTenantHandler struct {
 	renderer      Renderer
 	tenantService *service.TenantService
 	roomService   *service.RoomService
+}
+
+type tenantSortLink struct {
+	Key       string
+	Label     string
+	URL       string
+	Indicator string
+}
+
+type tenantStatusLink struct {
+	Value  string
+	Label  string
+	URL    string
+	Active bool
 }
 
 type tenantAPIItem struct {
@@ -41,23 +57,25 @@ func NewAdminTenantHandler(renderer Renderer, tenantService *service.TenantServi
 }
 
 func (h *AdminTenantHandler) List(c *gin.Context) {
-	filter := repository.TenantFilter{Status: c.Query("status"), Query: c.Query("q")}
+	filter := tenantFilterFromQuery(c)
 	tenants, err := h.tenantService.ListTenants(filter)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "读取租客失败")
 		return
 	}
 	h.renderer.Render(c, http.StatusOK, "admin_base.html", "admin/tenants.html", gin.H{
-		"Title":    "租客管理",
-		"Tenants":  tenants,
-		"Statuses": tenantStatusOptions(),
-		"Filter":   filter,
-		"Error":    queryError(c),
+		"Title":       "租客管理",
+		"Tenants":     tenants,
+		"Statuses":    tenantStatusOptions(),
+		"StatusLinks": tenantStatusLinks(c, filter),
+		"SortLinks":   tenantSortLinks(c, filter),
+		"Filter":      filter,
+		"Error":       queryError(c),
 	})
 }
 
 func (h *AdminTenantHandler) APIList(c *gin.Context) {
-	filter := repository.TenantFilter{Status: c.Query("status"), Query: c.Query("q")}
+	filter := repository.TenantFilter{Status: tenantStatusFromQuery(c.Query("status")), Query: c.Query("q")}
 	leaseExpired := c.Query("lease_expired") == "true"
 	if leaseExpired {
 		filter.Status = model.TenantStatusActive
@@ -156,6 +174,7 @@ func (h *AdminTenantHandler) renderForm(c *gin.Context, status int, input servic
 		"Rooms":        rooms,
 		"RentTypes":    rentTypeOptions(),
 		"PaymentTerms": paymentTermsOptions(),
+		"Genders":      tenantGenderOptions(),
 		"Error":        errorMessage,
 	})
 }
@@ -165,6 +184,7 @@ func tenantInputFromForm(c *gin.Context) (service.TenantInput, error) {
 		Name:             c.PostForm("name"),
 		Phone:            c.PostForm("phone"),
 		EmergencyContact: c.PostForm("emergency_contact"),
+		Gender:           c.PostForm("gender"),
 		RentPriceYuan:    c.PostForm("rent_price"),
 		RentType:         c.PostForm("rent_type"),
 		PaymentTerms:     c.PostForm("payment_terms"),
@@ -187,6 +207,82 @@ func tenantInputFromForm(c *gin.Context) (service.TenantInput, error) {
 	}
 	input.LeaseEndDate = leaseEndDate
 	return input, nil
+}
+
+func tenantFilterFromQuery(c *gin.Context) repository.TenantFilter {
+	return repository.TenantFilter{
+		Status:  tenantStatusFromQuery(c.Query("status")),
+		Query:   strings.TrimSpace(c.Query("q")),
+		SortBy:  c.DefaultQuery("sort_by", "created_at"),
+		SortDir: c.DefaultQuery("sort_dir", "desc"),
+	}
+}
+
+func tenantStatusFromQuery(status string) string {
+	switch status {
+	case "all":
+		return ""
+	case model.TenantStatusCheckout:
+		return model.TenantStatusCheckout
+	default:
+		return model.TenantStatusActive
+	}
+}
+
+func tenantSortLinks(c *gin.Context, filter repository.TenantFilter) []tenantSortLink {
+	items := []tenantSortLink{
+		{Key: "name", Label: "租客"},
+		{Key: "room", Label: "房源"},
+		{Key: "rent_price", Label: "租金"},
+		{Key: "checkin_date", Label: "入住日期"},
+		{Key: "status", Label: "状态"},
+	}
+	for i := range items {
+		items[i].URL = tenantListURL(c, map[string]string{"sort_by": items[i].Key, "sort_dir": nextTenantSortDir(filter, items[i].Key)})
+		if filter.SortBy == items[i].Key {
+			items[i].Indicator = "↓"
+			if strings.EqualFold(filter.SortDir, "asc") {
+				items[i].Indicator = "↑"
+			}
+		}
+	}
+	return items
+}
+
+func nextTenantSortDir(filter repository.TenantFilter, key string) string {
+	if filter.SortBy == key && strings.EqualFold(filter.SortDir, "asc") {
+		return "desc"
+	}
+	return "asc"
+}
+
+func tenantStatusLinks(c *gin.Context, filter repository.TenantFilter) []tenantStatusLink {
+	items := []tenantStatusLink{
+		{Value: "all", Label: "全部", Active: filter.Status == ""},
+		{Value: model.TenantStatusActive, Label: "在租", Active: filter.Status == model.TenantStatusActive},
+		{Value: model.TenantStatusCheckout, Label: "已退租", Active: filter.Status == model.TenantStatusCheckout},
+	}
+	for i := range items {
+		items[i].URL = tenantListURL(c, map[string]string{"status": items[i].Value})
+	}
+	return items
+}
+
+func tenantListURL(c *gin.Context, overrides map[string]string) string {
+	values := url.Values{}
+	for key, vals := range c.Request.URL.Query() {
+		for _, value := range vals {
+			values.Add(key, value)
+		}
+	}
+	for key, value := range overrides {
+		values.Set(key, value)
+	}
+	encoded := values.Encode()
+	if encoded == "" {
+		return "/admin/tenants"
+	}
+	return "/admin/tenants?" + encoded
 }
 
 func tenantToAPIItem(tenant model.Tenant, now time.Time) tenantAPIItem {
@@ -225,5 +321,12 @@ func tenantStatusOptions() []SelectOption {
 	return []SelectOption{
 		{Value: model.TenantStatusActive, Label: "在租"},
 		{Value: model.TenantStatusCheckout, Label: "已退租"},
+	}
+}
+
+func tenantGenderOptions() []SelectOption {
+	return []SelectOption{
+		{Value: model.TenantGenderMale, Label: "男性"},
+		{Value: model.TenantGenderFemale, Label: "女性"},
 	}
 }

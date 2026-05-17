@@ -12,6 +12,7 @@ func TestLoadUsesDevelopmentDefaults(t *testing.T) {
 	t.Setenv("ADMIN_USERNAME", "")
 	t.Setenv("ADMIN_PASSWORD", "")
 	t.Setenv("DB_PATH", "")
+	t.Setenv("APP_TIMEZONE", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -25,6 +26,27 @@ func TestLoadUsesDevelopmentDefaults(t *testing.T) {
 	}
 	if cfg.IsProduction() {
 		t.Fatal("development config should not be production")
+	}
+	if cfg.AppTimezone != "Asia/Shanghai" {
+		t.Fatalf("AppTimezone = %q, want Asia/Shanghai", cfg.AppTimezone)
+	}
+}
+
+func TestConfigLocationLoadsTimezone(t *testing.T) {
+	cfg := Config{AppTimezone: "UTC"}
+	loc, err := cfg.Location()
+	if err != nil {
+		t.Fatalf("Location returned error: %v", err)
+	}
+	if loc.String() != "UTC" {
+		t.Fatalf("location = %q, want UTC", loc.String())
+	}
+}
+
+func TestConfigLocationRejectsInvalidTimezone(t *testing.T) {
+	cfg := Config{AppTimezone: "Invalid/Timezone"}
+	if _, err := cfg.Location(); err == nil {
+		t.Fatal("Location returned nil error for invalid timezone")
 	}
 }
 

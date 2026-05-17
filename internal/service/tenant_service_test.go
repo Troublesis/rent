@@ -41,6 +41,9 @@ func TestCheckInTenant(t *testing.T) {
 	if tenant.Notes != "合同已线下签署" {
 		t.Fatalf("tenant notes = %q", tenant.Notes)
 	}
+	if tenant.Gender != "" {
+		t.Fatalf("tenant gender = %q, want blank", tenant.Gender)
+	}
 
 	updatedRoom, err := roomRepo.GetRoom(room.ID)
 	if err != nil {
@@ -48,6 +51,50 @@ func TestCheckInTenant(t *testing.T) {
 	}
 	if updatedRoom.Status != model.RoomStatusOccupied {
 		t.Fatalf("room status = %q, want occupied", updatedRoom.Status)
+	}
+}
+
+func TestBuildTenantAcceptsOptionalGender(t *testing.T) {
+	baseInput := TenantInput{
+		Name:          "性别租客",
+		Phone:         "13800000010",
+		RoomID:        1,
+		RentPriceYuan: "1500",
+		DepositYuan:   "1500",
+	}
+
+	maleInput := baseInput
+	maleInput.Gender = model.TenantGenderMale
+	maleTenant, err := buildTenant(maleInput)
+	if err != nil {
+		t.Fatalf("buildTenant male returned error: %v", err)
+	}
+	if maleTenant.Gender != model.TenantGenderMale {
+		t.Fatalf("male gender = %q, want male", maleTenant.Gender)
+	}
+
+	femaleInput := baseInput
+	femaleInput.Gender = model.TenantGenderFemale
+	femaleTenant, err := buildTenant(femaleInput)
+	if err != nil {
+		t.Fatalf("buildTenant female returned error: %v", err)
+	}
+	if femaleTenant.Gender != model.TenantGenderFemale {
+		t.Fatalf("female gender = %q, want female", femaleTenant.Gender)
+	}
+}
+
+func TestBuildTenantRejectsInvalidGender(t *testing.T) {
+	_, err := buildTenant(TenantInput{
+		Name:          "错误性别",
+		Phone:         "13800000011",
+		Gender:        "unknown",
+		RoomID:        1,
+		RentPriceYuan: "1500",
+		DepositYuan:   "1500",
+	})
+	if err == nil {
+		t.Fatal("buildTenant returned nil error")
 	}
 }
 

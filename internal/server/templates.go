@@ -33,6 +33,8 @@ func NewTemplateRenderer(root string) *TemplateRenderer {
 		"rentTypeLabel":     rentTypeLabel,
 		"rentUnitLabel":     rentUnitLabel,
 		"paymentTermsLabel": paymentTermsLabel,
+		"isRoomOccupied":    isRoomOccupied,
+		"tenantGenderLabel": tenantGenderLabel,
 		"roomRentPrice":     model.RoomRentPrice,
 		"floorPlanLabel":    floorPlanLabel,
 		"isOverdue":         isOverdue,
@@ -67,7 +69,7 @@ func formatDate(value time.Time) string {
 	if value.IsZero() {
 		return "-"
 	}
-	return value.Format("2006-01-02")
+	return value.Format("2006/01/02")
 }
 
 func formatInputDate(value time.Time) string {
@@ -81,7 +83,7 @@ func formatDateTime(value time.Time) string {
 	if value.IsZero() {
 		return "-"
 	}
-	return value.Format("2006-01-02 15:04")
+	return value.Format("2006/01/02 15:04")
 }
 
 func roomStatusLabel(status string) string {
@@ -106,6 +108,21 @@ func tenantStatusLabel(status string) string {
 	default:
 		return "未知"
 	}
+}
+
+func tenantGenderLabel(gender string) string {
+	switch gender {
+	case model.TenantGenderMale:
+		return "男性"
+	case model.TenantGenderFemale:
+		return "女性"
+	default:
+		return "未填写"
+	}
+}
+
+func isRoomOccupied(status string) bool {
+	return status == model.RoomStatusOccupied
 }
 
 func paymentTypeLabel(paymentType string) string {
@@ -177,8 +194,12 @@ func isOverdue(value time.Time) bool {
 	if value.IsZero() {
 		return false
 	}
-	today := time.Now().Truncate(24 * time.Hour)
-	return value.Before(today)
+	now := time.Now()
+	loc := now.Location()
+	localValue := value.In(loc)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	valueDate := time.Date(localValue.Year(), localValue.Month(), localValue.Day(), 0, 0, 0, 0, loc)
+	return valueDate.Before(today)
 }
 
 func seq(start int, end int) []int {
