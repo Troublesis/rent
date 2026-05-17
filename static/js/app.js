@@ -97,6 +97,21 @@ document.querySelectorAll('[data-rent-type]').forEach((select) => {
 })
 updateRentLabels()
 
+const extractURL = (value) => {
+  const match = String(value || '').match(/https?:\/\/[^\s<>"']+/i)
+  if (!match) return ''
+  return match[0].replace(/[，。；、）】),.;!?]+$/, '')
+}
+
+const normalizeURLField = (field) => {
+  const url = extractURL(field.value)
+  if (url && field.value !== url) {
+    field.value = url
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+  return url
+}
+
 const validators = {
   required: (value, label) => value.trim() ? '' : `${label}不能为空`,
   name: (value) => /^[一-龥A-Za-z]{2,20}$/.test(value.trim()) ? '' : '姓名需填写 2-20 个中文或英文字母',
@@ -137,6 +152,27 @@ const validateField = (field) => {
   showFieldError(field, message)
   return message === ''
 }
+
+document.querySelectorAll('[data-url-extract]').forEach((field) => {
+  let checkedClipboard = false
+  const readClipboardURL = () => {
+    if (checkedClipboard || field.value.trim() !== '' || !navigator.clipboard?.readText) return
+    navigator.clipboard.readText()
+      .then((text) => {
+        const url = extractURL(text)
+        checkedClipboard = true
+        if (url && field.value.trim() === '') {
+          field.value = url
+          field.dispatchEvent(new Event('input', { bubbles: true }))
+          validateField(field)
+        }
+      })
+      .catch(() => {})
+  }
+  field.addEventListener('click', readClipboardURL)
+  field.addEventListener('input', () => normalizeURLField(field))
+  field.addEventListener('blur', () => normalizeURLField(field))
+})
 
 document.querySelectorAll('[data-validate]').forEach((field) => {
   field.addEventListener('blur', () => validateField(field))

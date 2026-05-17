@@ -37,7 +37,7 @@
     <form class="mt-5 space-y-3" method="post" action="/admin/rooms/{{.Room.ID}}/video-link" data-validate-form>
       <label class="block">
         <span class="text-sm font-bold text-stone-600">视频链接 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
-        <input class="input mt-2" name="video_link" placeholder="https://v.douyin.com/..." data-validate="video_link">
+        <input class="input mt-2" name="video_link" placeholder="https://v.douyin.com/..." data-validate="video_link" data-url-extract>
       </label>
       <button class="btn-secondary w-full" type="submit">保存视频链接</button>
     </form>
