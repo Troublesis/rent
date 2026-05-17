@@ -2,7 +2,6 @@ package server
 
 import (
 	"html/template"
-	"path/filepath"
 	"testing"
 	"time"
 )
@@ -45,7 +44,10 @@ func TestTemplatesParse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.page, func(t *testing.T) {
-			files := []string{filepath.Join("templates", "layout", tt.layout), filepath.Join("templates", tt.page)}
+			files, err := renderer.templateFiles(tt.layout, tt.page)
+			if err != nil {
+				t.Fatalf("template files: %v", err)
+			}
 			if _, err := template.New(tt.layout).Funcs(renderer.funcMap).ParseFiles(files...); err != nil {
 				t.Fatalf("parse template: %v", err)
 			}

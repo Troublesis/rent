@@ -37,6 +37,9 @@ func NewTemplateRenderer(root string) *TemplateRenderer {
 		"tenantGenderLabel": tenantGenderLabel,
 		"roomRentPrice":     model.RoomRentPrice,
 		"floorPlanLabel":    floorPlanLabel,
+		"firstImageURL":     firstImageURL,
+		"mediaPosterURL":    mediaPosterURL,
+		"isPlayableMedia":   isPlayableMedia,
 		"isOverdue":         isOverdue,
 		"seq":               seq,
 	}}
@@ -47,7 +50,11 @@ func (r *TemplateRenderer) Render(c *gin.Context, status int, layout string, pag
 		data = gin.H{}
 	}
 	data["CurrentPath"] = c.Request.URL.Path
-	files := []string{filepath.Join(r.root, "layout", layout), filepath.Join(r.root, page)}
+	files, err := r.templateFiles(layout, page)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "模板加载失败: %v", err)
+		return
+	}
 	tmpl, err := template.New(layout).Funcs(r.funcMap).ParseFiles(files...)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "模板加载失败: %v", err)
@@ -59,6 +66,17 @@ func (r *TemplateRenderer) Render(c *gin.Context, status int, layout string, pag
 	if err := tmpl.ExecuteTemplate(c.Writer, layoutName, data); err != nil {
 		c.String(http.StatusInternalServerError, "模板渲染失败: %v", err)
 	}
+}
+
+func (r *TemplateRenderer) templateFiles(layout string, page string) ([]string, error) {
+	componentFiles, err := filepath.Glob(filepath.Join(r.root, "components", "*.html"))
+	if err != nil {
+		return nil, err
+	}
+	files := []string{filepath.Join(r.root, "layout", layout)}
+	files = append(files, componentFiles...)
+	files = append(files, filepath.Join(r.root, page))
+	return files, nil
 }
 
 func formatYuanInt(fen int) int {
@@ -151,6 +169,29 @@ func mediaTypeLabel(mediaType string) string {
 	default:
 		return "文件"
 	}
+}
+
+func firstImageURL(media []model.RoomMedia) string {
+	for _, item := range media {
+		if item.MediaType == model.MediaTypeImage {
+			return item.URL
+		}
+	}
+	return ""
+}
+
+func mediaPosterURL(media model.RoomMedia, mediaList []model.RoomMedia) string {
+	if media.MediaType == model.MediaTypeImage {
+		return media.URL
+	}
+	if media.MediaType == model.MediaTypeVideoLink {
+		return firstImageURL(mediaList)
+	}
+	return ""
+}
+
+func isPlayableMedia(mediaType string) bool {
+	return mediaType == model.MediaTypeVideo || mediaType == model.MediaTypeVideoLink
 }
 
 func rentTypeLabel(rentType string) string {

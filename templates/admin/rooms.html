@@ -1,4 +1,5 @@
 {{define "content"}}
+<div id="room-list-section">
 <section class="card overflow-hidden">
   <div class="space-y-5 border-b border-stone-300/70 p-5">
     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -8,7 +9,7 @@
       </div>
       <a class="btn-primary text-center" href="/admin/rooms/new">新增房源</a>
     </div>
-    <form class="space-y-4" method="get" action="/admin/rooms">
+    <form class="space-y-4" method="get" action="/admin/rooms" hx-boost="true" hx-target="#room-list-section" hx-select="#room-list-section" hx-swap="outerHTML" hx-push-url="true">
       <div class="grid gap-3 md:grid-cols-[1fr_auto_auto]">
         <label class="block">
           <span class="sr-only">搜索房源</span>
@@ -61,4 +62,5 @@
     <div class="card p-10 text-center text-stone-600 lg:col-span-2">还没有房源，先新增一个房间。</div>
   {{end}}
 </section>
+</div>
 {{end}}

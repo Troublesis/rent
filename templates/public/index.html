@@ -20,14 +20,18 @@
   </div>
   <div class="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
     {{range .Rooms}}
-      <a class="card block overflow-hidden transition hover:-translate-y-1 hover:border-amber-700" href="/room/{{.ID}}">
-        <div class="p-6">
-          <span class="badge">可租</span>
+      <article class="card flex h-full flex-col overflow-hidden transition hover:-translate-y-1 hover:border-amber-700">
+        {{template "room_media_frame" .}}
+        <div class="flex flex-1 flex-col p-6 pt-2">
+          <span class="badge w-fit">可租</span>
           <h4 class="mt-4 text-2xl font-black">{{.Title}}</h4>
           <p class="mt-2 text-sm text-stone-500">{{.RoomNo}} · {{.Area}}㎡ · {{.Floor}}层 · {{floorPlanLabel .Bedrooms .LivingRooms .Bathrooms}}</p>
           <p class="mt-6 text-3xl font-black text-amber-800">¥{{formatFen (roomRentPrice .)}}<span class="text-sm text-stone-500"> / {{rentUnitLabel .RentType}}</span></p>
+          <div class="mt-auto flex justify-center pt-6">
+            <a class="btn-primary" href="/room/{{.ID}}">查看详情</a>
+          </div>
         </div>
-      </a>
+      </article>
     {{else}}
       <div class="card p-10 text-center text-stone-600 md:col-span-2 xl:col-span-3">暂时没有空置房源，欢迎稍后再看。</div>
     {{end}}

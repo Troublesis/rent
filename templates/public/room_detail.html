@@ -1,42 +1,58 @@
 {{define "content"}}
 <section class="grid gap-7 xl:grid-cols-[1.25fr_0.75fr]">
   <article class="card overflow-hidden">
-    <div class="p-4" data-gallery>
-      {{if .Room.Media}}
-        <div class="relative overflow-hidden rounded-3xl bg-stone-950">
-          {{range $index, $media := .Room.Media}}
-            <div class="{{if ne $index 0}}hidden {{end}}p-3" data-gallery-main="{{$index}}">
-              {{if eq .MediaType "image"}}
-                <button class="block w-full" type="button" data-lightbox-src="{{.URL}}">
-                  <img class="max-h-[34rem] w-full rounded-2xl object-contain" src="{{.URL}}" alt="房源图片">
-                </button>
-              {{else if eq .MediaType "video"}}
-                <video class="max-h-[34rem] w-full rounded-2xl object-contain" src="{{.URL}}" controls></video>
-              {{else}}
-                <a class="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-white/20 bg-stone-900 p-8 text-center text-stone-100" href="{{.URL}}" target="_blank" rel="noopener noreferrer">
-                  <span class="text-5xl">▶</span>
-                  <span class="mt-4 text-lg font-black">打开视频链接</span>
-                  <span class="mt-2 break-all text-sm text-stone-300">{{.URL}}</span>
-                </a>
+    {{if .Room.Media}}
+      <div class="p-4" data-gallery>
+        {{$mediaList := .Room.Media}}
+        <div class="mx-auto max-w-4xl">
+          <div class="gallery-screen">
+            <div class="gallery-screen-scroll" data-gallery-scroll>
+              {{range $index, $media := .Room.Media}}
+                {{$poster := mediaPosterURL $media $mediaList}}
+                <div class="gallery-screen-slide" data-gallery-main="{{$index}}">
+                  {{if eq $media.MediaType "image"}}
+                    <img class="media-blur-backdrop" src="{{$media.URL}}" alt="" aria-hidden="true">
+                    <button class="gallery-media-hit" type="button" data-lightbox-src="{{$media.URL}}">
+                      <img class="gallery-media-object" src="{{$media.URL}}" alt="房源图片">
+                    </button>
+                  {{else if eq $media.MediaType "video"}}
+                    <video class="gallery-media-object" src="{{$media.URL}}" controls preload="metadata"></video>
+                    <span class="media-play-button" aria-hidden="true"></span>
+                  {{else}}
+                    <a class="gallery-media-hit" href="{{$media.URL}}" target="_blank" rel="noopener noreferrer">
+                      {{if $poster}}
+                        <img class="media-blur-backdrop" src="{{$poster}}" alt="" aria-hidden="true">
+                        <img class="gallery-media-object" src="{{$poster}}" alt="房源视频封面">
+                      {{else}}
+                        <span class="gallery-media-fallback">播放视频</span>
+                      {{end}}
+                      <span class="media-play-button" aria-hidden="true"></span>
+                    </a>
+                  {{end}}
+                </div>
               {{end}}
             </div>
-          {{end}}
+          </div>
         </div>
-        <div class="mt-4 flex gap-3 overflow-x-auto pb-2">
+        <div class="gallery-thumb-strip mt-4">
           {{range $index, $media := .Room.Media}}
+            {{$poster := mediaPosterURL $media $mediaList}}
             <button class="gallery-thumb min-w-28 rounded-2xl border border-stone-300 bg-white/70 p-2 text-left text-xs font-bold text-stone-600" type="button" data-gallery-thumb="{{$index}}">
-              {{if eq .MediaType "image"}}
-                <img class="h-16 w-full rounded-xl object-cover" src="{{.URL}}" alt="房源缩略图">
-              {{else}}
-                <span class="flex h-16 items-center justify-center rounded-xl bg-stone-900 text-stone-100">{{mediaTypeLabel .MediaType}}</span>
-              {{end}}
+              <span class="gallery-thumb-media">
+                {{if $poster}}
+                  <img src="{{$poster}}" alt="房源缩略图">
+                {{else if eq $media.MediaType "video"}}
+                  <video src="{{$media.URL}}" preload="metadata" muted></video>
+                {{else}}
+                  <span class="gallery-media-fallback">{{mediaTypeLabel $media.MediaType}}</span>
+                {{end}}
+                {{if isPlayableMedia $media.MediaType}}<span class="gallery-thumb-play" aria-hidden="true"></span>{{end}}
+              </span>
             </button>
           {{end}}
         </div>
-      {{else}}
-        <div class="flex min-h-80 items-center justify-center rounded-3xl bg-white/50 text-stone-500">暂无媒体</div>
-      {{end}}
-    </div>
+      </div>
+    {{end}}
     <div class="p-7">
       <span class="badge">可租</span>
       <h2 class="mt-4 text-4xl font-black">{{.Room.RoomNo}} · {{.Room.Title}}</h2>

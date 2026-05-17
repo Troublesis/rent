@@ -16,8 +16,12 @@ document.addEventListener('click', (event) => {
 document.querySelectorAll('[data-gallery]').forEach((gallery) => {
   const frames = gallery.querySelectorAll('[data-gallery-main]')
   const thumbs = gallery.querySelectorAll('[data-gallery-thumb]')
+  const scrollArea = gallery.querySelector('[data-gallery-scroll]')
   const selectFrame = (index) => {
-    frames.forEach((frame) => frame.classList.toggle('hidden', frame.dataset.galleryMain !== index))
+    frames.forEach((frame) => {
+      if (!scrollArea) frame.classList.toggle('hidden', frame.dataset.galleryMain !== index)
+      if (scrollArea && frame.dataset.galleryMain === index) frame.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    })
     thumbs.forEach((thumb) => {
       const active = thumb.dataset.galleryThumb === index
       thumb.classList.toggle('border-amber-700', active)

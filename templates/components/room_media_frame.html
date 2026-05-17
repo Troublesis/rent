@@ -1,0 +1,35 @@
+{{define "room_media_frame"}}
+{{if .Media}}
+  <div class="room-media-shell">
+    <div class="room-media-frame" aria-label="房源媒体">
+      <div class="room-media-scroll">
+        {{$mediaList := .Media}}
+        {{range $media := .Media}}
+          {{$poster := mediaPosterURL $media $mediaList}}
+          <div class="room-media-slide">
+            {{if eq $media.MediaType "image"}}
+              <img class="media-blur-backdrop" src="{{$media.URL}}" alt="" aria-hidden="true">
+              <button class="room-media-hit" type="button" data-lightbox-src="{{$media.URL}}">
+                <img class="room-media-object" src="{{$media.URL}}" alt="房源图片">
+              </button>
+            {{else if eq $media.MediaType "video"}}
+              <video class="room-media-object" src="{{$media.URL}}" controls preload="metadata"></video>
+              <span class="media-play-button" aria-hidden="true"></span>
+            {{else}}
+              <a class="room-media-hit" href="{{$media.URL}}" target="_blank" rel="noopener noreferrer">
+                {{if $poster}}
+                  <img class="media-blur-backdrop" src="{{$poster}}" alt="" aria-hidden="true">
+                  <img class="room-media-object" src="{{$poster}}" alt="房源视频封面">
+                {{else}}
+                  <span class="room-media-fallback">播放视频</span>
+                {{end}}
+                <span class="media-play-button" aria-hidden="true"></span>
+              </a>
+            {{end}}
+          </div>
+        {{end}}
+      </div>
+    </div>
+  </div>
+{{end}}
+{{end}}
