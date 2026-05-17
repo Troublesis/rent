@@ -19,18 +19,37 @@ type AdminPaymentHandler struct {
 }
 
 type paymentAPIResponse struct {
-	Data    []paymentAPIItem `json:"data"`
-	Page    int              `json:"page"`
-	Limit   int              `json:"limit"`
-	Total   int64            `json:"total"`
-	HasMore bool             `json:"has_more"`
+	Data    []paymentAPIItem  `json:"data"`
+	Summary paymentAPISummary `json:"summary"`
+	Page    int               `json:"page"`
+	Limit   int               `json:"limit"`
+	Total   int64             `json:"total"`
+	HasMore bool              `json:"has_more"`
+}
+
+type paymentAPISummary struct {
+	TotalUnpaidAmountFen  int    `json:"total_unpaid_amount_fen"`
+	TotalUnpaidAmountText string `json:"total_unpaid_amount_text"`
+	TotalPaidAmountFen    int    `json:"total_paid_amount_fen"`
+	TotalPaidAmountText   string `json:"total_paid_amount_text"`
+	CheckoutPendingCount  int64  `json:"checkout_pending_count"`
+	ExcludedCount         int64  `json:"excluded_count"`
+}
+
+type paymentExclusionRequest struct {
+	Excluded      bool   `json:"excluded"`
+	ExclusionNote string `json:"exclusion_note"`
+	Note          string `json:"note"`
 }
 
 type paymentAPIItem struct {
 	ID                uint   `json:"id"`
+	PaymentID         uint   `json:"payment_id"`
 	TenantID          uint   `json:"tenant_id"`
 	TenantName        string `json:"tenant_name"`
 	RoomNo            string `json:"room_no"`
+	Room              string `json:"room"`
+	TenantStatus      string `json:"tenant_status"`
 	Phone             string `json:"phone"`
 	RentPriceFen      int    `json:"rent_price_fen"`
 	RentPriceText     string `json:"rent_price_text"`
@@ -47,6 +66,7 @@ type paymentAPIItem struct {
 	AmountFen         int    `json:"amount_fen"`
 	AmountText        string `json:"amount_text"`
 	Paid              bool   `json:"paid"`
+	PaymentStatus     string `json:"payment_status"`
 	StatusLabel       string `json:"status_label"`
 	Excluded          bool   `json:"excluded"`
 	ExclusionNote     string `json:"exclusion_note"`
@@ -79,13 +99,14 @@ func (h *AdminPaymentHandler) List(c *gin.Context) {
 		return
 	}
 	h.renderer.Render(c, http.StatusOK, "admin_base.html", "admin/payments.html", gin.H{
-		"Title":        "收款记录",
-		"Items":        items,
-		"Tenants":      tenants,
-		"Filter":       filter,
-		"FilterPaid":   c.Query("paid"),
-		"PaymentTypes": paymentTypeOptions(),
-		"Error":        queryError(c),
+		"Title":          "收款记录",
+		"Items":          items,
+		"Tenants":        tenants,
+		"Filter":         filter,
+		"FilterPaid":     c.Query("paid"),
+		"FilterExcluded": excludedFilterValue(c.Query("excluded")),
+		"PaymentTypes":   paymentTypeOptions(),
+		"Error":          queryError(c),
 	})
 }
 
@@ -101,6 +122,11 @@ func (h *AdminPaymentHandler) APIList(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取收款记录失败"})
 		return
 	}
+	summary, err := h.paymentService.SummarizePayments(filter, now)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取收款汇总失败"})
+		return
+	}
 	page := normalizePaymentPage(filter.Page)
 	limit := normalizePaymentLimit(filter.Limit)
 	items := make([]paymentAPIItem, len(result.Payments))
@@ -109,6 +135,7 @@ func (h *AdminPaymentHandler) APIList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, paymentAPIResponse{
 		Data:    items,
+		Summary: paymentSummaryToAPI(summary),
 		Page:    page,
 		Limit:   limit,
 		Total:   result.Total,
@@ -154,6 +181,27 @@ func (h *AdminPaymentHandler) UpdateExclusion(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/admin/payments")
 }
 
+func (h *AdminPaymentHandler) Exclude(c *gin.Context) {
+	id, ok := parseUintParam(c, "id")
+	if !ok {
+		return
+	}
+	var input paymentExclusionRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求数据不正确"})
+		return
+	}
+	note := input.ExclusionNote
+	if strings.TrimSpace(note) == "" {
+		note = input.Note
+	}
+	if err := h.paymentService.SetExcluded(id, input.Excluded, note); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": userFacingError(err)})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
 func paymentFilterFromQuery(c *gin.Context) repository.PaymentFilter {
 	filter := repository.PaymentFilter{
 		Type:    c.Query("type"),
@@ -165,7 +213,7 @@ func paymentFilterFromQuery(c *gin.Context) repository.PaymentFilter {
 		SortDir: c.Query("sort_dir"),
 	}
 	filter.Paid = boolQuery(c.Query("paid"))
-	filter.Excluded = boolQuery(c.Query("excluded"))
+	filter.Excluded = excludedQuery(c.Query("excluded"))
 	filter.Overdue = boolQuery(c.Query("overdue"))
 	if tenantID, err := strconv.ParseUint(c.Query("tenant_id"), 10, 64); err == nil {
 		filter.TenantID = uint(tenantID)
@@ -208,9 +256,24 @@ func paymentTypeOptions() []SelectOption {
 	}
 }
 
+func paymentSummaryToAPI(summary repository.PaymentSummary) paymentAPISummary {
+	return paymentAPISummary{
+		TotalUnpaidAmountFen:  summary.TotalUnpaidAmount,
+		TotalUnpaidAmountText: service.FormatFen(summary.TotalUnpaidAmount),
+		TotalPaidAmountFen:    summary.TotalPaidAmount,
+		TotalPaidAmountText:   service.FormatFen(summary.TotalPaidAmount),
+		CheckoutPendingCount:  summary.CheckoutPendingCount,
+		ExcludedCount:         summary.ExcludedCount,
+	}
+}
+
 func paymentToAPIItem(payment model.Payment, now time.Time) paymentAPIItem {
 	today := paymentAPIDateOnly(now)
 	payDate := paymentAPIDateOnly(payment.PayDate)
+	paymentStatus := "unpaid"
+	if payment.Paid {
+		paymentStatus = "paid"
+	}
 	overdue := !payment.Paid && !payment.Excluded && !payDate.IsZero() && payDate.Before(today)
 	overdueDays := 0
 	if overdue {
@@ -222,9 +285,12 @@ func paymentToAPIItem(payment model.Payment, now time.Time) paymentAPIItem {
 	}
 	return paymentAPIItem{
 		ID:                payment.ID,
+		PaymentID:         payment.ID,
 		TenantID:          payment.TenantID,
 		TenantName:        payment.Tenant.Name,
 		RoomNo:            payment.Tenant.Room.RoomNo,
+		Room:              payment.Tenant.Room.RoomNo,
+		TenantStatus:      payment.Tenant.Status,
 		Phone:             payment.Tenant.Phone,
 		RentPriceFen:      payment.Tenant.RentPrice,
 		RentPriceText:     service.FormatFen(payment.Tenant.RentPrice),
@@ -241,6 +307,7 @@ func paymentToAPIItem(payment model.Payment, now time.Time) paymentAPIItem {
 		AmountFen:         payment.Amount,
 		AmountText:        service.FormatFen(payment.Amount),
 		Paid:              payment.Paid,
+		PaymentStatus:     paymentStatus,
 		StatusLabel:       paymentStatusLabelText(payment.Paid),
 		Excluded:          payment.Excluded,
 		ExclusionNote:     payment.ExclusionNote,
@@ -274,6 +341,28 @@ func boolQuery(value string) *bool {
 		return &parsed
 	default:
 		return nil
+	}
+}
+
+func excludedQuery(value string) *bool {
+	switch value {
+	case "all":
+		return nil
+	case "true":
+		parsed := true
+		return &parsed
+	default:
+		parsed := false
+		return &parsed
+	}
+}
+
+func excludedFilterValue(value string) string {
+	switch value {
+	case "all", "true":
+		return value
+	default:
+		return "false"
 	}
 }
 
@@ -336,9 +425,9 @@ func overdueLabelText(days int) string {
 
 func paymentStatusLabelText(paid bool) string {
 	if paid {
-		return "已收"
+		return "已付款"
 	}
-	return "未收"
+	return "未付款"
 }
 
 func paymentTypeLabelText(paymentType string) string {

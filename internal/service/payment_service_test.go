@@ -94,6 +94,9 @@ func TestPaymentExclusionRemovesUnpaidAggregate(t *testing.T) {
 	if before != 100000 {
 		t.Fatalf("before = %d, want 100000", before)
 	}
+	if err := tenantService.CheckOutTenant(tenant.ID); err != nil {
+		t.Fatalf("CheckOutTenant returned error: %v", err)
+	}
 	if err := paymentService.SetExcluded(payment.ID, true, "租客已搬离"); err != nil {
 		t.Fatalf("SetExcluded returned error: %v", err)
 	}
@@ -120,6 +123,87 @@ func TestPaymentExclusionRemovesUnpaidAggregate(t *testing.T) {
 	}
 	if paidPayment.Excluded || paidPayment.ExclusionNote != "" {
 		t.Fatalf("paid payment exclusion = %v/%q, want cleared", paidPayment.Excluded, paidPayment.ExclusionNote)
+	}
+}
+
+func TestPaymentExclusionRequiresCheckoutTenant(t *testing.T) {
+	db := newTestDB(t)
+	roomRepo := repository.NewRoomRepository(db)
+	tenantRepo := repository.NewTenantRepository(db)
+	paymentRepo := repository.NewPaymentRepository(db)
+	roomService := NewRoomService(roomRepo, tenantRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	paymentService := NewPaymentService(paymentRepo, tenantRepo)
+
+	room, err := roomService.CreateRoom(validRoomInput("B206", "在租单间", "1000"))
+	if err != nil {
+		t.Fatalf("CreateRoom returned error: %v", err)
+	}
+	tenant, err := tenantService.CheckInTenant(TenantInput{Name: "吴十", Phone: "13800000017", RoomID: room.ID})
+	if err != nil {
+		t.Fatalf("CheckInTenant returned error: %v", err)
+	}
+	payment, err := paymentService.RecordPayment(PaymentInput{TenantID: tenant.ID, AmountYuan: "1000", Type: model.PaymentTypeRent, Paid: false})
+	if err != nil {
+		t.Fatalf("RecordPayment returned error: %v", err)
+	}
+
+	if err := paymentService.SetExcluded(payment.ID, true, "仍在租"); err == nil {
+		t.Fatal("SetExcluded should reject active tenant payments")
+	}
+	updatedPayment, err := paymentRepo.GetPayment(payment.ID)
+	if err != nil {
+		t.Fatalf("GetPayment returned error: %v", err)
+	}
+	if updatedPayment.Excluded {
+		t.Fatal("active tenant payment should not be excluded")
+	}
+}
+
+func TestPaymentExclusionAllowsCheckoutPaidPayment(t *testing.T) {
+	db := newTestDB(t)
+	roomRepo := repository.NewRoomRepository(db)
+	tenantRepo := repository.NewTenantRepository(db)
+	paymentRepo := repository.NewPaymentRepository(db)
+	roomService := NewRoomService(roomRepo, tenantRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	paymentService := NewPaymentService(paymentRepo, tenantRepo)
+
+	room, err := roomService.CreateRoom(validRoomInput("B207", "已退租单间", "1000"))
+	if err != nil {
+		t.Fatalf("CreateRoom returned error: %v", err)
+	}
+	tenant, err := tenantService.CheckInTenant(TenantInput{Name: "郑十", Phone: "13800000018", RoomID: room.ID})
+	if err != nil {
+		t.Fatalf("CheckInTenant returned error: %v", err)
+	}
+	payment, err := paymentService.RecordPayment(PaymentInput{TenantID: tenant.ID, AmountYuan: "1000", Type: model.PaymentTypeRent, Paid: true})
+	if err != nil {
+		t.Fatalf("RecordPayment returned error: %v", err)
+	}
+	if err := tenantService.CheckOutTenant(tenant.ID); err != nil {
+		t.Fatalf("CheckOutTenant returned error: %v", err)
+	}
+
+	if err := paymentService.SetExcluded(payment.ID, true, "退租归档"); err != nil {
+		t.Fatalf("SetExcluded returned error: %v", err)
+	}
+	updatedPayment, err := paymentRepo.GetPayment(payment.ID)
+	if err != nil {
+		t.Fatalf("GetPayment returned error: %v", err)
+	}
+	if !updatedPayment.Excluded || updatedPayment.ExclusionNote != "退租归档" {
+		t.Fatalf("updated payment exclusion = %v/%q", updatedPayment.Excluded, updatedPayment.ExclusionNote)
+	}
+	if err := paymentService.SetExcluded(payment.ID, false, ""); err != nil {
+		t.Fatalf("SetExcluded restore returned error: %v", err)
+	}
+	restoredPayment, err := paymentRepo.GetPayment(payment.ID)
+	if err != nil {
+		t.Fatalf("GetPayment restored returned error: %v", err)
+	}
+	if restoredPayment.Excluded || restoredPayment.ExclusionNote != "" {
+		t.Fatalf("restored payment exclusion = %v/%q, want cleared", restoredPayment.Excluded, restoredPayment.ExclusionNote)
 	}
 }
 
@@ -218,8 +302,11 @@ func TestGenerateDueRecordsSkipsExistingRecordsAndIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RecordPayment returned error: %v", err)
 	}
-	if err := paymentService.SetExcluded(manualPayment.ID, true, "已线下处理"); err != nil {
-		t.Fatalf("SetExcluded returned error: %v", err)
+	excludedManualPayment := *manualPayment
+	excludedManualPayment.Excluded = true
+	excludedManualPayment.ExclusionNote = "已线下处理"
+	if err := paymentRepo.UpdatePayment(&excludedManualPayment); err != nil {
+		t.Fatalf("UpdatePayment returned error: %v", err)
 	}
 	created, err := paymentService.GenerateDueRecords(tenant.ID, time.Date(2026, time.February, 1, 12, 0, 0, 0, time.Local))
 	if err != nil {

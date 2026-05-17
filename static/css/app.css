@@ -101,3 +101,89 @@ h1, h2, h3, .display-font {
   font-size: 0.75rem;
   font-weight: 800;
 }
+
+.payments-table .col-tenant {
+  width: 260px;
+  min-width: 260px;
+}
+
+.payments-table .col-month,
+.payments-table .col-amount,
+.payments-table .col-status {
+  width: 120px;
+  min-width: 120px;
+}
+
+.payments-table .col-actions {
+  width: 180px;
+  min-width: 180px;
+}
+
+.payments-table .col-note {
+  min-width: 240px;
+}
+
+.payment-tenant-link {
+  color: var(--seal);
+  cursor: pointer;
+}
+
+.payment-tenant-link:hover {
+  text-decoration: underline;
+}
+
+.payment-action-button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  text-align: center;
+}
+
+.payment-mobile-card {
+  border: 1px solid rgba(120, 113, 108, 0.24);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.64);
+  padding: 1rem;
+}
+
+.payment-scope-option span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  cursor: pointer;
+  border: 1px solid rgba(120, 113, 108, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 0.55rem 0.9rem;
+  transition: 160ms ease;
+}
+
+.payment-scope-option input:checked + span {
+  border-color: var(--seal);
+  background: rgba(159, 58, 34, 0.1);
+  color: var(--seal);
+}
+
+@media (min-width: 768px) {
+  .payments-table th.payment-sticky-left,
+  .payments-table td.payment-sticky-left {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background: rgba(255, 249, 237, 0.96);
+  }
+
+  .payments-table th.payment-sticky-right,
+  .payments-table td.payment-sticky-right {
+    position: sticky;
+    right: 0;
+    z-index: 10;
+    background: rgba(255, 249, 237, 0.96);
+  }
+
+  .payments-table thead th.payment-sticky-left,
+  .payments-table thead th.payment-sticky-right {
+    z-index: 20;
+    background: rgba(255, 255, 255, 0.96);
+  }
+}

@@ -33,8 +33,11 @@ func TestDashboardSummaryReceivables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RecordPayment unpaid returned error: %v", err)
 	}
-	if err := paymentService.SetExcluded(excluded.ID, true, "协商减免"); err != nil {
-		t.Fatalf("SetExcluded returned error: %v", err)
+	excludedRecord := *excluded
+	excludedRecord.Excluded = true
+	excludedRecord.ExclusionNote = "协商减免"
+	if err := paymentRepo.UpdatePayment(&excludedRecord); err != nil {
+		t.Fatalf("UpdatePayment returned error: %v", err)
 	}
 
 	summary, err := dashboardService.Summary(time.Date(2026, time.July, 1, 12, 0, 0, 0, time.Local))

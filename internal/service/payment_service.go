@@ -60,6 +60,10 @@ func (s *PaymentService) ListPaymentsPage(filter repository.PaymentFilter, now t
 	return s.paymentRepo.ListPaymentsPage(filter, now)
 }
 
+func (s *PaymentService) SummarizePayments(filter repository.PaymentFilter, now time.Time) (repository.PaymentSummary, error) {
+	return s.paymentRepo.SummarizePayments(filter, now)
+}
+
 func (s *PaymentService) RecordPayment(input PaymentInput) (*model.Payment, error) {
 	payment, err := buildPayment(input)
 	if err != nil {
@@ -140,8 +144,8 @@ func (s *PaymentService) SetExcluded(id uint, excluded bool, note string) error 
 	if err != nil {
 		return err
 	}
-	if excluded && payment.Paid {
-		return fmt.Errorf("已收款记录无需排除")
+	if excluded && payment.Tenant.Status != model.TenantStatusCheckout {
+		return fmt.Errorf("只有已退租租客的付款记录可以不再记录")
 	}
 	exclusionNote, err := validateNotes(note, "排除备注")
 	if err != nil {

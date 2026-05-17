@@ -69,15 +69,53 @@ func TestPaymentRepositoryListPaymentsPageAppliesPeriodAndOverdue(t *testing.T) 
 	}
 }
 
+func TestPaymentRepositorySummarizePayments(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewPaymentRepository(db)
+	activeTenant := createPaymentRepoTenantWithStatus(t, db, "P103", "在租汇总", "13800001003", model.TenantStatusActive)
+	checkoutTenant := createPaymentRepoTenantWithStatus(t, db, "P104", "退租汇总", "13800001004", model.TenantStatusCheckout)
+	now := time.Date(2026, time.May, 17, 12, 0, 0, 0, time.Local)
+
+	createPaymentRepoPayment(t, db, activeTenant.ID, 100000, time.Date(2026, time.May, 1, 0, 0, 0, 0, time.Local), false, false)
+	createPaymentRepoPayment(t, db, activeTenant.ID, 200000, time.Date(2026, time.May, 2, 0, 0, 0, 0, time.Local), true, false)
+	createPaymentRepoPayment(t, db, checkoutTenant.ID, 300000, time.Date(2026, time.May, 3, 0, 0, 0, 0, time.Local), false, false)
+	createPaymentRepoPayment(t, db, checkoutTenant.ID, 400000, time.Date(2026, time.May, 4, 0, 0, 0, 0, time.Local), true, false)
+	createPaymentRepoPayment(t, db, checkoutTenant.ID, 500000, time.Date(2026, time.May, 5, 0, 0, 0, 0, time.Local), false, true)
+
+	summary, err := repo.SummarizePayments(PaymentFilter{Period: "month"}, now)
+	if err != nil {
+		t.Fatalf("SummarizePayments returned error: %v", err)
+	}
+	if summary.TotalUnpaidAmount != 400000 {
+		t.Fatalf("TotalUnpaidAmount = %d, want 400000", summary.TotalUnpaidAmount)
+	}
+	if summary.TotalPaidAmount != 600000 {
+		t.Fatalf("TotalPaidAmount = %d, want 600000", summary.TotalPaidAmount)
+	}
+	if summary.CheckoutPendingCount != 2 {
+		t.Fatalf("CheckoutPendingCount = %d, want 2", summary.CheckoutPendingCount)
+	}
+	if summary.ExcludedCount != 1 {
+		t.Fatalf("ExcludedCount = %d, want 1", summary.ExcludedCount)
+	}
+}
+
 func createPaymentRepoTenant(t *testing.T, db interface {
 	Create(value interface{}) *gorm.DB
 }, roomNo string, name string, phone string) model.Tenant {
+	t.Helper()
+	return createPaymentRepoTenantWithStatus(t, db, roomNo, name, phone, model.TenantStatusActive)
+}
+
+func createPaymentRepoTenantWithStatus(t *testing.T, db interface {
+	Create(value interface{}) *gorm.DB
+}, roomNo string, name string, phone string, status string) model.Tenant {
 	t.Helper()
 	room := model.Room{RoomNo: roomNo, Title: roomNo + " 房源", RentType: model.RentTypeMonthly, RentPrice: 100000, PaymentTerms: model.PaymentTerms1M1D, Deposit: 100000, Status: model.RoomStatusOccupied}
 	if err := db.Create(&room).Error; err != nil {
 		t.Fatalf("create room: %v", err)
 	}
-	tenant := model.Tenant{Name: name, Phone: phone, RoomID: room.ID, CheckinDate: time.Date(2026, time.May, 1, 0, 0, 0, 0, time.Local), RentPrice: 100000, RentType: model.RentTypeMonthly, PaymentTerms: model.PaymentTerms1M1D, Status: model.TenantStatusActive}
+	tenant := model.Tenant{Name: name, Phone: phone, RoomID: room.ID, CheckinDate: time.Date(2026, time.May, 1, 0, 0, 0, 0, time.Local), RentPrice: 100000, RentType: model.RentTypeMonthly, PaymentTerms: model.PaymentTerms1M1D, Status: status}
 	if err := db.Create(&tenant).Error; err != nil {
 		t.Fatalf("create tenant: %v", err)
 	}

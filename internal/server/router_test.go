@@ -29,6 +29,22 @@ func TestProtectedAdminRouteRedirectsToLogin(t *testing.T) {
 	}
 }
 
+func TestProtectedPaymentPatchRouteRedirectsToLogin(t *testing.T) {
+	withProjectRoot(t)
+	router := newTestRouter(t)
+
+	request := httptest.NewRequest(http.MethodPatch, "/admin/payments/1/exclude", nil)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusSeeOther)
+	}
+	if location := response.Header().Get("Location"); location != "/admin/login" {
+		t.Fatalf("Location = %q, want /admin/login", location)
+	}
+}
+
 func TestLoginPageReturnsOK(t *testing.T) {
 	withProjectRoot(t)
 	router := newTestRouter(t)

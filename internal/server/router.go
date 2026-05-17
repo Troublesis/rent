@@ -87,6 +87,7 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	admin.POST("/payments", paymentHandler.Create)
 	admin.POST("/payments/:id/toggle", paymentHandler.Toggle)
 	admin.POST("/payments/:id/exclusion", paymentHandler.UpdateExclusion)
+	admin.PATCH("/payments/:id/exclude", paymentHandler.Exclude)
 	admin.GET("/stats", statsHandler.Page)
 	admin.GET("/settings", settingsHandler.Page)
 	admin.POST("/settings", settingsHandler.Update)

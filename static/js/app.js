@@ -256,19 +256,31 @@ const initPaymentsTable = () => {
   const root = document.querySelector('[data-payments-table]')
   if (!root) return
   const body = root.querySelector('[data-payments-body]')
+  const cards = root.querySelector('[data-payments-cards]')
   const footer = root.querySelector('[data-payments-footer]')
   const filterForm = root.querySelector('[data-payments-filter]')
-  const state = { page: 1, limit: 20, hasMore: true, loading: false, sortBy: 'next_pay_date', sortDir: 'asc' }
+  const summaryRoot = root.querySelector('[data-payments-summary]')
+  const sortSelect = root.querySelector('[data-payment-sort-select]')
+  const modal = document.querySelector('[data-payment-exclude-modal]')
+  const modalCancel = modal?.querySelector('[data-payment-exclude-cancel]')
+  const modalConfirm = modal?.querySelector('[data-payment-exclude-confirm]')
+  const initialSort = paymentSortFromSelect(sortSelect)
+  let pendingExcludeID = ''
+  let state = { page: 1, limit: 20, hasMore: true, loading: false, sortBy: initialSort.sortBy, sortDir: initialSort.sortDir }
 
+  const setState = (updates) => {
+    state = { ...state, ...updates }
+  }
   const filters = () => {
     const data = new FormData(filterForm)
     const params = new URLSearchParams(window.location.search)
     return {
-      tenant_id: data.get('tenant_id') || params.get('tenant_id') || '',
-      paid: data.get('paid') || params.get('paid') || '',
-      period: data.get('period') || params.get('period') || '',
-      type: data.get('type') || params.get('type') || '',
-      excluded: params.get('excluded') || '',
+      q: data.get('q') || '',
+      tenant_id: params.get('tenant_id') || '',
+      paid: data.get('paid') || '',
+      period: data.get('period') || '',
+      type: data.get('type') || '',
+      excluded: data.get('excluded') || 'false',
       overdue: params.get('overdue') || ''
     }
   }
@@ -280,60 +292,120 @@ const initPaymentsTable = () => {
   const paymentURL = () => {
     const params = new URLSearchParams({ page: String(state.page), limit: String(state.limit), sort_by: state.sortBy, sort_dir: state.sortDir })
     Object.entries(filters()).forEach(([key, value]) => {
-      if (value) params.set(key, value)
+      if (value !== '') params.set(key, value)
     })
     return `/api/payments?${params.toString()}`
   }
   const setFooter = (message) => {
     if (footer) footer.textContent = message
   }
+  const showLoading = () => {
+    body.innerHTML = '<tr><td class="px-5 py-10 text-center text-stone-500" colspan="6">正在加载收款记录...</td></tr>'
+    if (cards) cards.innerHTML = '<div class="rounded-2xl border border-stone-200 bg-white/60 p-4 text-center text-stone-500">正在加载收款记录...</div>'
+  }
+  const showEmpty = () => {
+    body.innerHTML = '<tr><td class="px-5 py-10 text-center text-stone-500" colspan="6">还没有收款记录。</td></tr>'
+    if (cards) cards.innerHTML = '<div class="rounded-2xl border border-stone-200 bg-white/60 p-4 text-center text-stone-500">还没有收款记录。</div>'
+  }
+  const showError = () => {
+    body.innerHTML = '<tr><td class="px-5 py-10 text-center text-red-700" colspan="6">读取收款记录失败，请稍后重试。</td></tr>'
+    if (cards) cards.innerHTML = '<div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-red-700">读取收款记录失败，请稍后重试。</div>'
+  }
   const reload = () => {
-    state.page = 1
-    state.hasMore = true
-    body.innerHTML = '<tr><td class="px-5 py-10 text-center text-stone-500" colspan="7">正在加载收款记录...</td></tr>'
+    setState({ page: 1, hasMore: true })
+    showLoading()
     loadPage(true)
   }
   const loadPage = (replace = false) => {
     if (state.loading || !state.hasMore) return
-    state.loading = true
+    setState({ loading: true })
     setFooter('正在加载...')
     fetch(paymentURL())
       .then((response) => response.ok ? response.json() : Promise.reject(new Error('读取收款记录失败')))
       .then((payload) => {
-        const rows = (payload.data || []).map(renderPaymentRow).join('')
-        if (replace) body.innerHTML = ''
+        const payments = payload.data || []
+        const rows = payments.map(renderPaymentRow).join('')
+        const mobileCards = payments.map(renderPaymentCard).join('')
+        if (payload.summary) renderPaymentSummary(summaryRoot, payload.summary)
+        if (replace) {
+          body.innerHTML = ''
+          if (cards) cards.innerHTML = ''
+        }
         if (rows) body.insertAdjacentHTML('beforeend', rows)
-        if (!body.children.length) body.innerHTML = '<tr><td class="px-5 py-10 text-center text-stone-500" colspan="7">还没有收款记录。</td></tr>'
-        state.hasMore = Boolean(payload.has_more)
-        state.page += 1
+        if (cards && mobileCards) cards.insertAdjacentHTML('beforeend', mobileCards)
+        if (replace && !payments.length) showEmpty()
+        setState({ hasMore: Boolean(payload.has_more), page: state.page + 1 })
         setFooter(state.hasMore ? '下拉加载更多记录' : '已显示全部记录')
       })
       .catch(() => {
-        if (replace) body.innerHTML = '<tr><td class="px-5 py-10 text-center text-red-700" colspan="7">读取收款记录失败，请稍后重试。</td></tr>'
+        if (replace) showError()
         setFooter('读取失败')
       })
       .finally(() => {
-        state.loading = false
+        setState({ loading: false })
         updateIndicators()
       })
+  }
+  const openExcludeModal = (paymentID) => {
+    pendingExcludeID = paymentID
+    modal?.classList.remove('hidden')
+    modal?.classList.add('flex')
+  }
+  const closeExcludeModal = () => {
+    pendingExcludeID = ''
+    modal?.classList.add('hidden')
+    modal?.classList.remove('flex')
   }
 
   filterForm.addEventListener('submit', (event) => {
     event.preventDefault()
     reload()
   })
-  filterForm.addEventListener('change', reload)
+  filterForm.addEventListener('change', (event) => {
+    if (event.target.closest('[data-payment-sort-select]')) {
+      const nextSort = paymentSortFromSelect(sortSelect)
+      setState({ sortBy: nextSort.sortBy, sortDir: nextSort.sortDir })
+    }
+    reload()
+  })
   root.querySelectorAll('[data-payment-sort]').forEach((button) => {
     button.addEventListener('click', () => {
       const nextSort = button.dataset.paymentSort
-      if (state.sortBy === nextSort) {
-        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'
-      } else {
-        state.sortBy = nextSort
-        state.sortDir = nextSort === 'next_pay_date' ? 'asc' : 'asc'
+      const nextDir = state.sortBy === nextSort && state.sortDir === 'asc' ? 'desc' : 'asc'
+      setState({ sortBy: nextSort, sortDir: nextDir })
+      if (sortSelect) {
+        const nextValue = `${nextSort}:${nextDir}`
+        if (Array.from(sortSelect.options).some((option) => option.value === nextValue)) sortSelect.value = nextValue
       }
       reload()
     })
+  })
+  root.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-payment-exclude]')
+    if (!trigger) return
+    openExcludeModal(trigger.dataset.paymentExclude)
+  })
+  modalCancel?.addEventListener('click', closeExcludeModal)
+  modal?.addEventListener('click', (event) => {
+    if (event.target === modal) closeExcludeModal()
+  })
+  modalConfirm?.addEventListener('click', () => {
+    if (!pendingExcludeID) return
+    modalConfirm.disabled = true
+    fetch(`/admin/payments/${pendingExcludeID}/exclude`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ excluded: true })
+    })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('操作失败')))
+      .then(() => {
+        closeExcludeModal()
+        reload()
+      })
+      .catch(() => setFooter('操作失败，请稍后重试'))
+      .finally(() => {
+        modalConfirm.disabled = false
+      })
   })
 
   if ('IntersectionObserver' in window && footer) {
@@ -349,44 +421,108 @@ const initPaymentsTable = () => {
   reload()
 }
 
+const paymentSortFromSelect = (select) => {
+  const [sortBy, sortDir] = String(select?.value || 'next_pay_date:asc').split(':')
+  return { sortBy: sortBy || 'next_pay_date', sortDir: sortDir || 'asc' }
+}
+
+const renderPaymentSummary = (root, summary) => {
+  if (!root) return
+  root.innerHTML = [
+    paymentSummaryCard('总待付款', `¥${summary.total_unpaid_amount_text || '0.00'}`),
+    paymentSummaryCard('已付款', `¥${summary.total_paid_amount_text || '0.00'}`),
+    paymentSummaryCard('已退租待处理', summary.checkout_pending_count || 0),
+    paymentSummaryCard('排除记录', summary.excluded_count || 0)
+  ].join('')
+}
+
+const paymentSummaryCard = (label, value) => `
+  <div class="rounded-2xl border border-stone-200 bg-white/55 p-4">
+    <p class="text-sm font-bold text-stone-500">${escapeHTML(label)}</p>
+    <p class="mt-2 text-2xl font-black">${escapeHTML(value)}</p>
+  </div>`
+
+const paymentID = (payment) => payment.payment_id || payment.id
+const paymentRoom = (payment) => payment.room || payment.room_no || '-'
+const paymentStatusValue = (payment) => payment.payment_status || (payment.paid ? 'paid' : 'unpaid')
+const paymentStatusLabel = (payment) => paymentStatusValue(payment) === 'paid' ? '已付款' : '未付款'
+const tenantStatusLabel = (status) => {
+  if (status === 'active') return '在租'
+  if (status === 'checkout') return '已退租'
+  return '未知'
+}
+const paymentMonth = (payment) => {
+  const value = payment.pay_date || payment.next_pay_date_label || ''
+  return value && value.length >= 7 ? value.slice(0, 7) : '-'
+}
+
 const renderPaymentRow = (payment) => {
-  const rowClass = payment.excluded ? 'bg-stone-200/50 text-stone-500' : ''
-  const statusClass = payment.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-  const actionClass = payment.paid ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
-  const dueClass = payment.overdue ? 'font-black text-red-700' : ''
-  const exclusionID = `exclude-${payment.id}`
-  const note = payment.note ? `<p class="mt-1 text-stone-600">${escapeHTML(payment.note)}</p>` : ''
-  const excludedBadge = payment.excluded ? '<span class="badge mt-2 bg-stone-200 text-stone-600">已排除</span>' : ''
-  const autoBadge = payment.auto_generated ? '<span class="badge mt-2 bg-amber-100 text-amber-800">自动生成</span>' : ''
-  const overdueBadge = payment.overdue_label ? `<span class="badge ml-2 bg-red-100 text-red-700">${escapeHTML(payment.overdue_label)}</span>` : ''
-  const exclusionForm = payment.paid ? '' : `
-    <button class="btn-secondary text-xs" type="button" data-toggle-panel="${exclusionID}">${payment.excluded ? '编辑排除备注' : '不再记录'}</button>
-    <form id="${exclusionID}" class="${payment.excluded ? '' : 'hidden '}space-y-2 rounded-2xl bg-white/60 p-3" method="post" action="/admin/payments/${payment.id}/exclusion">
-      <input type="hidden" name="excluded" value="true">
-      <input class="input" name="exclusion_note" value="${escapeHTML(payment.exclusion_note)}" maxlength="1000" placeholder="填写排除原因" data-validate="notes">
-      <button class="btn-secondary w-full text-xs" type="submit">保存备注</button>
-    </form>`
-  const restoreForm = payment.excluded ? `
-    <form method="post" action="/admin/payments/${payment.id}/exclusion">
-      <input type="hidden" name="excluded" value="false">
-      <button class="btn-secondary w-full text-xs" type="submit">恢复记录</button>
-    </form>` : ''
+  const rowClass = payment.excluded ? 'bg-stone-100/80 text-stone-500' : ''
+  const statusClass = paymentStatusValue(payment) === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+  const note = payment.note || '暂无备注'
+  const badges = renderPaymentBadges(payment)
   return `
     <tr class="${rowClass}">
-      <td class="px-5 py-4"><p class="font-black">${escapeHTML(payment.tenant_name)}</p><p class="text-stone-500">${escapeHTML(payment.room_no)} · ${escapeHTML(payment.phone)}</p></td>
-      <td class="px-5 py-4">¥${escapeHTML(payment.rent_price_text)} / ${escapeHTML(payment.rent_type_label)}</td>
-      <td class="px-5 py-4">${escapeHTML(payment.checkin_date || '-')}</td>
-      <td class="px-5 py-4 ${dueClass}">${escapeHTML(payment.next_pay_date_label || payment.pay_date || '-')}${overdueBadge}</td>
-      <td class="px-5 py-4"><span class="badge ${statusClass}">${escapeHTML(payment.status_label)}</span>${excludedBadge}${autoBadge}</td>
-      <td class="px-5 py-4"><p class="font-black">${escapeHTML(payment.type_label)} · ¥${escapeHTML(payment.amount_text)}</p><p class="text-stone-500">${escapeHTML(payment.pay_date || '-')}</p>${note}</td>
-      <td class="space-y-2 px-5 py-4">
-        ${exclusionForm}
-        ${restoreForm}
-        <form method="post" action="/admin/payments/${payment.id}/toggle">
-          <button class="w-full rounded-full px-4 py-2 text-xs font-black text-white ${actionClass}" type="submit">${payment.paid ? '已收，改为未收' : '未收，标记已收'}</button>
-        </form>
+      <td class="payment-sticky-left col-tenant px-5 py-4">
+        <a class="payment-tenant-link font-semibold" href="/admin/tenants/${escapeHTML(payment.tenant_id)}">${escapeHTML(payment.tenant_name)}</a>
+        <p class="mt-1 text-xs text-stone-500">${escapeHTML(paymentRoom(payment))} · ${escapeHTML(tenantStatusLabel(payment.tenant_status))}</p>
       </td>
+      <td class="col-month px-5 py-4">${escapeHTML(paymentMonth(payment))}</td>
+      <td class="col-amount px-5 py-4 font-black">¥${escapeHTML(payment.amount_text)}</td>
+      <td class="col-status px-5 py-4"><span class="badge ${statusClass}">${escapeHTML(paymentStatusLabel(payment))}</span>${badges}</td>
+      <td class="col-note px-5 py-4"><p class="font-bold text-stone-700">${escapeHTML(payment.type_label)}</p><p class="mt-1 text-stone-600">${escapeHTML(note)}</p></td>
+      <td class="payment-sticky-right col-actions space-y-2 px-5 py-4">${renderPaymentActions(payment)}</td>
     </tr>`
+}
+
+const renderPaymentCard = (payment) => {
+  const statusClass = paymentStatusValue(payment) === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+  const note = payment.note || '暂无备注'
+  const cardClass = payment.excluded ? 'opacity-75' : ''
+  return `
+    <article class="payment-mobile-card ${cardClass}">
+      <div>
+        <a class="payment-tenant-link font-semibold" href="/admin/tenants/${escapeHTML(payment.tenant_id)}">${escapeHTML(payment.tenant_name)}</a>
+        <p class="mt-1 text-xs text-stone-500">${escapeHTML(paymentRoom(payment))} · ${escapeHTML(tenantStatusLabel(payment.tenant_status))}</p>
+      </div>
+      <dl class="mt-4 space-y-3 text-sm">
+        <div class="flex justify-between gap-4"><dt class="text-stone-500">租金月份</dt><dd class="font-bold">${escapeHTML(paymentMonth(payment))}</dd></div>
+        <div class="flex justify-between gap-4"><dt class="text-stone-500">金额</dt><dd class="font-bold">¥${escapeHTML(payment.amount_text)}</dd></div>
+        <div class="flex justify-between gap-4"><dt class="text-stone-500">状态</dt><dd><span class="badge ${statusClass}">${escapeHTML(paymentStatusLabel(payment))}</span></dd></div>
+      </dl>
+      <div class="mt-4 border-t border-stone-200 pt-4">
+        <p class="text-sm font-bold text-stone-500">备注</p>
+        <p class="mt-1 text-sm text-stone-700">${escapeHTML(note)}</p>
+      </div>
+      <div class="mt-4 space-y-2">${renderPaymentActions(payment)}</div>
+    </article>`
+}
+
+const renderPaymentBadges = (payment) => {
+  const excludedBadge = payment.excluded ? '<span class="badge ml-2 bg-stone-200 text-stone-600">已排除</span>' : ''
+  const autoBadge = payment.auto_generated ? '<span class="badge ml-2 bg-amber-100 text-amber-800">自动生成</span>' : ''
+  const overdueBadge = payment.overdue_label ? `<span class="badge ml-2 bg-red-100 text-red-700">${escapeHTML(payment.overdue_label)}</span>` : ''
+  return `${excludedBadge}${autoBadge}${overdueBadge}`
+}
+
+const renderPaymentActions = (payment) => {
+  const id = paymentID(payment)
+  const status = paymentStatusValue(payment)
+  const canRemind = status === 'unpaid' && !payment.excluded
+  const canExclude = payment.tenant_status === 'checkout' && !payment.excluded
+  const actionClass = status === 'paid' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
+  const remindButton = canRemind ? '<button class="btn-secondary payment-action-button text-xs opacity-70" type="button" disabled>催缴</button>' : ''
+  const excludeButton = canExclude ? `<button class="btn-secondary payment-action-button text-xs" type="button" data-payment-exclude="${escapeHTML(id)}">不再记录</button>` : ''
+  const restoreForm = payment.excluded ? `
+    <form method="post" action="/admin/payments/${escapeHTML(id)}/exclusion">
+      <input type="hidden" name="excluded" value="false">
+      <button class="btn-secondary payment-action-button text-xs" type="submit">恢复记录</button>
+    </form>` : ''
+  const toggleForm = `
+    <form method="post" action="/admin/payments/${escapeHTML(id)}/toggle">
+      <button class="payment-action-button rounded-full px-4 py-2 text-xs font-black text-white ${actionClass}" type="submit">${status === 'paid' ? '已付款，改为未付款' : '未付款，标记已付款'}</button>
+    </form>`
+  return `${remindButton}${excludeButton}${restoreForm}${toggleForm}`
 }
 
 initPaymentsTable()

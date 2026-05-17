@@ -29,6 +29,13 @@ type PaymentListResult struct {
 	Total    int64
 }
 
+type PaymentSummary struct {
+	TotalUnpaidAmount    int
+	TotalPaidAmount      int
+	CheckoutPendingCount int64
+	ExcludedCount        int64
+}
+
 type MonthlyIncomeRow struct {
 	Month int
 	Total int
@@ -88,6 +95,32 @@ func (r *PaymentRepository) ListPaymentsPage(filter PaymentFilter, now time.Time
 		return PaymentListResult{}, err
 	}
 	return PaymentListResult{Payments: payments, Total: total}, nil
+}
+
+func (r *PaymentRepository) SummarizePayments(filter PaymentFilter, now time.Time) (PaymentSummary, error) {
+	summaryFilter := filter
+	summaryFilter.Paid = nil
+	summaryFilter.Excluded = nil
+	summaryFilter.Overdue = nil
+	summaryQuery := func() *gorm.DB {
+		query := joinPaymentTenantRoom(r.db.Model(&model.Payment{}))
+		return applyPaymentFilter(query, summaryFilter, now)
+	}
+
+	var summary PaymentSummary
+	if err := summaryQuery().Select("COALESCE(SUM(payments.amount), 0)").Where("payments.paid = ? AND payments.excluded = ?", false, false).Scan(&summary.TotalUnpaidAmount).Error; err != nil {
+		return PaymentSummary{}, err
+	}
+	if err := summaryQuery().Select("COALESCE(SUM(payments.amount), 0)").Where("payments.paid = ? AND payments.excluded = ?", true, false).Scan(&summary.TotalPaidAmount).Error; err != nil {
+		return PaymentSummary{}, err
+	}
+	if err := summaryQuery().Where("tenants.status = ? AND payments.excluded = ?", model.TenantStatusCheckout, false).Count(&summary.CheckoutPendingCount).Error; err != nil {
+		return PaymentSummary{}, err
+	}
+	if err := summaryQuery().Where("payments.excluded = ?", true).Count(&summary.ExcludedCount).Error; err != nil {
+		return PaymentSummary{}, err
+	}
+	return summary, nil
 }
 
 func (r *PaymentRepository) GetPayment(id uint) (*model.Payment, error) {

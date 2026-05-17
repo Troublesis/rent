@@ -1,102 +1,158 @@
 {{define "content"}}
-<section class="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+<section class="space-y-6">
   <form class="card space-y-5 p-6" method="post" action="/admin/payments" data-validate-form>
     <div>
       <h3 class="text-2xl font-black">新增收款</h3>
       <p class="mt-2 text-sm text-stone-600">记录租金、水电费或其他费用。</p>
     </div>
-    <div data-tenant-combobox data-tenant-mode="form">
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div data-tenant-combobox data-tenant-mode="form">
+        <label class="block">
+          <span class="text-sm font-bold text-stone-600">租客 <span class="text-red-600">*</span></span>
+          <div class="relative mt-2">
+            <input class="input pr-10" type="search" placeholder="输入姓名、房间号或手机号" autocomplete="off" data-tenant-input data-label="租客">
+            <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-stone-500">⌄</span>
+            <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-list></div>
+          </div>
+        </label>
+        <input type="hidden" name="tenant_id" required data-tenant-hidden data-validate="required" data-label="租客">
+      </div>
       <label class="block">
-        <span class="text-sm font-bold text-stone-600">租客 <span class="text-red-600">*</span></span>
-        <div class="relative mt-2">
-          <input class="input pr-10" type="search" placeholder="输入姓名、房间号或手机号" autocomplete="off" data-tenant-input data-label="租客">
-          <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-stone-500">⌄</span>
-          <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-list></div>
-        </div>
+        <span class="text-sm font-bold text-stone-600">金额（元） <span class="text-red-600">*</span></span>
+        <input class="input mt-2" name="amount" inputmode="decimal" required data-validate="positive_amount" data-label="金额">
       </label>
-      <input type="hidden" name="tenant_id" required data-tenant-hidden data-validate="required" data-label="租客">
+      <label class="block">
+        <span class="text-sm font-bold text-stone-600">类型 <span class="text-red-600">*</span></span>
+        <select class="input mt-2" name="type" required>
+          {{range .PaymentTypes}}
+            <option value="{{.Value}}">{{.Label}}</option>
+          {{end}}
+        </select>
+      </label>
+      <label class="block">
+        <span class="text-sm font-bold text-stone-600">付款日期 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
+        <input class="input mt-2" type="date" name="pay_date">
+      </label>
+      <div class="flex items-end">
+        <label class="flex h-[48px] w-full items-center gap-3 rounded-2xl border border-stone-300/70 bg-white/50 px-4 text-sm font-bold text-stone-600">
+          <input type="checkbox" name="paid" class="h-4 w-4 rounded border-stone-400">
+          已收款
+        </label>
+      </div>
     </div>
-    <label class="block">
-      <span class="text-sm font-bold text-stone-600">金额（元） <span class="text-red-600">*</span></span>
-      <input class="input mt-2" name="amount" inputmode="decimal" required data-validate="positive_amount" data-label="金额">
-    </label>
-    <label class="block">
-      <span class="text-sm font-bold text-stone-600">类型 <span class="text-red-600">*</span></span>
-      <select class="input mt-2" name="type" required>
-        {{range .PaymentTypes}}
-          <option value="{{.Value}}">{{.Label}}</option>
-        {{end}}
-      </select>
-    </label>
-    <label class="block">
-      <span class="text-sm font-bold text-stone-600">付款日期 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
-      <input class="input mt-2" type="date" name="pay_date">
-    </label>
-    <label class="flex items-center gap-3 text-sm font-bold text-stone-600">
-      <input type="checkbox" name="paid" class="h-4 w-4 rounded border-stone-400">
-      已收款
-    </label>
     <label class="block">
       <span class="text-sm font-bold text-stone-600">备注 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
       <textarea class="input mt-2" name="note" maxlength="1000" data-validate="notes" data-counter-target="payment-note-counter"></textarea>
       <span id="payment-note-counter" class="mt-1 block text-right text-xs text-stone-500">0 / 500 字</span>
     </label>
-    <button class="btn-primary w-full" type="submit">保存收款</button>
+    <button class="btn-primary w-full md:w-auto" type="submit">保存收款</button>
   </form>
 
   <section class="card overflow-hidden" data-payments-table>
-    <div class="border-b border-stone-300/70 p-5">
-      <form class="grid gap-3 xl:grid-cols-[1.4fr_0.75fr_0.75fr_0.75fr_auto]" method="get" action="/admin/payments" data-payments-filter>
-        <div data-tenant-combobox data-tenant-mode="filter" data-tenant-allow-all="true">
-          <label class="block">
-            <span class="sr-only">筛选租客</span>
-            <div class="relative">
-              <input class="input pr-10" type="search" placeholder="输入姓名、房间号或手机号" autocomplete="off" data-tenant-input>
-              <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-stone-500">⌄</span>
-              <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-list></div>
-            </div>
-          </label>
-          <input type="hidden" name="tenant_id" data-tenant-hidden>
+    <div class="space-y-5 border-b border-stone-300/70 p-5">
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-payments-summary>
+        <div class="rounded-2xl border border-stone-200 bg-white/55 p-4">
+          <p class="text-sm font-bold text-stone-500">总待付款</p>
+          <p class="mt-2 text-2xl font-black">¥0.00</p>
         </div>
-        <select class="input" name="paid" data-payment-filter="paid">
-          <option value="" {{if eq .FilterPaid ""}}selected{{end}}>全部状态</option>
-          <option value="true" {{if eq .FilterPaid "true"}}selected{{end}}>已收</option>
-          <option value="false" {{if eq .FilterPaid "false"}}selected{{end}}>未收</option>
-        </select>
-        <select class="input" name="period" data-payment-filter="period">
-          <option value="" {{if eq .Filter.Period ""}}selected{{end}}>全部周期</option>
-          <option value="today" {{if eq .Filter.Period "today"}}selected{{end}}>当日</option>
-          <option value="week" {{if eq .Filter.Period "week"}}selected{{end}}>当周</option>
-          <option value="month" {{if eq .Filter.Period "month"}}selected{{end}}>当月</option>
-        </select>
-        <select class="input" name="type" data-payment-filter="type">
-          <option value="">全部类型</option>
-          {{range .PaymentTypes}}
-            <option value="{{.Value}}" {{if eq $.Filter.Type .Value}}selected{{end}}>{{.Label}}</option>
-          {{end}}
-        </select>
-        <a class="btn-secondary text-center" href="/admin/payments" data-payments-reset>清空</a>
+        <div class="rounded-2xl border border-stone-200 bg-white/55 p-4">
+          <p class="text-sm font-bold text-stone-500">已付款</p>
+          <p class="mt-2 text-2xl font-black">¥0.00</p>
+        </div>
+        <div class="rounded-2xl border border-stone-200 bg-white/55 p-4">
+          <p class="text-sm font-bold text-stone-500">已退租待处理</p>
+          <p class="mt-2 text-2xl font-black">0</p>
+        </div>
+        <div class="rounded-2xl border border-stone-200 bg-white/55 p-4">
+          <p class="text-sm font-bold text-stone-500">排除记录</p>
+          <p class="mt-2 text-2xl font-black">0</p>
+        </div>
+      </div>
+
+      <form class="space-y-4" method="get" action="/admin/payments" data-payments-filter>
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.3fr_0.75fr_0.75fr_0.75fr_0.9fr_auto]">
+          <label class="block">
+            <span class="sr-only">搜索租客</span>
+            <input class="input" type="search" name="q" value="{{.Filter.Query}}" placeholder="搜索姓名、房间号或手机号" data-payment-filter="q">
+          </label>
+          <select class="input" name="paid" data-payment-filter="paid">
+            <option value="" {{if eq .FilterPaid ""}}selected{{end}}>全部状态</option>
+            <option value="true" {{if eq .FilterPaid "true"}}selected{{end}}>已付款</option>
+            <option value="false" {{if eq .FilterPaid "false"}}selected{{end}}>未付款</option>
+          </select>
+          <select class="input" name="period" data-payment-filter="period">
+            <option value="" {{if eq .Filter.Period ""}}selected{{end}}>全部月份</option>
+            <option value="today" {{if eq .Filter.Period "today"}}selected{{end}}>当日</option>
+            <option value="week" {{if eq .Filter.Period "week"}}selected{{end}}>当周</option>
+            <option value="month" {{if eq .Filter.Period "month"}}selected{{end}}>当月</option>
+          </select>
+          <select class="input" name="type" data-payment-filter="type">
+            <option value="">全部类型</option>
+            {{range .PaymentTypes}}
+              <option value="{{.Value}}" {{if eq $.Filter.Type .Value}}selected{{end}}>{{.Label}}</option>
+            {{end}}
+          </select>
+          <select class="input" name="sort" data-payment-sort-select>
+            <option value="next_pay_date:asc">月份升序</option>
+            <option value="next_pay_date:desc">月份降序</option>
+            <option value="amount:desc">金额从高到低</option>
+            <option value="amount:asc">金额从低到高</option>
+            <option value="tenant:asc">租客名称</option>
+          </select>
+          <a class="btn-secondary text-center" href="/admin/payments" data-payments-reset>清空</a>
+        </div>
+        <fieldset class="flex flex-wrap gap-2 text-sm font-bold text-stone-600" data-payment-excluded-filter>
+          <legend class="sr-only">记录范围</legend>
+          <label class="payment-scope-option">
+            <input class="sr-only" type="radio" name="excluded" value="all" {{if eq .FilterExcluded "all"}}checked{{end}}>
+            <span>全部</span>
+          </label>
+          <label class="payment-scope-option">
+            <input class="sr-only" type="radio" name="excluded" value="false" {{if eq .FilterExcluded "false"}}checked{{end}}>
+            <span>正常记录</span>
+          </label>
+          <label class="payment-scope-option">
+            <input class="sr-only" type="radio" name="excluded" value="true" {{if eq .FilterExcluded "true"}}checked{{end}}>
+            <span>已排除</span>
+          </label>
+        </fieldset>
       </form>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[1040px] text-left text-sm">
-        <thead class="border-b border-stone-300/70 bg-white/40 text-stone-500">
+
+    <div class="hidden overflow-x-auto md:block">
+      <table class="payments-table w-full min-w-[920px] table-fixed text-left text-sm">
+        <thead class="border-b border-stone-300/70 bg-white/60 text-stone-500">
           <tr>
-            <th class="px-5 py-4"><button class="font-black" type="button" data-payment-sort="tenant">租客 <span data-sort-indicator="tenant"></span></button></th>
-            <th class="px-5 py-4"><button class="font-black" type="button" data-payment-sort="amount">租金 <span data-sort-indicator="amount"></span></button></th>
-            <th class="px-5 py-4"><button class="font-black" type="button" data-payment-sort="checkin_date">入住日期 <span data-sort-indicator="checkin_date"></span></button></th>
-            <th class="px-5 py-4"><button class="font-black" type="button" data-payment-sort="next_pay_date">下次支付日期 <span data-sort-indicator="next_pay_date">↑</span></button></th>
-            <th class="px-5 py-4"><button class="font-black" type="button" data-payment-sort="status">状态 <span data-sort-indicator="status"></span></button></th>
-            <th class="px-5 py-4"><button class="font-black" type="button" data-payment-sort="type">类型 <span data-sort-indicator="type"></span></button></th>
-            <th class="px-5 py-4">操作</th>
+            <th class="payment-sticky-left col-tenant px-5 py-4"><button class="font-black" type="button" data-payment-sort="tenant">租客 <span data-sort-indicator="tenant"></span></button></th>
+            <th class="col-month px-5 py-4"><button class="font-black" type="button" data-payment-sort="next_pay_date">租金月份 <span data-sort-indicator="next_pay_date">↑</span></button></th>
+            <th class="col-amount px-5 py-4"><button class="font-black" type="button" data-payment-sort="amount">金额 <span data-sort-indicator="amount"></span></button></th>
+            <th class="col-status px-5 py-4"><button class="font-black" type="button" data-payment-sort="status">付款状态 <span data-sort-indicator="status"></span></button></th>
+            <th class="col-note px-5 py-4">备注</th>
+            <th class="payment-sticky-right col-actions px-5 py-4">操作</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-stone-200/80" data-payments-body>
-          <tr><td class="px-5 py-10 text-center text-stone-500" colspan="7">正在加载收款记录...</td></tr>
+          <tr><td class="px-5 py-10 text-center text-stone-500" colspan="6">正在加载收款记录...</td></tr>
         </tbody>
       </table>
     </div>
+
+    <div class="space-y-4 p-4 md:hidden" data-payments-cards>
+      <div class="rounded-2xl border border-stone-200 bg-white/60 p-4 text-center text-stone-500">正在加载收款记录...</div>
+    </div>
+
     <div class="cursor-pointer border-t border-stone-200/70 p-4 text-center text-sm text-stone-500" data-payments-footer>下拉加载更多记录</div>
   </section>
 </section>
+
+<div class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 p-4" data-payment-exclude-modal>
+  <div class="w-full max-w-md rounded-3xl bg-[var(--paper-soft)] p-6 shadow-2xl">
+    <h3 class="text-xl font-black">确认将该记录标记为“不再记录”？</h3>
+    <p class="mt-3 text-sm text-stone-600">该操作后此付款记录将不再出现在默认列表。</p>
+    <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+      <button class="btn-secondary" type="button" data-payment-exclude-cancel>取消</button>
+      <button class="btn-primary" type="button" data-payment-exclude-confirm>确认</button>
+    </div>
+  </div>
+</div>
 {{end}}
