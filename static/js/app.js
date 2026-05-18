@@ -303,21 +303,26 @@ const initPaymentsTable = () => {
   const root = document.querySelector('[data-payments-table]')
   if (!root) return
   const body = root.querySelector('[data-payments-body]')
+  const grid = root.querySelector('[data-payments-grid]')
   const cards = root.querySelector('[data-payments-cards]')
   const footer = root.querySelector('[data-payments-footer]')
   const filterForm = root.querySelector('[data-payments-filter]')
   const summaryRoot = root.querySelector('[data-payments-summary]')
   const sortSelect = root.querySelector('[data-payment-sort-select]')
   const viewLinks = root.querySelectorAll('[data-payment-view-link]')
+  const swipe = root.querySelector('[data-payment-swipe]')
+  const viewPanes = root.querySelectorAll('[data-payment-view-pane]')
   const modal = document.querySelector('[data-payment-exclude-modal]')
   const modalCancel = modal?.querySelector('[data-payment-exclude-cancel]')
   const modalConfirm = modal?.querySelector('[data-payment-exclude-confirm]')
   const initialSort = paymentSortFromSelect(sortSelect)
-  const viewMode = root.dataset.paymentView || 'list'
+  let viewMode = root.dataset.paymentView || 'list'
   let pendingExcludeID = ''
   let requestSeq = 0
+  let swipeTimer = 0
   let state = { page: 1, limit: 20, hasMore: true, loading: false, sortBy: initialSort.sortBy, sortDir: initialSort.sortDir }
-  if (cards) cards.className = paymentCardsContainerClass(viewMode)
+  if (grid) grid.className = paymentCardsContainerClass('grid')
+  if (cards) cards.className = paymentCardsContainerClass('card')
 
   const setState = (updates) => {
     state = { ...state, ...updates }
@@ -328,7 +333,7 @@ const initPaymentsTable = () => {
     return {
       q: data.get('q') || '',
       tenant_id: params.get('tenant_id') || '',
-      paid: data.get('paid') || '',
+      paid: data.get('paid') || 'false',
       period: data.get('period') || '',
       type: data.get('type') || '',
       excluded: data.get('excluded') || 'false',
@@ -356,11 +361,31 @@ const initPaymentsTable = () => {
   }
   const syncPaymentNavigation = (replaceURL = false) => {
     viewLinks.forEach((link) => {
-      link.href = paymentPageURL(link.dataset.paymentViewValue || viewMode)
+      const targetView = link.dataset.paymentViewValue || viewMode
+      link.href = paymentPageURL(targetView)
+      link.classList.toggle('public-room-view-active', targetView === viewMode)
+      if (targetView === viewMode) {
+        link.setAttribute('aria-current', 'page')
+      } else {
+        link.removeAttribute('aria-current')
+      }
     })
+    const viewInput = filterForm.querySelector('input[name="view"]')
+    if (viewInput) viewInput.value = viewMode
     if (replaceURL && window.history?.replaceState) {
       window.history.replaceState(null, '', paymentPageURL(viewMode))
     }
+  }
+  const setPaymentView = (nextView, replaceURL = false) => {
+    if (!nextView || nextView === viewMode) return
+    viewMode = nextView
+    root.dataset.paymentView = nextView
+    syncPaymentNavigation(replaceURL)
+  }
+  const scrollToPaymentView = (nextView, behavior = 'auto') => {
+    const pane = root.querySelector(`[data-payment-view-pane="${nextView}"]`)
+    if (!pane || !swipe) return
+    swipe.scrollTo({ left: pane.offsetLeft, behavior })
   }
   const paymentURL = () => {
     const params = new URLSearchParams({ page: String(state.page), limit: String(state.limit), sort_by: state.sortBy, sort_dir: state.sortDir })
@@ -374,14 +399,17 @@ const initPaymentsTable = () => {
   }
   const showLoading = () => {
     body.innerHTML = '<tr><td class="px-5 py-10 text-center text-stone-500" colspan="6">正在加载收款记录...</td></tr>'
+    if (grid) grid.innerHTML = paymentCardMessage('正在加载收款记录...')
     if (cards) cards.innerHTML = paymentCardMessage('正在加载收款记录...')
   }
   const showEmpty = () => {
     body.innerHTML = '<tr><td class="px-5 py-10 text-center text-stone-500" colspan="6">还没有收款记录。</td></tr>'
+    if (grid) grid.innerHTML = paymentCardMessage('还没有收款记录。')
     if (cards) cards.innerHTML = paymentCardMessage('还没有收款记录。')
   }
   const showError = () => {
     body.innerHTML = '<tr><td class="px-5 py-10 text-center text-red-700" colspan="6">读取收款记录失败，请稍后重试。</td></tr>'
+    if (grid) grid.innerHTML = paymentCardMessage('读取收款记录失败，请稍后重试。', 'text-red-700 border-red-200 bg-red-50')
     if (cards) cards.innerHTML = paymentCardMessage('读取收款记录失败，请稍后重试。', 'text-red-700 border-red-200 bg-red-50')
   }
   const reload = () => {
@@ -401,13 +429,16 @@ const initPaymentsTable = () => {
         if (version !== requestSeq) return
         const payments = payload.data || []
         const rows = payments.map(renderPaymentRow).join('')
-        const cardItems = payments.map((payment) => renderPaymentCard(payment, viewMode)).join('')
+        const gridItems = payments.map((payment) => renderPaymentCard(payment, 'grid')).join('')
+        const cardItems = payments.map((payment) => renderPaymentCard(payment, 'card')).join('')
         if (payload.summary) renderPaymentSummary(summaryRoot, payload.summary)
         if (replace) {
           body.innerHTML = ''
+          if (grid) grid.innerHTML = ''
           if (cards) cards.innerHTML = ''
         }
         if (rows) body.insertAdjacentHTML('beforeend', rows)
+        if (grid && gridItems) grid.insertAdjacentHTML('beforeend', gridItems)
         if (cards && cardItems) cards.insertAdjacentHTML('beforeend', cardItems)
         if (replace && !payments.length) showEmpty()
         setState({ hasMore: Boolean(payload.has_more), page: state.page + 1 })
@@ -458,6 +489,26 @@ const initPaymentsTable = () => {
       reload()
     })
   })
+  viewLinks.forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault()
+      const nextView = link.dataset.paymentViewValue || 'list'
+      setPaymentView(nextView, true)
+      scrollToPaymentView(nextView, 'smooth')
+    })
+  })
+  swipe?.addEventListener('scroll', () => {
+    window.clearTimeout(swipeTimer)
+    swipeTimer = window.setTimeout(() => {
+      const nearestPane = Array.from(viewPanes).reduce((nearest, pane) => {
+        if (!nearest) return pane
+        const currentDistance = Math.abs(pane.offsetLeft - swipe.scrollLeft)
+        const nearestDistance = Math.abs(nearest.offsetLeft - swipe.scrollLeft)
+        return currentDistance < nearestDistance ? pane : nearest
+      }, null)
+      setPaymentView(nearestPane?.dataset.paymentViewPane, true)
+    }, 120)
+  })
   root.addEventListener('click', (event) => {
     const trigger = event.target.closest('[data-payment-exclude]')
     if (!trigger) return
@@ -496,6 +547,8 @@ const initPaymentsTable = () => {
     footer.addEventListener('click', () => loadPage())
   }
 
+  syncPaymentNavigation(false)
+  window.requestAnimationFrame(() => scrollToPaymentView(viewMode))
   reload()
 }
 

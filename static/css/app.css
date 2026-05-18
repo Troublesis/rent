@@ -621,6 +621,14 @@ input[type="date"].input::-webkit-calendar-picker-indicator {
   color: var(--seal);
 }
 
+@media (max-width: 380px) {
+  .payment-scope-option span {
+    min-height: 2.25rem;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.75rem;
+  }
+}
+
 @media (min-width: 768px) {
   .payments-table th.payment-sticky-left,
   .payments-table td.payment-sticky-left {

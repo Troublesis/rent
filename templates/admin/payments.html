@@ -71,28 +71,11 @@
 
       <form class="space-y-4" method="get" action="/admin/payments" data-payments-filter>
         <input type="hidden" name="view" value="{{.ViewMode}}">
-        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.3fr_0.75fr_0.75fr_0.75fr_0.9fr_auto]">
+        <div class="grid gap-3 lg:grid-cols-[1fr_0.85fr_auto]">
           <label class="block">
             <span class="sr-only">搜索租客</span>
             <input class="input" type="search" name="q" value="{{.Filter.Query}}" placeholder="搜索姓名、房间号或手机号" data-payment-filter="q">
           </label>
-          <select class="input" name="paid" data-payment-filter="paid">
-            <option value="" {{if eq .FilterPaid ""}}selected{{end}}>全部状态</option>
-            <option value="true" {{if eq .FilterPaid "true"}}selected{{end}}>已付款</option>
-            <option value="false" {{if eq .FilterPaid "false"}}selected{{end}}>未付款</option>
-          </select>
-          <select class="input" name="period" data-payment-filter="period">
-            <option value="" {{if eq .Filter.Period ""}}selected{{end}}>全部月份</option>
-            <option value="today" {{if eq .Filter.Period "today"}}selected{{end}}>当日</option>
-            <option value="week" {{if eq .Filter.Period "week"}}selected{{end}}>当周</option>
-            <option value="month" {{if eq .Filter.Period "month"}}selected{{end}}>当月</option>
-          </select>
-          <select class="input" name="type" data-payment-filter="type">
-            <option value="">全部类型</option>
-            {{range .PaymentTypes}}
-              <option value="{{.Value}}" {{if eq $.Filter.Type .Value}}selected{{end}}>{{.Label}}</option>
-            {{end}}
-          </select>
           <select class="input" name="sort" data-payment-sort-select>
             <option value="next_pay_date:asc" {{if eq .SelectedSort "next_pay_date:asc"}}selected{{end}}>月份升序</option>
             <option value="next_pay_date:desc" {{if eq .SelectedSort "next_pay_date:desc"}}selected{{end}}>月份降序</option>
@@ -102,49 +85,125 @@
           </select>
           <a class="btn-secondary text-center" href="{{.ClearFilterURL}}" data-payments-reset>清空</a>
         </div>
-        <fieldset class="flex flex-wrap gap-2 text-sm font-bold text-stone-600" data-payment-excluded-filter>
-          <legend class="sr-only">记录范围</legend>
-          <label class="payment-scope-option">
-            <input class="sr-only" type="radio" name="excluded" value="all" {{if eq .FilterExcluded "all"}}checked{{end}}>
-            <span>全部</span>
-          </label>
-          <label class="payment-scope-option">
-            <input class="sr-only" type="radio" name="excluded" value="false" {{if eq .FilterExcluded "false"}}checked{{end}}>
-            <span>正常记录</span>
-          </label>
-          <label class="payment-scope-option">
-            <input class="sr-only" type="radio" name="excluded" value="true" {{if eq .FilterExcluded "true"}}checked{{end}}>
-            <span>已排除</span>
-          </label>
-        </fieldset>
+
+        <div class="grid gap-4 lg:grid-cols-2">
+          <fieldset class="space-y-2 text-sm font-bold text-stone-600">
+            <legend class="text-xs font-black text-stone-500">付款状态</legend>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="paid" value="all" {{if eq .FilterPaid "all"}}checked{{end}} data-payment-filter="paid">
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">全部</span>
+              </label>
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="paid" value="false" {{if eq .FilterPaid "false"}}checked{{end}} data-payment-filter="paid">
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">未付款</span>
+              </label>
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="paid" value="true" {{if eq .FilterPaid "true"}}checked{{end}} data-payment-filter="paid">
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">已付款</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-2 text-sm font-bold text-stone-600">
+            <legend class="text-xs font-black text-stone-500">收款月份</legend>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="period" value="" {{if eq .Filter.Period ""}}checked{{end}} data-payment-filter="period">
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">全部月份</span>
+              </label>
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="period" value="today" {{if eq .Filter.Period "today"}}checked{{end}} data-payment-filter="period">
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">当日</span>
+              </label>
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="period" value="week" {{if eq .Filter.Period "week"}}checked{{end}} data-payment-filter="period">
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">当周</span>
+              </label>
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="period" value="month" {{if eq .Filter.Period "month"}}checked{{end}} data-payment-filter="period">
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">当月</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-2 text-sm font-bold text-stone-600">
+            <legend class="text-xs font-black text-stone-500">收款类型</legend>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="type" value="" {{if eq .Filter.Type ""}}checked{{end}} data-payment-filter="type">
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">全部类型</span>
+              </label>
+              {{range .PaymentTypes}}
+                <label class="payment-scope-option min-w-0">
+                  <input class="sr-only" type="radio" name="type" value="{{.Value}}" {{if eq $.Filter.Type .Value}}checked{{end}} data-payment-filter="type">
+                  <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">{{.Label}}</span>
+                </label>
+              {{end}}
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-2 text-sm font-bold text-stone-600" data-payment-excluded-filter>
+            <legend class="text-xs font-black text-stone-500">记录范围</legend>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="excluded" value="all" {{if eq .FilterExcluded "all"}}checked{{end}}>
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">全部</span>
+              </label>
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="excluded" value="false" {{if eq .FilterExcluded "false"}}checked{{end}}>
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">正常记录</span>
+              </label>
+              <label class="payment-scope-option min-w-0">
+                <input class="sr-only" type="radio" name="excluded" value="true" {{if eq .FilterExcluded "true"}}checked{{end}}>
+                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">已排除</span>
+              </label>
+            </div>
+          </fieldset>
+        </div>
       </form>
     </div>
 
     <div class="border-b border-stone-300/70 px-5 py-4">
       {{template "admin_payment_view_switcher" .}}
+      <div class="mt-3 flex justify-end pr-2 text-xs font-black text-stone-400" aria-hidden="true">← →</div>
     </div>
 
-    <div class="hidden overflow-x-auto {{if eq .ViewMode "list"}}md:block{{end}}" data-payments-table-view>
-      <table class="payments-table w-full min-w-[920px] table-fixed text-left text-sm">
-        <thead class="border-b border-stone-300/70 bg-white/60 text-stone-500">
-          <tr>
-            <th class="payment-sticky-left col-tenant px-5 py-4"><button class="font-black" type="button" data-payment-sort="tenant">租客 <span data-sort-indicator="tenant"></span></button></th>
-            <th class="col-month px-5 py-4"><button class="font-black" type="button" data-payment-sort="next_pay_date">租金月份 <span data-sort-indicator="next_pay_date">↑</span></button></th>
-            <th class="col-amount px-5 py-4"><button class="font-black" type="button" data-payment-sort="amount">金额 <span data-sort-indicator="amount"></span></button></th>
-            <th class="col-status px-5 py-4"><button class="font-black" type="button" data-payment-sort="status">付款状态 <span data-sort-indicator="status"></span></button></th>
-            <th class="col-note px-5 py-4">备注</th>
-            <th class="payment-sticky-right col-actions px-5 py-4">操作</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-stone-200/80" data-payments-body>
-          <tr><td class="px-5 py-10 text-center text-stone-500" colspan="6">正在加载收款记录...</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <section class="overflow-hidden">
+      <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth pb-3" data-payment-swipe>
+        <div class="w-full shrink-0 snap-start" data-payment-view-pane="list" data-payments-table-view>
+          <div class="overflow-x-auto">
+            <table class="payments-table w-full min-w-[920px] table-fixed text-left text-sm">
+              <thead class="border-b border-stone-300/70 bg-white/60 text-stone-500">
+                <tr>
+                  <th class="payment-sticky-left col-tenant px-5 py-4"><button class="font-black" type="button" data-payment-sort="tenant">租客 <span data-sort-indicator="tenant"></span></button></th>
+                  <th class="col-month px-5 py-4"><button class="font-black" type="button" data-payment-sort="next_pay_date">租金月份 <span data-sort-indicator="next_pay_date">↑</span></button></th>
+                  <th class="col-amount px-5 py-4"><button class="font-black" type="button" data-payment-sort="amount">金额 <span data-sort-indicator="amount"></span></button></th>
+                  <th class="col-status px-5 py-4"><button class="font-black" type="button" data-payment-sort="status">付款状态 <span data-sort-indicator="status"></span></button></th>
+                  <th class="col-note px-5 py-4">备注</th>
+                  <th class="payment-sticky-right col-actions px-5 py-4">操作</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-200/80" data-payments-body>
+                <tr><td class="px-5 py-10 text-center text-stone-500" colspan="6">正在加载收款记录...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-    <div class="p-4 {{if eq .ViewMode "list"}}md:hidden{{end}}" data-payments-cards>
-      <div class="rounded-2xl border border-stone-200 bg-white/60 p-4 text-center text-stone-500">正在加载收款记录...</div>
-    </div>
+        <div class="w-full shrink-0 snap-start" data-payment-view-pane="grid">
+          <div class="grid gap-5 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" data-payments-grid>
+            <div class="rounded-2xl border border-stone-200 bg-white/60 p-4 text-center text-stone-500">正在加载收款记录...</div>
+          </div>
+        </div>
+
+        <div class="w-full shrink-0 snap-start" data-payment-view-pane="card">
+          <div class="public-room-masonry p-4" data-payments-cards>
+            <div class="rounded-2xl border border-stone-200 bg-white/60 p-4 text-center text-stone-500">正在加载收款记录...</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <div class="cursor-pointer border-t border-stone-200/70 p-4 text-center text-sm text-stone-500" data-payments-footer>下拉加载更多记录</div>
   </section>

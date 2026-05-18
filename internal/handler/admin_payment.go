@@ -170,7 +170,7 @@ func (h *AdminPaymentHandler) List(c *gin.Context) {
 		"Items":          items,
 		"Tenants":        tenants,
 		"Filter":         filter,
-		"FilterPaid":     c.Query("paid"),
+		"FilterPaid":     paidFilterValue(c),
 		"FilterExcluded": excludedFilterValue(c.Query("excluded")),
 		"PaymentTypes":   paymentTypeOptions(),
 		"ViewMode":       viewMode,
@@ -287,7 +287,7 @@ func paymentFilterFromQuery(c *gin.Context) repository.PaymentFilter {
 		SortBy:  c.Query("sort_by"),
 		SortDir: c.Query("sort_dir"),
 	}
-	filter.Paid = boolQuery(c.Query("paid"))
+	filter.Paid = paidQuery(c)
 	filter.Excluded = excludedQuery(c.Query("excluded"))
 	filter.Overdue = boolQuery(c.Query("overdue"))
 	if tenantID, err := strconv.ParseUint(c.Query("tenant_id"), 10, 64); err == nil {
@@ -416,6 +416,28 @@ func boolQuery(value string) *bool {
 		return &parsed
 	default:
 		return nil
+	}
+}
+
+func paidQuery(c *gin.Context) *bool {
+	value, exists := c.GetQuery("paid")
+	if !exists {
+		parsed := false
+		return &parsed
+	}
+	return boolQuery(value)
+}
+
+func paidFilterValue(c *gin.Context) string {
+	value, exists := c.GetQuery("paid")
+	if !exists {
+		return "false"
+	}
+	switch value {
+	case "all", "true":
+		return value
+	default:
+		return "false"
 	}
 }
 
