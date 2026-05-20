@@ -104,11 +104,106 @@ document.addEventListener('click', (event) => {
   scrollToRoomView(root, nextView, 'smooth')
 })
 
+const tenantViewTimers = new WeakMap()
+
+const tenantViewRoots = (scope) => {
+  const current = scope?.matches?.('[data-tenant-view-root]') ? [scope] : []
+  const nested = scope?.querySelectorAll ? Array.from(scope.querySelectorAll('[data-tenant-view-root]')) : []
+  return [...current, ...nested]
+}
+
+const tenantURLWithView = (href, view) => {
+  try {
+    const url = new URL(href, window.location.origin)
+    if (url.pathname !== '/admin/tenants') return href
+    url.searchParams.set('view', view)
+    return `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return href
+  }
+}
+
+const syncTenantFilterLinks = (root, view) => {
+  root.querySelectorAll('a[href^="/admin/tenants"]').forEach((link) => {
+    if (link.matches('[data-tenant-view-link]')) return
+    const nextHref = tenantURLWithView(link.getAttribute('href'), view)
+    link.setAttribute('href', nextHref)
+    if (link.hasAttribute('hx-get')) link.setAttribute('hx-get', nextHref)
+  })
+}
+
+const setTenantView = (root, view, replaceURL = false) => {
+  if (!root || !view) return
+  root.dataset.tenantView = view
+  root.querySelectorAll('[data-tenant-view-link]').forEach((link) => {
+    const active = link.dataset.tenantViewValue === view
+    link.classList.toggle('public-room-view-active', active)
+    if (active) {
+      link.setAttribute('aria-current', 'page')
+    } else {
+      link.removeAttribute('aria-current')
+    }
+  })
+  const viewInput = root.querySelector('input[name="view"]')
+  if (viewInput) viewInput.value = view
+  syncTenantFilterLinks(root, view)
+  const activeLink = root.querySelector(`[data-tenant-view-link][data-tenant-view-value="${view}"]`)
+  if (replaceURL && window.history?.replaceState) {
+    window.history.replaceState(null, '', activeLink?.href || tenantURLWithView(window.location.href, view))
+  }
+}
+
+const scrollToTenantView = (root, view, behavior = 'auto') => {
+  const swipe = root?.querySelector('[data-tenant-view-swipe]')
+  const pane = root?.querySelector(`[data-tenant-view-pane="${view}"]`)
+  if (!swipe || !pane) return
+  swipe.scrollTo({ left: pane.offsetLeft, behavior })
+}
+
+const initTenantViews = (scope = document) => {
+  tenantViewRoots(scope).forEach((root) => {
+    if (root.dataset.tenantViewReady === 'true') return
+    root.dataset.tenantViewReady = 'true'
+    const initialView = root.dataset.tenantView || 'list'
+    window.requestAnimationFrame(() => scrollToTenantView(root, initialView))
+    const swipe = root.querySelector('[data-tenant-view-swipe]')
+    swipe?.addEventListener('scroll', () => {
+      window.clearTimeout(tenantViewTimers.get(root))
+      const timer = window.setTimeout(() => {
+        const panes = Array.from(root.querySelectorAll('[data-tenant-view-pane]'))
+        const nearestPane = panes.reduce((nearest, pane) => {
+          if (!nearest) return pane
+          const currentDistance = Math.abs(pane.offsetLeft - swipe.scrollLeft)
+          const nearestDistance = Math.abs(nearest.offsetLeft - swipe.scrollLeft)
+          return currentDistance < nearestDistance ? pane : nearest
+        }, null)
+        setTenantView(root, nearestPane?.dataset.tenantViewPane || 'list', true)
+      }, 120)
+      tenantViewTimers.set(root, timer)
+    })
+  })
+}
+
+document.addEventListener('click', (event) => {
+  const link = event.target.closest('[data-tenant-view-link]')
+  if (!link) return
+  const root = link.closest('[data-tenant-view-root]')
+  if (!root) return
+  event.preventDefault()
+  const nextView = link.dataset.tenantViewValue || 'list'
+  setTenantView(root, nextView, true)
+  scrollToTenantView(root, nextView, 'smooth')
+})
+
 document.addEventListener('htmx:afterSwap', (event) => {
   initRoomViews(event.target)
+  initTenantViews(event.target)
+  initRoomComboBoxes(event.target)
+  initTenantSearchComboBoxes(event.target)
 })
 
 initRoomViews()
+initTenantViews()
 
 document.querySelectorAll('[data-gallery]').forEach((gallery) => {
   const frames = gallery.querySelectorAll('[data-gallery-main]')
@@ -395,6 +490,319 @@ const initTenantComboBox = (root) => {
 }
 
 document.querySelectorAll('[data-tenant-combobox]').forEach(initTenantComboBox)
+
+const roomOptionLabel = (room) => `${room.room_no || ''} - ${room.title || ''}`
+const roomSearchText = (room) => `${room.room_no || ''} ${room.title || ''} ${room.status_label || ''} ${roomOptionLabel(room)}`.toLowerCase()
+
+const roomOptionsURL = (status) => {
+  const params = new URLSearchParams()
+  if (!status || status === 'all') {
+    params.set('include_all', 'true')
+  } else {
+    params.set('status', status)
+  }
+  return `/api/rooms?${params.toString()}`
+}
+
+const initRoomComboBox = (root) => {
+  if (root.dataset.roomComboboxReady === 'true') return
+  root.dataset.roomComboboxReady = 'true'
+  const input = root.querySelector('[data-room-input]')
+  const list = root.querySelector('[data-room-list]')
+  const form = input?.closest('form')
+  if (!input || !list) return
+
+  let rooms = []
+  let filtered = []
+  let activeIndex = 0
+  let loadedStatus = null
+  let loading = false
+  let loadFailed = false
+  let suppressOpen = false
+
+  const currentStatus = () => form?.querySelector('input[name="status"]')?.value || ''
+  const close = () => list.classList.add('hidden')
+  const message = (text, extraClass = 'text-stone-500') => {
+    list.innerHTML = `<div class="px-4 py-3 text-sm ${extraClass}">${escapeHTML(text)}</div>`
+  }
+  const loadRooms = () => {
+    const status = currentStatus()
+    if (loadedStatus === status && !loading) return Promise.resolve(rooms)
+    loadedStatus = status
+    loading = true
+    loadFailed = false
+    message('正在加载房源...')
+    return fetch(roomOptionsURL(status))
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('读取房源失败')))
+      .then((payload) => {
+        rooms = Array.isArray(payload.data) ? payload.data : []
+        return rooms
+      })
+      .catch(() => {
+        rooms = []
+        loadFailed = true
+        return rooms
+      })
+      .finally(() => {
+        loading = false
+      })
+  }
+  const updateFiltered = () => {
+    const query = input.value.trim().toLowerCase()
+    filtered = rooms.filter((room) => query === '' || roomSearchText(room).includes(query))
+    activeIndex = Math.min(activeIndex, Math.max(filtered.length - 1, 0))
+  }
+  const render = () => {
+    if (loading && rooms.length === 0) {
+      message('正在加载房源...')
+      return
+    }
+    if (loadFailed) {
+      message('读取房源失败，请稍后重试。', 'text-red-700')
+      return
+    }
+    updateFiltered()
+    if (filtered.length === 0) {
+      message('未找到匹配房源')
+      return
+    }
+    list.innerHTML = filtered.map((room, index) => {
+      const active = index === activeIndex ? 'bg-amber-50 text-amber-900' : 'hover:bg-stone-50'
+      const status = room.status_label ? `<span class="mt-1 block text-xs font-bold text-stone-500">${escapeHTML(room.status_label)}</span>` : ''
+      return `<button class="block w-full px-4 py-3 text-left text-sm font-semibold ${active}" type="button" data-room-option="${index}"><span>${escapeHTML(roomOptionLabel(room))}</span>${status}</button>`
+    }).join('')
+  }
+  const open = () => {
+    list.classList.remove('hidden')
+    render()
+  }
+  const openWithRooms = () => {
+    list.classList.remove('hidden')
+    loadRooms().then(() => {
+      if (!list.classList.contains('hidden')) render()
+    })
+  }
+  const submitFilter = () => {
+    if (!form) return
+    if (typeof form.requestSubmit === 'function') {
+      form.requestSubmit()
+      return
+    }
+    const event = new Event('submit', { bubbles: true, cancelable: true })
+    if (form.dispatchEvent(event)) form.submit()
+  }
+  const selectRoom = (room) => {
+    input.value = roomOptionLabel(room)
+    suppressOpen = true
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    close()
+    submitFilter()
+  }
+
+  input.addEventListener('focus', openWithRooms)
+  input.addEventListener('input', () => {
+    if (suppressOpen) {
+      suppressOpen = false
+      return
+    }
+    activeIndex = 0
+    if (loadedStatus === currentStatus() && !loading) {
+      open()
+      return
+    }
+    openWithRooms()
+  })
+  input.addEventListener('keydown', (event) => {
+    if (list.classList.contains('hidden') && ['ArrowDown', 'ArrowUp'].includes(event.key)) openWithRooms()
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      activeIndex = Math.min(activeIndex + 1, Math.max(filtered.length - 1, 0))
+      render()
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      activeIndex = Math.max(activeIndex - 1, 0)
+      render()
+    }
+    if (event.key === 'Enter' && !list.classList.contains('hidden')) {
+      event.preventDefault()
+      if (filtered[activeIndex]) selectRoom(filtered[activeIndex])
+    }
+    if (event.key === 'Escape') close()
+  })
+  list.addEventListener('click', (event) => {
+    const option = event.target.closest('[data-room-option]')
+    if (!option) return
+    const room = filtered[Number(option.dataset.roomOption)]
+    if (room) selectRoom(room)
+  })
+  document.addEventListener('click', (event) => {
+    if (!root.contains(event.target)) close()
+  })
+}
+
+const initRoomComboBoxes = (scope = document) => {
+  const roots = []
+  if (scope?.matches?.('[data-room-combobox]')) roots.push(scope)
+  if (scope?.querySelectorAll) roots.push(...scope.querySelectorAll('[data-room-combobox]'))
+  roots.forEach(initRoomComboBox)
+}
+
+initRoomComboBoxes()
+
+const tenantSearchOptionLabel = (tenant) => `${tenant.name || ''} - ${tenant.room_no || ''} - ${tenant.phone || ''}`
+const tenantListSearchText = (tenant) => `${tenant.name || ''} ${tenant.room_no || ''} ${tenant.phone || ''} ${tenantSearchOptionLabel(tenant)}`.toLowerCase()
+
+const tenantSearchOptionsURL = (status) => {
+  const params = new URLSearchParams()
+  params.set('status', status || 'active')
+  return `/api/tenants?${params.toString()}`
+}
+
+const initTenantSearchComboBox = (root) => {
+  if (root.dataset.tenantSearchComboboxReady === 'true') return
+  root.dataset.tenantSearchComboboxReady = 'true'
+  const input = root.querySelector('[data-tenant-search-input]')
+  const list = root.querySelector('[data-tenant-search-list]')
+  const form = input?.closest('form')
+  if (!input || !list) return
+
+  let tenants = []
+  let filtered = []
+  let activeIndex = 0
+  let loadedStatus = null
+  let loading = false
+  let loadFailed = false
+  let suppressOpen = false
+
+  const currentStatus = () => form?.querySelector('input[name="status"]')?.value || 'active'
+  const close = () => list.classList.add('hidden')
+  const message = (text, extraClass = 'text-stone-500') => {
+    list.innerHTML = `<div class="px-4 py-3 text-sm ${extraClass}">${escapeHTML(text)}</div>`
+  }
+  const loadTenants = () => {
+    const status = currentStatus()
+    if (loadedStatus === status && !loading) return Promise.resolve(tenants)
+    loadedStatus = status
+    loading = true
+    loadFailed = false
+    message('正在加载租客...')
+    return fetch(tenantSearchOptionsURL(status))
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('读取租客失败')))
+      .then((payload) => {
+        tenants = Array.isArray(payload.data) ? payload.data : []
+        return tenants
+      })
+      .catch(() => {
+        tenants = []
+        loadFailed = true
+        return tenants
+      })
+      .finally(() => {
+        loading = false
+      })
+  }
+  const updateFiltered = () => {
+    const query = input.value.trim().toLowerCase()
+    filtered = tenants.filter((tenant) => query === '' || tenantListSearchText(tenant).includes(query))
+    activeIndex = Math.min(activeIndex, Math.max(filtered.length - 1, 0))
+  }
+  const render = () => {
+    if (loading && tenants.length === 0) {
+      message('正在加载租客...')
+      return
+    }
+    if (loadFailed) {
+      message('读取租客失败，请稍后重试。', 'text-red-700')
+      return
+    }
+    updateFiltered()
+    if (filtered.length === 0) {
+      message('未找到匹配租客')
+      return
+    }
+    list.innerHTML = filtered.map((tenant, index) => {
+      const active = index === activeIndex ? 'bg-amber-50 text-amber-900' : 'hover:bg-stone-50'
+      return `<button class="block w-full px-4 py-3 text-left text-sm font-semibold ${active}" type="button" data-tenant-search-option="${index}">${escapeHTML(tenantSearchOptionLabel(tenant))}</button>`
+    }).join('')
+  }
+  const open = () => {
+    list.classList.remove('hidden')
+    render()
+  }
+  const openWithTenants = () => {
+    list.classList.remove('hidden')
+    loadTenants().then(() => {
+      if (!list.classList.contains('hidden')) render()
+    })
+  }
+  const submitFilter = () => {
+    if (!form) return
+    if (typeof form.requestSubmit === 'function') {
+      form.requestSubmit()
+      return
+    }
+    const event = new Event('submit', { bubbles: true, cancelable: true })
+    if (form.dispatchEvent(event)) form.submit()
+  }
+  const selectTenant = (tenant) => {
+    input.value = tenantSearchOptionLabel(tenant)
+    suppressOpen = true
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    close()
+    submitFilter()
+  }
+
+  input.addEventListener('focus', openWithTenants)
+  input.addEventListener('input', () => {
+    if (suppressOpen) {
+      suppressOpen = false
+      return
+    }
+    activeIndex = 0
+    if (loadedStatus === currentStatus() && !loading) {
+      open()
+      return
+    }
+    openWithTenants()
+  })
+  input.addEventListener('keydown', (event) => {
+    if (list.classList.contains('hidden') && ['ArrowDown', 'ArrowUp'].includes(event.key)) openWithTenants()
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      activeIndex = Math.min(activeIndex + 1, Math.max(filtered.length - 1, 0))
+      render()
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      activeIndex = Math.max(activeIndex - 1, 0)
+      render()
+    }
+    if (event.key === 'Enter' && !list.classList.contains('hidden')) {
+      event.preventDefault()
+      if (filtered[activeIndex]) selectTenant(filtered[activeIndex])
+    }
+    if (event.key === 'Escape') close()
+  })
+  list.addEventListener('click', (event) => {
+    const option = event.target.closest('[data-tenant-search-option]')
+    if (!option) return
+    const tenant = filtered[Number(option.dataset.tenantSearchOption)]
+    if (tenant) selectTenant(tenant)
+  })
+  document.addEventListener('click', (event) => {
+    if (!root.contains(event.target)) close()
+  })
+}
+
+const initTenantSearchComboBoxes = (scope = document) => {
+  const roots = []
+  if (scope?.matches?.('[data-tenant-search-combobox]')) roots.push(scope)
+  if (scope?.querySelectorAll) roots.push(...scope.querySelectorAll('[data-tenant-search-combobox]'))
+  roots.forEach(initTenantSearchComboBox)
+}
+
+initTenantSearchComboBoxes()
 
 const initPaymentsTable = () => {
   const root = document.querySelector('[data-payments-table]')

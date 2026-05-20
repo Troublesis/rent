@@ -37,7 +37,7 @@ func (r *TenantRepository) ListTenants(filter TenantFilter) ([]model.Tenant, err
 		like := "%" + strings.TrimSpace(filter.Query) + "%"
 		query = query.Joins("LEFT JOIN rooms ON rooms.id = tenants.room_id")
 		joinedRooms = true
-		query = query.Where("tenants.name LIKE ? OR tenants.phone LIKE ? OR rooms.room_no LIKE ? OR rooms.title LIKE ?", like, like, like, like)
+		query = query.Where("tenants.name LIKE ? OR tenants.phone LIKE ? OR rooms.room_no LIKE ? OR rooms.title LIKE ? OR (tenants.name || ' - ' || rooms.room_no || ' - ' || tenants.phone) LIKE ?", like, like, like, like, like)
 	}
 	orderColumn, orderDirection, needsRoomJoin := tenantSort(filter.SortBy, filter.SortDir)
 	if needsRoomJoin && !joinedRooms {

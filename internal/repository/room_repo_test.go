@@ -76,6 +76,28 @@ func TestRoomRepositoryListRoomsSortsByRoomNumberAscending(t *testing.T) {
 	}
 }
 
+func TestRoomRepositoryListRoomsFiltersByRoomOptionLabel(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewRoomRepository(db)
+	rooms := []*model.Room{
+		{RoomNo: "A101", Title: "温馨单间", Status: model.RoomStatusVacant},
+		{RoomNo: "A102", Title: "整洁两居", Status: model.RoomStatusVacant},
+	}
+	for _, room := range rooms {
+		if err := repo.CreateRoom(room); err != nil {
+			t.Fatalf("CreateRoom returned error: %v", err)
+		}
+	}
+
+	filteredRooms, err := repo.ListRooms(RoomFilter{Status: model.RoomStatusVacant, Query: "A101 - 温馨单间"})
+	if err != nil {
+		t.Fatalf("ListRooms returned error: %v", err)
+	}
+	if len(filteredRooms) != 1 || filteredRooms[0].RoomNo != "A101" {
+		t.Fatalf("filteredRooms = %#v, want only A101", filteredRooms)
+	}
+}
+
 func TestRoomRepositoryCountByStatus(t *testing.T) {
 	db := newTestDB(t)
 	repo := NewRoomRepository(db)

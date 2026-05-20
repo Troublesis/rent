@@ -15,10 +15,16 @@
         <input type="hidden" name="sort_by" value="{{.SortBy}}">
         <input type="hidden" name="sort_dir" value="{{.SortDir}}">
         <div class="grid gap-3 md:grid-cols-[1fr_auto]">
-          <label class="block">
-            <span class="sr-only">搜索房源</span>
-            <input class="input" type="search" name="q" value="{{.Filter.Query}}" placeholder="在{{.CurrentStatusLabel}}房源中搜索房号或标题" hx-get="/admin/rooms" hx-trigger="input changed delay:300ms, search" hx-target="#room-list-section" hx-select="#room-list-section" hx-swap="outerHTML" hx-push-url="true" hx-include="#room-filter-form">
-          </label>
+          <div data-room-combobox>
+            <label class="block">
+              <span class="sr-only">搜索房源</span>
+              <div class="relative">
+                <input id="room-search-input" class="input pr-10" type="search" name="q" value="{{.Filter.Query}}" placeholder="在{{.CurrentStatusLabel}}房源中搜索房号或标题" autocomplete="off" data-room-input>
+                <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-stone-500">⌄</span>
+                <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl" data-room-list></div>
+              </div>
+            </label>
+          </div>
           <div class="grid grid-cols-2 gap-3 md:w-48">
             <button class="btn-secondary" type="submit">筛选</button>
             <a class="btn-secondary text-center" href="{{.ClearFilterURL}}" hx-get="{{.ClearFilterURL}}" hx-target="#room-list-section" hx-select="#room-list-section" hx-swap="outerHTML" hx-push-url="true">清空</a>

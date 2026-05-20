@@ -1,5 +1,5 @@
 {{define "content"}}
-<div id="tenant-list-section">
+<div id="tenant-list-section" data-tenant-view-root data-tenant-view="{{.ViewMode}}">
   <section class="card overflow-hidden">
     <div class="space-y-5 border-b border-stone-300/70 p-5">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -10,16 +10,22 @@
         <a class="btn-primary text-center" href="/admin/tenants/new">办理入住</a>
       </div>
 
-      <form class="space-y-4" method="get" action="/admin/tenants" hx-boost="true" hx-target="#tenant-list-section" hx-select="#tenant-list-section" hx-swap="outerHTML" hx-push-url="true">
+      <form id="tenant-filter-form" class="space-y-4" method="get" action="/admin/tenants" hx-get="/admin/tenants" hx-target="#tenant-list-section" hx-select="#tenant-list-section" hx-swap="outerHTML" hx-push-url="true">
         <input type="hidden" name="view" value="{{.ViewMode}}">
         <input type="hidden" name="status" value="{{.CurrentStatus}}">
         <input type="hidden" name="sort_by" value="{{.Filter.SortBy}}">
         <input type="hidden" name="sort_dir" value="{{.Filter.SortDir}}">
         <div class="grid gap-3 md:grid-cols-[1fr_auto]">
-          <label class="block">
-            <span class="sr-only">搜索租客</span>
-            <input class="input" type="search" name="q" value="{{.Filter.Query}}" placeholder="搜索姓名、电话或房号">
-          </label>
+          <div data-tenant-search-combobox>
+            <label class="block">
+              <span class="sr-only">搜索租客</span>
+              <div class="relative">
+                <input id="tenant-search-input" class="input pr-10" type="search" name="q" value="{{.Filter.Query}}" placeholder="在{{.CurrentStatusLabel}}租客中搜索姓名、电话或房号" autocomplete="off" data-tenant-search-input>
+                <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-stone-500">⌄</span>
+                <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-search-list></div>
+              </div>
+            </label>
+          </div>
           <div class="grid grid-cols-2 gap-3 md:w-48">
             <button class="btn-secondary" type="submit">筛选</button>
             <a class="btn-secondary text-center" href="{{.ClearFilterURL}}" hx-get="{{.ClearFilterURL}}" hx-target="#tenant-list-section" hx-select="#tenant-list-section" hx-swap="outerHTML" hx-push-url="true">清空</a>
@@ -45,81 +51,93 @@
 
 {{define "admin_tenant_results"}}
 <section class="mt-2 overflow-hidden">
-  <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth pb-3">
-    <div class="w-full shrink-0 snap-start space-y-2">
+  <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth pb-3" data-tenant-view-swipe>
+    <div class="w-full shrink-0 snap-start" data-tenant-view-pane="list">
       {{template "admin_tenant_list_items" .}}
     </div>
-    <div class="w-full shrink-0 snap-start public-room-masonry">
-      {{template "admin_tenant_card_items" .}}
+    <div class="w-full shrink-0 snap-start" data-tenant-view-pane="card">
+      <div class="admin-room-card-grid">
+        {{template "admin_tenant_card_items" .}}
+      </div>
     </div>
   </div>
 </section>
 {{end}}
 
-{{define "admin_tenant_list_checkout"}}
-{{if eq .Status "active"}}
-  <form class="pointer-events-auto relative z-30 shrink-0" method="post" action="/admin/tenants/{{.ID}}/checkout">
-    <button class="rounded-full bg-red-700 px-3 py-2 text-xs font-black text-white transition hover:bg-red-800 sm:px-4" data-confirm="确定为该租客办理退租吗？" type="submit">退租</button>
-  </form>
+{{define "admin_tenant_action_buttons"}}
+<div class="mt-4 grid gap-2 {{if eq .Status "active"}}grid-cols-2{{end}}">
+  <a class="admin-action-button admin-room-action-button btn-secondary" href="/admin/tenants/{{.ID}}">详情</a>
+  {{if eq .Status "active"}}
+    <form method="post" action="/admin/tenants/{{.ID}}/checkout">
+      <button class="admin-action-button admin-room-action-button rounded-full bg-red-700 px-4 py-2 font-black text-white transition hover:bg-red-800" data-confirm="确定为该租客办理退租吗？" type="submit">退租</button>
+    </form>
+  {{end}}
+</div>
 {{end}}
+
+{{define "admin_tenant_list_actions"}}
+<div class="grid gap-2 px-3 pb-3 {{if eq .Status "active"}}grid-cols-2 sm:w-44{{else}}sm:w-20{{end}} sm:absolute sm:right-3 sm:top-1/2 sm:-translate-y-1/2 sm:px-0 sm:pb-0">
+  <a class="admin-action-button admin-room-action-button admin-room-list-action-button btn-secondary text-sm" href="/admin/tenants/{{.ID}}">详情</a>
+  {{if eq .Status "active"}}
+    <form method="post" action="/admin/tenants/{{.ID}}/checkout">
+      <button class="admin-action-button admin-room-action-button admin-room-list-action-button rounded-full bg-red-700 px-4 py-2 text-sm font-black text-white transition hover:bg-red-800" data-confirm="确定为该租客办理退租吗？" type="submit">退租</button>
+    </form>
+  {{end}}
+</div>
 {{end}}
 
 {{define "admin_tenant_list_items"}}
-{{range .Tenants}}
-  <article class="card relative overflow-hidden p-2.5 sm:p-3">
-    <a class="absolute inset-0 z-10" href="/admin/tenants/{{.ID}}" aria-label="查看{{.Name}}详情"></a>
-    <div class="pointer-events-none relative z-20 flex min-w-0 items-center gap-2 sm:gap-3">
-      <div class="min-w-0 flex-1 rounded-2xl px-1 py-0.5">
-        <div class="flex min-w-0 items-center gap-2">
-          <h3 class="min-w-0 truncate text-base font-black leading-tight text-stone-950 sm:text-lg">{{.Name}}</h3>
-          <span class="badge shrink-0 px-2 py-0.5 text-[0.7rem]">{{tenantStatusLabel .Status}}</span>
-        </div>
-        <div class="mt-1 flex min-w-0 items-center gap-2 text-xs font-bold text-stone-600 sm:text-sm">
-          <span class="shrink-0">{{.Room.RoomNo}}</span>
-          <a class="pointer-events-auto relative z-30 min-w-0 flex-1 truncate text-stone-600" href="tel:{{.Phone}}">{{.Phone}}</a>
-          <span class="shrink-0 text-amber-800">¥{{formatYuanInt .RentPrice}}</span>
-        </div>
-      </div>
-      {{template "admin_tenant_list_checkout" .}}
-    </div>
-  </article>
-{{else}}
-  <div class="card public-room-empty p-12 text-center text-stone-600">没有符合条件的租客记录。</div>
-{{end}}
+<div class="card overflow-hidden">
+  <div class="grid grid-cols-[0.72fr_0.8fr_0.72fr_0.78fr_0.58fr] gap-2 border-b border-stone-300/70 bg-white/35 px-3 py-2 text-[0.68rem] font-black text-stone-500 sm:grid-cols-[0.8fr_1fr_0.75fr_0.85fr_0.62fr] sm:pr-52 sm:text-xs" hx-boost="true" hx-target="#tenant-list-section" hx-select="#tenant-list-section" hx-swap="outerHTML" hx-push-url="true">
+    {{range .SortLinks}}
+      <a class="min-w-0 truncate transition hover:text-amber-800 {{if .Indicator}}text-amber-800{{end}}" href="{{.URL}}">{{.Label}}{{if .Indicator}} {{.Indicator}}{{end}}</a>
+    {{end}}
+  </div>
+  <div class="divide-y divide-stone-300/60">
+    {{range .Tenants}}
+      <article class="relative bg-white/20 transition hover:bg-white/55">
+        <a class="grid grid-cols-[0.72fr_0.8fr_0.72fr_0.78fr_0.58fr] gap-2 px-3 py-3 text-xs sm:grid-cols-[0.8fr_1fr_0.75fr_0.85fr_0.62fr] sm:items-center sm:pr-52 sm:text-sm" href="/admin/tenants/{{.ID}}" aria-label="查看{{.Name}}详情">
+          <span class="min-w-0 truncate font-black text-stone-950">{{.Name}}</span>
+          <span class="min-w-0 truncate font-bold text-stone-700">{{.Room.RoomNo}} · {{.Room.Title}}</span>
+          <span class="min-w-0 truncate font-black text-amber-800">¥{{formatYuanInt .RentPrice}} / {{rentUnitLabel .RentType}}</span>
+          <span class="min-w-0 truncate font-bold text-stone-600">{{formatDate .CheckinDate}}</span>
+          <span class="min-w-0"><span class="badge max-w-full truncate px-2 py-0.5 text-[0.65rem] sm:text-xs">{{tenantStatusLabel .Status}}</span></span>
+        </a>
+        {{template "admin_tenant_list_actions" .}}
+      </article>
+    {{else}}
+      <div class="p-12 text-center text-stone-600">没有符合条件的租客记录。</div>
+    {{end}}
+  </div>
+</div>
 {{end}}
 
 
 {{define "admin_tenant_card_items"}}
 {{range .Tenants}}
-  <article class="card public-room-masonry-card relative overflow-hidden p-3 sm:p-4">
-    <a class="absolute inset-0 z-10" href="/admin/tenants/{{.ID}}" aria-label="查看{{.Name}}详情"></a>
-    <div class="pointer-events-none relative z-20 min-w-0 p-1 sm:p-2">
-      <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <h3 class="text-xl font-black leading-tight text-stone-950 sm:text-2xl">{{.Name}}</h3>
-        <span class="badge shrink-0">{{tenantStatusLabel .Status}}</span>
-        <span class="rounded-full bg-stone-900/5 px-2.5 py-1 text-xs font-black text-stone-600">{{paymentTermsLabel .PaymentTerms}}</span>
+  <article class="card public-room-masonry-card overflow-hidden p-3">
+    <div class="p-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="badge">{{tenantStatusLabel .Status}}</span>
+        <span class="text-xs font-black text-stone-500">{{paymentTermsLabel .PaymentTerms}}</span>
       </div>
-      <div class="mt-3 grid grid-cols-1 gap-2 text-sm font-bold text-stone-600 sm:grid-cols-2">
+      <h3 class="mt-4 text-xl font-black leading-tight">{{.Name}}</h3>
+      <p class="mt-3 text-sm font-bold leading-6 text-stone-700">{{.Room.RoomNo}} · {{.Room.Title}}</p>
+      <div class="mt-4 grid grid-cols-2 gap-2 text-sm font-bold text-stone-600">
         <div class="min-w-0 rounded-2xl bg-white/55 px-3 py-2">
           <p class="text-xs font-black text-stone-400">电话</p>
-          <a class="pointer-events-auto relative z-30 mt-0.5 block break-all text-stone-800" href="tel:{{.Phone}}">{{.Phone}}</a>
-        </div>
-        <div class="min-w-0 rounded-2xl bg-white/55 px-3 py-2">
-          <p class="text-xs font-black text-stone-400">租金</p>
-          <p class="mt-0.5 break-words text-stone-800">¥{{formatYuanInt .RentPrice}} / {{rentUnitLabel .RentType}}</p>
+          <a class="mt-0.5 block break-all text-stone-800" href="tel:{{.Phone}}">{{.Phone}}</a>
         </div>
         <div class="min-w-0 rounded-2xl bg-white/55 px-3 py-2">
           <p class="text-xs font-black text-stone-400">入住</p>
           <p class="mt-0.5 break-words text-stone-800">{{formatDate .CheckinDate}}</p>
         </div>
-        <div class="min-w-0 rounded-2xl bg-white/55 px-3 py-2">
-          <p class="text-xs font-black text-stone-400">居住期限</p>
-          <p class="mt-0.5 break-words text-stone-800">{{if .LeaseEndDate}}{{formatOptionalDate .LeaseEndDate}}{{else}}长期居住{{end}}</p>
-        </div>
       </div>
-      <p class="mt-3 break-words rounded-2xl bg-white/55 px-3 py-2 text-sm font-bold leading-6 text-stone-700">{{.Room.RoomNo}} · {{.Room.Title}}</p>
+      <div class="mt-5 flex items-end justify-between gap-3">
+        <p class="text-2xl font-black text-amber-800">¥{{formatYuanInt .RentPrice}} <span class="text-sm text-stone-500">/ {{rentUnitLabel .RentType}}</span></p>
+      </div>
+      {{template "admin_tenant_action_buttons" .}}
     </div>
-    {{template "admin_tenant_list_checkout" .}}
   </article>
 {{else}}
   <div class="card public-room-empty p-12 text-center text-stone-600">没有符合条件的租客记录。</div>

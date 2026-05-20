@@ -79,6 +79,17 @@ func tenantStatusQueryValue(filter repository.TenantFilter) string {
 	}
 }
 
+func tenantCurrentStatusLabel(currentStatus string) string {
+	switch currentStatus {
+	case "all":
+		return "全部"
+	case model.TenantStatusCheckout:
+		return "已退租"
+	default:
+		return "在租"
+	}
+}
+
 func tenantClearURL(viewMode string) string {
 	if viewMode == "" {
 		return "/admin/tenants"
@@ -94,19 +105,21 @@ func (h *AdminTenantHandler) List(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "读取租客失败")
 		return
 	}
+	currentStatus := tenantStatusQueryValue(filter)
 	h.renderer.Render(c, http.StatusOK, "admin_base.html", "admin/tenants.html", gin.H{
-		"Title":          "租客管理",
-		"Tenants":        tenants,
-		"Statuses":       tenantStatusOptions(),
-		"StatusLinks":    tenantStatusLinks(c, filter),
-		"SortLinks":      tenantSortLinks(c, filter),
-		"Filter":         filter,
-		"CurrentStatus":  tenantStatusQueryValue(filter),
-		"ViewMode":       viewMode,
-		"ListViewURL":    tenantListURL(c, map[string]string{"view": adminTenantViewList}),
-		"CardViewURL":    tenantListURL(c, map[string]string{"view": adminTenantViewCard}),
-		"ClearFilterURL": tenantClearURL(viewMode),
-		"Error":          queryError(c),
+		"Title":              "租客管理",
+		"Tenants":            tenants,
+		"Statuses":           tenantStatusOptions(),
+		"StatusLinks":        tenantStatusLinks(c, filter),
+		"SortLinks":          tenantSortLinks(c, filter),
+		"Filter":             filter,
+		"CurrentStatus":      currentStatus,
+		"CurrentStatusLabel": tenantCurrentStatusLabel(currentStatus),
+		"ViewMode":           viewMode,
+		"ListViewURL":        tenantListURL(c, map[string]string{"view": adminTenantViewList}),
+		"CardViewURL":        tenantListURL(c, map[string]string{"view": adminTenantViewCard}),
+		"ClearFilterURL":     tenantClearURL(viewMode),
+		"Error":              queryError(c),
 	})
 }
 
@@ -329,8 +342,8 @@ func tenantFilterFromQuery(c *gin.Context) repository.TenantFilter {
 	return repository.TenantFilter{
 		Status:  tenantStatusFromQuery(c.Query("status")),
 		Query:   strings.TrimSpace(c.Query("q")),
-		SortBy:  c.DefaultQuery("sort_by", "created_at"),
-		SortDir: c.DefaultQuery("sort_dir", "desc"),
+		SortBy:  c.DefaultQuery("sort_by", "name"),
+		SortDir: c.DefaultQuery("sort_dir", "asc"),
 	}
 }
 

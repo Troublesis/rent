@@ -132,7 +132,7 @@ func applyRoomFilter(query *gorm.DB, filter RoomFilter) *gorm.DB {
 	}
 	if filter.Query != "" {
 		like := "%" + filter.Query + "%"
-		query = query.Where("room_no LIKE ? OR title LIKE ?", like, like)
+		query = query.Where("room_no LIKE ? OR title LIKE ? OR (room_no || ' - ' || title) LIKE ?", like, like, like)
 	}
 	if filter.HasFloor || filter.Floor > 0 {
 		query = query.Where("floor = ?", filter.Floor)
