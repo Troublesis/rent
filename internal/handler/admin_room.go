@@ -35,37 +35,88 @@ type roomAPIItem struct {
 	DetailURL     string `json:"detail_url"`
 }
 
+type adminRoomStatusLink struct {
+	Label  string
+	URL    string
+	Active bool
+}
+
+type adminRoomSortLink struct {
+	Label     string
+	URL       string
+	Active    bool
+	Indicator string
+}
+
 func NewAdminRoomHandler(renderer Renderer, roomService *service.RoomService, tenantService *service.TenantService) *AdminRoomHandler {
 	return &AdminRoomHandler{renderer: renderer, roomService: roomService, tenantService: tenantService}
 }
 
 const (
-	adminRoomViewList = "list"
-	adminRoomViewGrid = "grid"
-	adminRoomViewCard = "card"
+	adminRoomStatusAll     = "all"
+	adminRoomViewList      = "list"
+	adminRoomViewCard      = "card"
+	adminRoomSortRoomNo    = "room_no"
+	adminRoomSortTitle     = "title"
+	adminRoomSortRentPrice = "rent_price"
+	adminRoomSortStatus    = "status"
+	adminRoomSortAsc       = "asc"
+	adminRoomSortDesc      = "desc"
 )
 
 func adminRoomViewFromQuery(c *gin.Context) string {
-	switch c.Query("view") {
-	case adminRoomViewGrid:
-		return adminRoomViewGrid
-	case adminRoomViewCard:
+	if c.Query("view") == adminRoomViewCard {
 		return adminRoomViewCard
+	}
+	return adminRoomViewList
+}
+
+func adminRoomStatusFromQuery(c *gin.Context) (string, string) {
+	switch c.Query("status") {
+	case adminRoomStatusAll:
+		return "", adminRoomStatusAll
+	case model.RoomStatusOccupied:
+		return model.RoomStatusOccupied, model.RoomStatusOccupied
+	case model.RoomStatusMaintenance:
+		return model.RoomStatusMaintenance, model.RoomStatusMaintenance
 	default:
-		return adminRoomViewList
+		return model.RoomStatusVacant, model.RoomStatusVacant
 	}
 }
 
-func adminRoomsURL(filter repository.RoomFilter, viewMode string) string {
-	values := url.Values{}
-	if filter.Query != "" {
-		values.Set("q", filter.Query)
+func adminRoomSortFromQuery(c *gin.Context) (string, string) {
+	sortBy := adminRoomSortRoomNo
+	switch c.Query("sort_by") {
+	case adminRoomSortTitle:
+		sortBy = adminRoomSortTitle
+	case adminRoomSortRentPrice:
+		sortBy = adminRoomSortRentPrice
+	case adminRoomSortStatus:
+		sortBy = adminRoomSortStatus
 	}
-	if filter.Status != "" {
-		values.Set("status", filter.Status)
+	sortDir := adminRoomSortAsc
+	if c.Query("sort_dir") == adminRoomSortDesc {
+		sortDir = adminRoomSortDesc
+	}
+	return sortBy, sortDir
+}
+
+func adminRoomsURLWithStatus(queryText string, status string, viewMode string, sortBy string, sortDir string) string {
+	values := url.Values{}
+	if queryText != "" {
+		values.Set("q", queryText)
+	}
+	if status != "" {
+		values.Set("status", status)
 	}
 	if viewMode != "" {
 		values.Set("view", viewMode)
+	}
+	if sortBy != "" {
+		values.Set("sort_by", sortBy)
+	}
+	if sortDir != "" {
+		values.Set("sort_dir", sortDir)
 	}
 	query := values.Encode()
 	if query == "" {
@@ -74,8 +125,81 @@ func adminRoomsURL(filter repository.RoomFilter, viewMode string) string {
 	return "/admin/rooms?" + query
 }
 
+func adminRoomsURL(filter repository.RoomFilter, viewMode string) string {
+	return adminRoomsURLWithStatus(filter.Query, filter.Status, viewMode, filter.SortBy, filter.SortDir)
+}
+
+func adminRoomStatusLinks(queryText string, currentStatus string, viewMode string, sortBy string, sortDir string) []adminRoomStatusLink {
+	options := []SelectOption{
+		{Value: model.RoomStatusVacant, Label: "空置"},
+		{Value: model.RoomStatusOccupied, Label: "已出租"},
+		{Value: model.RoomStatusMaintenance, Label: "维护中"},
+		{Value: adminRoomStatusAll, Label: "全部"},
+	}
+	links := make([]adminRoomStatusLink, len(options))
+	for i, option := range options {
+		links[i] = adminRoomStatusLink{
+			Label:  option.Label,
+			URL:    adminRoomsURLWithStatus(queryText, option.Value, viewMode, sortBy, sortDir),
+			Active: currentStatus == option.Value,
+		}
+	}
+	return links
+}
+
+func adminRoomSortLinks(queryText string, currentStatus string, viewMode string, sortBy string, sortDir string) []adminRoomSortLink {
+	options := []SelectOption{
+		{Value: adminRoomSortRoomNo, Label: "房间号"},
+		{Value: adminRoomSortTitle, Label: "标题"},
+		{Value: adminRoomSortRentPrice, Label: "租金金额"},
+		{Value: adminRoomSortStatus, Label: "状态"},
+	}
+	links := make([]adminRoomSortLink, len(options))
+	for i, option := range options {
+		nextDir := adminRoomSortAsc
+		active := sortBy == option.Value
+		if active && sortDir == adminRoomSortAsc {
+			nextDir = adminRoomSortDesc
+		}
+		links[i] = adminRoomSortLink{
+			Label:     option.Label,
+			URL:       adminRoomsURLWithStatus(queryText, currentStatus, viewMode, option.Value, nextDir),
+			Active:    active,
+			Indicator: adminRoomSortIndicator(active, sortDir),
+		}
+	}
+	return links
+}
+
+func adminRoomSortIndicator(active bool, sortDir string) string {
+	if !active {
+		return ""
+	}
+	if sortDir == adminRoomSortDesc {
+		return "↓"
+	}
+	return "↑"
+}
+
+func adminRoomCurrentStatusLabel(currentStatus string) string {
+	if currentStatus == adminRoomStatusAll {
+		return "全部"
+	}
+	return roomStatusLabelText(currentStatus)
+}
+
+func adminRoomBaseURL(id uint) string {
+	return "/admin/rooms/" + strconv.FormatUint(uint64(id), 10)
+}
+
+func adminRoomEditURL(id uint) string {
+	return adminRoomBaseURL(id) + "/edit"
+}
+
 func (h *AdminRoomHandler) List(c *gin.Context) {
-	filter := repository.RoomFilter{Status: c.Query("status"), Query: c.Query("q")}
+	filterStatus, currentStatus := adminRoomStatusFromQuery(c)
+	sortBy, sortDir := adminRoomSortFromQuery(c)
+	filter := repository.RoomFilter{Status: filterStatus, Query: c.Query("q"), SortBy: sortBy, SortDir: sortDir}
 	viewMode := adminRoomViewFromQuery(c)
 	rooms, err := h.roomService.ListRooms(filter)
 	if err != nil {
@@ -83,16 +207,21 @@ func (h *AdminRoomHandler) List(c *gin.Context) {
 		return
 	}
 	h.renderer.Render(c, http.StatusOK, "admin_base.html", "admin/rooms.html", gin.H{
-		"Title":          "房源管理",
-		"Rooms":          rooms,
-		"Statuses":       roomStatusOptions(),
-		"Filter":         filter,
-		"ViewMode":       viewMode,
-		"ListViewURL":    adminRoomsURL(filter, adminRoomViewList),
-		"GridViewURL":    adminRoomsURL(filter, adminRoomViewGrid),
-		"CardViewURL":    adminRoomsURL(filter, adminRoomViewCard),
-		"ClearFilterURL": adminRoomsURL(repository.RoomFilter{}, viewMode),
-		"Error":          queryError(c),
+		"Title":              "房源管理",
+		"Rooms":              rooms,
+		"Statuses":           roomStatusOptions(),
+		"StatusLinks":        adminRoomStatusLinks(filter.Query, currentStatus, viewMode, sortBy, sortDir),
+		"SortLinks":          adminRoomSortLinks(filter.Query, currentStatus, viewMode, sortBy, sortDir),
+		"CurrentStatus":      currentStatus,
+		"CurrentStatusLabel": adminRoomCurrentStatusLabel(currentStatus),
+		"SortBy":             sortBy,
+		"SortDir":            sortDir,
+		"Filter":             filter,
+		"ViewMode":           viewMode,
+		"ListViewURL":        adminRoomsURLWithStatus(filter.Query, currentStatus, adminRoomViewList, sortBy, sortDir),
+		"CardViewURL":        adminRoomsURLWithStatus(filter.Query, currentStatus, adminRoomViewCard, sortBy, sortDir),
+		"ClearFilterURL":     adminRoomsURLWithStatus("", model.RoomStatusVacant, viewMode, adminRoomSortRoomNo, adminRoomSortAsc),
+		"Error":              queryError(c),
 	})
 }
 
@@ -147,16 +276,7 @@ func (h *AdminRoomHandler) Detail(c *gin.Context) {
 	if !ok {
 		return
 	}
-	room, err := h.roomService.GetRoom(id)
-	if err != nil {
-		c.String(http.StatusNotFound, "房源不存在")
-		return
-	}
-	h.renderer.Render(c, http.StatusOK, "admin_base.html", "admin/room_detail.html", gin.H{
-		"Title": "房源详情",
-		"Room":  room,
-		"Error": queryError(c),
-	})
+	c.Redirect(http.StatusSeeOther, adminRoomEditURL(id))
 }
 
 func (h *AdminRoomHandler) Edit(c *gin.Context) {
@@ -169,7 +289,7 @@ func (h *AdminRoomHandler) Edit(c *gin.Context) {
 		c.String(http.StatusNotFound, "房源不存在")
 		return
 	}
-	h.renderForm(c, http.StatusOK, *room, "/admin/rooms/"+strconv.FormatUint(uint64(id), 10), "编辑房源", "")
+	h.renderForm(c, http.StatusOK, *room, adminRoomBaseURL(id), "编辑房源", "")
 }
 
 func (h *AdminRoomHandler) Update(c *gin.Context) {
@@ -179,14 +299,14 @@ func (h *AdminRoomHandler) Update(c *gin.Context) {
 	}
 	input, err := roomInputFromForm(c)
 	if err != nil {
-		h.renderForm(c, http.StatusBadRequest, roomFromInput(input), "/admin/rooms/"+strconv.FormatUint(uint64(id), 10), "编辑房源", "表单数据不正确")
+		h.renderForm(c, http.StatusBadRequest, h.roomFromFailedUpdate(id, input), adminRoomBaseURL(id), "编辑房源", "表单数据不正确")
 		return
 	}
 	if _, err := h.roomService.UpdateRoom(id, input); err != nil {
-		h.renderForm(c, http.StatusBadRequest, roomFromInput(input), "/admin/rooms/"+strconv.FormatUint(uint64(id), 10), "编辑房源", userFacingError(err))
+		h.renderForm(c, http.StatusBadRequest, h.roomFromFailedUpdate(id, input), adminRoomBaseURL(id), "编辑房源", userFacingError(err))
 		return
 	}
-	c.Redirect(http.StatusSeeOther, "/admin/rooms/"+strconv.FormatUint(uint64(id), 10))
+	c.Redirect(http.StatusSeeOther, adminRoomEditURL(id))
 }
 
 func (h *AdminRoomHandler) Delete(c *gin.Context) {
@@ -207,10 +327,20 @@ func (h *AdminRoomHandler) AddVideoLink(c *gin.Context) {
 		return
 	}
 	if err := h.roomService.AddRoomVideoLink(id, c.PostForm("video_link")); err != nil {
-		redirectWithError(c, "/admin/rooms/"+strconv.FormatUint(uint64(id), 10), userFacingError(err))
+		redirectWithError(c, adminRoomEditURL(id), userFacingError(err))
 		return
 	}
-	c.Redirect(http.StatusSeeOther, "/admin/rooms/"+strconv.FormatUint(uint64(id), 10))
+	c.Redirect(http.StatusSeeOther, adminRoomEditURL(id))
+}
+
+func (h *AdminRoomHandler) roomFromFailedUpdate(id uint, input service.RoomInput) model.Room {
+	room := roomFromInput(input)
+	room.ID = id
+	currentRoom, err := h.roomService.GetRoom(id)
+	if err == nil {
+		room.Media = currentRoom.Media
+	}
+	return room
 }
 
 func (h *AdminRoomHandler) renderForm(c *gin.Context, status int, room model.Room, action string, title string, errorMessage string) {
@@ -326,7 +456,7 @@ func roomToAPIItem(room model.Room, tenant model.Tenant) roomAPIItem {
 		RentTypeLabel: rentTypeLabelText(room.RentType),
 		Floor:         room.Floor,
 		Area:          room.Area,
-		DetailURL:     "/admin/rooms/" + strconv.FormatUint(uint64(room.ID), 10),
+		DetailURL:     adminRoomEditURL(room.ID),
 	}
 	if tenant.ID > 0 {
 		item.TenantID = tenant.ID

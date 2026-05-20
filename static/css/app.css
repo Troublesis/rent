@@ -337,6 +337,46 @@ input[type="date"].input::-webkit-calendar-picker-indicator {
   }
 }
 
+.admin-room-card-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.admin-room-card-grid .public-room-masonry-card {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.admin-room-action-button {
+  min-height: 2.25rem;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
+@media (min-width: 768px) {
+  .admin-room-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.1rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .admin-room-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.2rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .admin-room-card-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 768px) {
   .public-room-masonry {
     column-count: 2;
@@ -583,6 +623,14 @@ input[type="date"].input::-webkit-calendar-picker-indicator {
   width: 100%;
   min-height: 44px;
   text-align: center;
+}
+
+.admin-room-list-action-button {
+  min-height: 1.875rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
 }
 
 .filter-chip-option {

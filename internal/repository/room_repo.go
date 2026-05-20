@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/troublesis/rent/internal/model"
 	"gorm.io/gorm"
@@ -10,6 +11,8 @@ import (
 type RoomFilter struct {
 	Status         string
 	Query          string
+	SortBy         string
+	SortDir        string
 	Floor          int
 	HasFloor       bool
 	Bedrooms       int
@@ -35,8 +38,9 @@ func (r *RoomRepository) WithDB(db *gorm.DB) *RoomRepository {
 }
 
 func (r *RoomRepository) ListRooms(filter RoomFilter) ([]model.Room, error) {
-	query := r.db.Model(&model.Room{}).Preload("Media").Order("created_at DESC, id DESC")
+	query := r.db.Model(&model.Room{}).Preload("Media")
 	query = applyRoomFilter(query, filter)
+	query = applyRoomSort(query, filter)
 	var rooms []model.Room
 	if err := query.Find(&rooms).Error; err != nil {
 		return nil, err
@@ -149,6 +153,25 @@ func applyRoomFilter(query *gorm.DB, filter RoomFilter) *gorm.DB {
 		query = query.Offset(filter.Offset)
 	}
 	return query
+}
+
+func applyRoomSort(query *gorm.DB, filter RoomFilter) *gorm.DB {
+	direction := "DESC"
+	if strings.EqualFold(filter.SortDir, "asc") {
+		direction = "ASC"
+	}
+	switch filter.SortBy {
+	case "room_no":
+		return query.Order("room_no " + direction).Order("id ASC")
+	case "title":
+		return query.Order("title " + direction).Order("id ASC")
+	case "rent_price":
+		return query.Order("COALESCE(NULLIF(rent_price, 0), price) " + direction).Order("id ASC")
+	case "status":
+		return query.Order("status " + direction).Order("id ASC")
+	default:
+		return query.Order("created_at DESC, id DESC")
+	}
 }
 
 func IsNotFound(err error) bool {

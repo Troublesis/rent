@@ -49,6 +49,33 @@ func TestRoomRepositoryListAndPreloadMedia(t *testing.T) {
 	}
 }
 
+func TestRoomRepositoryListRoomsSortsByRoomNumberAscending(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewRoomRepository(db)
+	rooms := []*model.Room{
+		{RoomNo: "C301", Title: "三号", Status: model.RoomStatusVacant, RentPrice: 30000},
+		{RoomNo: "A101", Title: "一号", Status: model.RoomStatusVacant, RentPrice: 10000},
+		{RoomNo: "B201", Title: "二号", Status: model.RoomStatusVacant, RentPrice: 20000},
+	}
+	for _, room := range rooms {
+		if err := repo.CreateRoom(room); err != nil {
+			t.Fatalf("CreateRoom returned error: %v", err)
+		}
+	}
+
+	sortedRooms, err := repo.ListRooms(RoomFilter{Status: model.RoomStatusVacant, SortBy: "room_no", SortDir: "asc"})
+	if err != nil {
+		t.Fatalf("ListRooms returned error: %v", err)
+	}
+	got := []string{sortedRooms[0].RoomNo, sortedRooms[1].RoomNo, sortedRooms[2].RoomNo}
+	want := []string{"A101", "B201", "C301"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("room order = %v, want %v", got, want)
+		}
+	}
+}
+
 func TestRoomRepositoryCountByStatus(t *testing.T) {
 	db := newTestDB(t)
 	repo := NewRoomRepository(db)

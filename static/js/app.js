@@ -13,6 +13,103 @@ document.addEventListener('click', (event) => {
   if (panel) panel.classList.toggle('hidden')
 })
 
+const roomViewTimers = new WeakMap()
+
+const roomViewRoots = (scope) => {
+  const current = scope?.matches?.('[data-room-view-root]') ? [scope] : []
+  const nested = scope?.querySelectorAll ? Array.from(scope.querySelectorAll('[data-room-view-root]')) : []
+  return [...current, ...nested]
+}
+
+const roomURLWithView = (href, view) => {
+  try {
+    const url = new URL(href, window.location.origin)
+    if (url.pathname !== '/admin/rooms') return href
+    url.searchParams.set('view', view)
+    return `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return href
+  }
+}
+
+const syncRoomFilterLinks = (root, view) => {
+  root.querySelectorAll('a[href^="/admin/rooms"]').forEach((link) => {
+    if (link.matches('[data-room-view-link]')) return
+    const nextHref = roomURLWithView(link.getAttribute('href'), view)
+    link.setAttribute('href', nextHref)
+    if (link.hasAttribute('hx-get')) link.setAttribute('hx-get', nextHref)
+  })
+}
+
+const setRoomView = (root, view, replaceURL = false) => {
+  if (!root || !view) return
+  root.dataset.roomView = view
+  root.querySelectorAll('[data-room-view-link]').forEach((link) => {
+    const active = link.dataset.roomViewValue === view
+    link.classList.toggle('public-room-view-active', active)
+    if (active) {
+      link.setAttribute('aria-current', 'page')
+    } else {
+      link.removeAttribute('aria-current')
+    }
+  })
+  const viewInput = root.querySelector('input[name="view"]')
+  if (viewInput) viewInput.value = view
+  syncRoomFilterLinks(root, view)
+  const activeLink = root.querySelector(`[data-room-view-link][data-room-view-value="${view}"]`)
+  if (replaceURL && activeLink?.href && window.history?.replaceState) {
+    window.history.replaceState(null, '', activeLink.href)
+  }
+}
+
+const scrollToRoomView = (root, view, behavior = 'auto') => {
+  const swipe = root?.querySelector('[data-room-view-swipe]')
+  const pane = root?.querySelector(`[data-room-view-pane="${view}"]`)
+  if (!swipe || !pane) return
+  swipe.scrollTo({ left: pane.offsetLeft, behavior })
+}
+
+const initRoomViews = (scope = document) => {
+  roomViewRoots(scope).forEach((root) => {
+    if (root.dataset.roomViewReady === 'true') return
+    root.dataset.roomViewReady = 'true'
+    const initialView = root.dataset.roomView || 'list'
+    window.requestAnimationFrame(() => scrollToRoomView(root, initialView))
+    const swipe = root.querySelector('[data-room-view-swipe]')
+    swipe?.addEventListener('scroll', () => {
+      window.clearTimeout(roomViewTimers.get(root))
+      const timer = window.setTimeout(() => {
+        const panes = Array.from(root.querySelectorAll('[data-room-view-pane]'))
+        const nearestPane = panes.reduce((nearest, pane) => {
+          if (!nearest) return pane
+          const currentDistance = Math.abs(pane.offsetLeft - swipe.scrollLeft)
+          const nearestDistance = Math.abs(nearest.offsetLeft - swipe.scrollLeft)
+          return currentDistance < nearestDistance ? pane : nearest
+        }, null)
+        setRoomView(root, nearestPane?.dataset.roomViewPane || 'list', true)
+      }, 120)
+      roomViewTimers.set(root, timer)
+    })
+  })
+}
+
+document.addEventListener('click', (event) => {
+  const link = event.target.closest('[data-room-view-link]')
+  if (!link) return
+  const root = link.closest('[data-room-view-root]')
+  if (!root) return
+  event.preventDefault()
+  const nextView = link.dataset.roomViewValue || 'list'
+  setRoomView(root, nextView, true)
+  scrollToRoomView(root, nextView, 'smooth')
+})
+
+document.addEventListener('htmx:afterSwap', (event) => {
+  initRoomViews(event.target)
+})
+
+initRoomViews()
+
 document.querySelectorAll('[data-gallery]').forEach((gallery) => {
   const frames = gallery.querySelectorAll('[data-gallery-main]')
   const thumbs = gallery.querySelectorAll('[data-gallery-thumb]')
@@ -694,21 +791,29 @@ const initDashboardDetails = () => {
   if (!panel) return
   const title = panel.querySelector('[data-dashboard-panel-title]')
   const body = panel.querySelector('[data-dashboard-panel-body]')
-  let lockedScrollY = 0
   const lockPageScroll = () => {
-    if (!panel.classList.contains('hidden')) return
-    lockedScrollY = window.scrollY
-    document.body.classList.add('overflow-hidden')
+    if (document.body.dataset.dashboardScrollY !== undefined) return
+    const scrollY = window.scrollY
+    document.body.dataset.dashboardScrollY = String(scrollY)
+    document.documentElement.style.overflow = 'hidden'
     document.body.style.position = 'fixed'
-    document.body.style.top = `-${lockedScrollY}px`
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.left = '0'
+    document.body.style.right = '0'
     document.body.style.width = '100%'
+    document.body.style.overflow = 'hidden'
   }
   const unlockPageScroll = () => {
-    document.body.classList.remove('overflow-hidden')
+    const scrollY = Number(document.body.dataset.dashboardScrollY || '0')
+    delete document.body.dataset.dashboardScrollY
+    document.documentElement.style.overflow = ''
     document.body.style.position = ''
     document.body.style.top = ''
+    document.body.style.left = ''
+    document.body.style.right = ''
     document.body.style.width = ''
-    window.scrollTo(0, lockedScrollY)
+    document.body.style.overflow = ''
+    window.scrollTo(0, scrollY)
   }
   const openPanel = (label) => {
     title.textContent = label
