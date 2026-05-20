@@ -694,12 +694,33 @@ const initDashboardDetails = () => {
   if (!panel) return
   const title = panel.querySelector('[data-dashboard-panel-title]')
   const body = panel.querySelector('[data-dashboard-panel-body]')
+  let lockedScrollY = 0
+  const lockPageScroll = () => {
+    if (!panel.classList.contains('hidden')) return
+    lockedScrollY = window.scrollY
+    document.body.classList.add('overflow-hidden')
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${lockedScrollY}px`
+    document.body.style.width = '100%'
+  }
+  const unlockPageScroll = () => {
+    document.body.classList.remove('overflow-hidden')
+    document.body.style.position = ''
+    document.body.style.top = ''
+    document.body.style.width = ''
+    window.scrollTo(0, lockedScrollY)
+  }
   const openPanel = (label) => {
     title.textContent = label
     body.innerHTML = '<p class="text-sm text-stone-500">正在加载明细...</p>'
+    lockPageScroll()
     panel.classList.remove('hidden')
   }
-  const closePanel = () => panel.classList.add('hidden')
+  const closePanel = () => {
+    if (panel.classList.contains('hidden')) return
+    panel.classList.add('hidden')
+    unlockPageScroll()
+  }
   panel.querySelectorAll('[data-dashboard-close]').forEach((button) => button.addEventListener('click', closePanel))
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closePanel()
