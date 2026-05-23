@@ -1568,3 +1568,113 @@ const formatFenText = (fen) => (Number(fen || 0) / 100).toFixed(2)
 const formatYuanIntText = (fen) => String(Math.trunc(Number(fen || 0) / 100))
 
 initDashboardDetails()
+
+// ----- Chinese date input display (年月日) ---------------------------------
+// Native <input type="date"> renders YYYY/MM/DD or DD/MM/YYYY depending on
+// the browser/OS locale. Overlay the value in Chinese form while keeping the
+// native picker fully usable.
+const formatChineseDateInputValue = (value, placeholder) => {
+  if (!value) return { text: placeholder || '请选择日期', empty: true }
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return { text: value, empty: false }
+  return { text: `${match[1]}年${Number(match[2])}月${Number(match[3])}日`, empty: false }
+}
+
+const refreshDateFieldDisplay = (input) => {
+  const wrap = input.parentElement
+  if (!wrap || !wrap.classList.contains('date-field-wrap')) return
+  const display = wrap.querySelector('.date-field-display')
+  if (!display) return
+  const placeholder = input.dataset.placeholder || '请选择日期'
+  const { text, empty } = formatChineseDateInputValue(input.value, placeholder)
+  display.textContent = text
+  display.classList.toggle('is-empty', empty)
+}
+
+const enhanceDateInput = (input) => {
+  if (input.dataset.dateEnhanced === 'true') return
+  if (input.type !== 'date') return
+  const parent = input.parentNode
+  if (!parent) return
+  input.dataset.dateEnhanced = 'true'
+  const wrap = document.createElement('span')
+  wrap.className = 'date-field-wrap'
+  parent.insertBefore(wrap, input)
+  wrap.appendChild(input)
+  const display = document.createElement('span')
+  display.className = 'date-field-display'
+  display.setAttribute('aria-hidden', 'true')
+  wrap.appendChild(display)
+  refreshDateFieldDisplay(input)
+  input.addEventListener('input', () => refreshDateFieldDisplay(input))
+  input.addEventListener('change', () => refreshDateFieldDisplay(input))
+}
+
+const enhanceDateInputs = (scope = document) => {
+  const nodes = []
+  if (scope?.matches?.('input[type="date"]')) nodes.push(scope)
+  if (scope?.querySelectorAll) nodes.push(...scope.querySelectorAll('input[type="date"]'))
+  nodes.forEach(enhanceDateInput)
+}
+
+enhanceDateInputs()
+document.addEventListener('htmx:afterSwap', (event) => {
+  enhanceDateInputs(event.target)
+})
+
+// ----- Auto-hide mobile top bar (Safari-style) -----------------------------
+// Hide when scrolling down, reveal when scrolling up. Always shown near the
+// top of the page and once the user reaches the bottom. Desktop already
+// hides .admin-topbar via the lg breakpoint.
+const initAutoHideTopbar = () => {
+  const topbar = document.querySelector('.admin-topbar')
+  if (!topbar) return
+  const HIDE_THRESHOLD = 8
+  const SHOW_THRESHOLD = 4
+  const TOP_OFFSET = 32
+  let lastY = window.scrollY
+  let accumDown = 0
+  let accumUp = 0
+  let ticking = false
+  const onScroll = () => {
+    ticking = false
+    const y = window.scrollY
+    const diff = y - lastY
+    lastY = y
+    if (y <= TOP_OFFSET) {
+      topbar.classList.remove('is-hidden')
+      accumDown = 0
+      accumUp = 0
+      return
+    }
+    const bottomReached = window.innerHeight + y >= document.documentElement.scrollHeight - 4
+    if (bottomReached) {
+      topbar.classList.remove('is-hidden')
+      return
+    }
+    if (diff > 0) {
+      accumDown += diff
+      accumUp = 0
+      if (accumDown > HIDE_THRESHOLD) topbar.classList.add('is-hidden')
+    } else if (diff < 0) {
+      accumUp -= diff
+      accumDown = 0
+      if (accumUp > SHOW_THRESHOLD) topbar.classList.remove('is-hidden')
+    }
+  }
+  const scheduleScroll = () => {
+    if (ticking) return
+    ticking = true
+    window.requestAnimationFrame(onScroll)
+  }
+  window.addEventListener('scroll', scheduleScroll, { passive: true })
+  const drawer = document.querySelector('[data-drawer]')
+  if (drawer) {
+    const observer = new MutationObserver(() => {
+      if (drawer.dataset.open === 'true') topbar.classList.remove('is-hidden')
+    })
+    observer.observe(drawer, { attributes: true, attributeFilter: ['data-open'] })
+  }
+}
+
+initAutoHideTopbar()

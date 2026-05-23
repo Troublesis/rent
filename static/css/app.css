@@ -199,6 +199,14 @@ h1, h2, h3, .display-font {
   background: linear-gradient(145deg, rgba(37,31,24,0.98), rgba(61,43,28,0.96));
   color: #fff7ed;
   box-shadow: 0 12px 24px rgba(37, 31, 24, 0.18);
+  transform: translateY(0);
+  transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.admin-topbar.is-hidden {
+  transform: translateY(-100%);
+  box-shadow: none;
 }
 
 .admin-topbar-brand {
@@ -426,6 +434,51 @@ input[type="date"].input::-webkit-date-and-time-value {
 
 input[type="date"].input::-webkit-calendar-picker-indicator {
   margin-inline-start: 0;
+}
+
+/* Chinese-formatted date display overlay: hide native YYYY/MM/DD or DD/MM/YYYY
+   text but keep the calendar picker UI fully usable. */
+.date-field-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.date-field-wrap > input[type="date"].input {
+  color: transparent;
+  caret-color: transparent;
+  background-color: rgba(255, 255, 255, 0.62);
+}
+
+.date-field-wrap > input[type="date"].input::-webkit-datetime-edit,
+.date-field-wrap > input[type="date"].input::-webkit-datetime-edit-fields-wrapper,
+.date-field-wrap > input[type="date"].input::-webkit-datetime-edit-text,
+.date-field-wrap > input[type="date"].input::-webkit-datetime-edit-year-field,
+.date-field-wrap > input[type="date"].input::-webkit-datetime-edit-month-field,
+.date-field-wrap > input[type="date"].input::-webkit-datetime-edit-day-field {
+  color: transparent;
+}
+
+.date-field-display {
+  position: absolute;
+  left: 0;
+  right: 2.5rem;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 0.95rem;
+  font: inherit;
+  line-height: 1.5;
+  color: var(--ink);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.date-field-display.is-empty {
+  color: rgba(37, 31, 24, 0.42);
 }
 
 .input:focus {
