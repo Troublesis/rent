@@ -1,0 +1,28 @@
+2026-05-23T11:57:23Z [backup] Snapshotting SQLite DB from /Users/troublesis/code/rent/data/rent.db
+2026-05-23T11:57:23Z [backup] Included app env file from /Users/troublesis/code/rent/.env
+2026-05-23T11:57:23Z [backup] Creating archive rent-20260523T115723Z.tar.gz
+2026-05-23T11:57:23Z [backup] Archive size: 1.1M
+2026-05-23T11:57:23Z [backup] [dry-run] Would upload rent-20260523T115723Z.tar.gz to https://alist.troublesis.win/dav/rent-20260523T115723Z.tar.gz
+2026-05-23T11:57:23Z [backup] Listing remote backups for rotation (keep last 10)
+2026-05-23T11:57:24Z [backup] WARN: PROPFIND failed — skipping rotation
+2026-05-23T11:57:24Z [backup] Done. archive=rent-20260523T115723Z.tar.gz size=1.1M env=yes kept=0 pruned=0
+2026-05-23T11:57:24Z [backup] Dry run complete — no notification sent.
+2026-05-23T11:57:51Z [backup] Snapshotting SQLite DB from /Users/troublesis/code/rent/data/rent.db
+2026-05-23T11:57:51Z [backup] Included app env file from /Users/troublesis/code/rent/.env
+2026-05-23T11:57:51Z [backup] Creating archive rent-20260523T115751Z.tar.gz
+2026-05-23T11:57:51Z [backup] Archive size: 1.1M
+2026-05-23T11:57:51Z [backup] Uploading to https://alist.troublesis.win/dav/rent-20260523T115751Z.tar.gz
+2026-05-23T11:57:51Z [backup] FATAL: WebDAV upload failed
+2026-05-23T12:02:01Z [backup] Snapshotting SQLite DB from /Users/troublesis/code/rent/data/rent.db
+2026-05-23T12:02:01Z [backup] Included app env file from /Users/troublesis/code/rent/.env
+2026-05-23T12:02:01Z [backup] Creating archive rent-20260523T120201Z.tar.gz
+2026-05-23T12:02:01Z [backup] Archive size: 1.1M
+2026-05-23T12:02:01Z [backup] Uploading to https://alist.troublesis.win/dav/rent-20260523T120201Z.tar.gz
+2026-05-23T12:02:02Z [backup] FATAL: WebDAV upload failed
+2026-05-23T12:02:44Z [backup] Snapshotting SQLite DB from /Users/troublesis/code/rent/data/rent.db
+2026-05-23T12:02:44Z [backup] Included app env file from /Users/troublesis/code/rent/.env
+2026-05-23T12:02:44Z [backup] Creating archive rent-20260523T120244Z.tar.gz
+2026-05-23T12:02:44Z [backup] Archive size: 1.1M
+2026-05-23T12:02:44Z [backup] Uploading to https://alist.troublesis.win/dav/rent-20260523T120244Z.tar.gz
+2026-05-23T12:02:45Z [backup] Listing remote backups for rotation (keep last 10)
+2026-05-23T12:02:45Z [backup] Done. archive=rent-20260523T120244Z.tar.gz size=1.1M env=yes kept=2 pruned=0
