@@ -58,18 +58,26 @@
   {{template "admin_payment_list" .}}
 </section>
 
-<div class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 p-4" data-payment-exclude-modal>
-  <div class="w-full max-w-md rounded-3xl bg-[var(--paper-soft)] p-6 shadow-2xl">
-    <h3 class="text-xl font-black">确认将该记录标记为"不再记录"？</h3>
-    <p class="mt-3 text-sm text-stone-600">该操作后此付款记录将不再出现在默认列表。可在「记录范围」筛选中查看已排除的记录。</p>
-    <form method="post" action="" class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end"
+<div class="fixed inset-0 z-50 hidden items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4" data-payment-exclude-modal>
+  <div class="w-full max-w-md rounded-t-3xl bg-[var(--paper-soft)] p-5 shadow-2xl sm:rounded-3xl sm:p-6">
+    <h3 class="text-lg font-black sm:text-xl">确认将该记录标记为“不再记录”？</h3>
+    <p class="mt-2 text-sm text-stone-600 sm:mt-3">该操作后此付款记录将不再出现在默认列表。可在「记录范围」筛选中查看已排除的记录。</p>
+    <form method="post" action="" class="mt-5 space-y-4"
           hx-post="" hx-target="#payment-list-section" hx-select="#payment-list-section"
           hx-swap="outerHTML" hx-push-url="false"
           data-payment-exclude-form>
       <input type="hidden" name="excluded" value="true">
       <input type="hidden" name="return_to" value="/admin/payments">
-      <button class="btn-secondary" type="button" data-payment-exclude-cancel>取消</button>
-      <button class="btn-danger" type="submit">确认</button>
+      <label class="block">
+        <span class="text-sm font-bold text-stone-600">备注 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
+        <textarea class="input mt-2 min-h-[96px]" name="exclusion_note" rows="3" maxlength="500"
+                  placeholder="说明排除原因，例如：已与租客线下结清、记录重复等"
+                  data-payment-exclude-note></textarea>
+      </label>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+        <button class="btn-secondary w-full sm:w-auto" type="button" data-payment-exclude-cancel>取消</button>
+        <button class="btn-danger w-full sm:w-auto" type="submit">确认</button>
+      </div>
     </form>
   </div>
 </div>

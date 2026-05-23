@@ -841,18 +841,22 @@ const initPaymentsExcludeModal = () => {
   if (!modal) return
   const form = modal.querySelector('[data-payment-exclude-form]')
   const cancel = modal.querySelector('[data-payment-exclude-cancel]')
+  const noteField = form?.querySelector('[data-payment-exclude-note]')
   const open = (paymentID) => {
     if (!form || !paymentID) return
     const action = `/admin/payments/${paymentID}/exclusion`
     form.setAttribute('action', action)
     form.setAttribute('hx-post', action)
     if (window.htmx?.process) window.htmx.process(form)
+    if (noteField) noteField.value = ''
     modal.classList.remove('hidden')
     modal.classList.add('flex')
+    requestAnimationFrame(() => noteField?.focus())
   }
   const close = () => {
     modal.classList.add('hidden')
     modal.classList.remove('flex')
+    if (noteField) noteField.value = ''
   }
   document.addEventListener('click', (event) => {
     const trigger = event.target.closest('[data-payment-exclude]')
