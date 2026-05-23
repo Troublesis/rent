@@ -121,7 +121,7 @@ func (r *PaymentRepository) SummarizePayments(filter PaymentFilter, now time.Tim
 	if err := summaryQuery().Select("COALESCE(SUM(payments.amount), 0)").Where("payments.paid = ? AND payments.excluded = ?", true, false).Scan(&summary.TotalPaidAmount).Error; err != nil {
 		return PaymentSummary{}, err
 	}
-	if err := summaryQuery().Where("tenants.status = ? AND payments.excluded = ?", model.TenantStatusCheckout, false).Count(&summary.CheckoutPendingCount).Error; err != nil {
+	if err := summaryQuery().Where("tenants.status = ? AND payments.excluded = ? AND payments.paid = ?", model.TenantStatusCheckout, false, false).Count(&summary.CheckoutPendingCount).Error; err != nil {
 		return PaymentSummary{}, err
 	}
 	if err := summaryQuery().Where("payments.excluded = ?", true).Count(&summary.ExcludedCount).Error; err != nil {

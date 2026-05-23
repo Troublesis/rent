@@ -125,7 +125,7 @@ func formatDate(value time.Time) string {
 	if value.IsZero() {
 		return "-"
 	}
-	return value.Format("2006/01/02")
+	return fmt.Sprintf("%d年%d月%d日", value.Year(), int(value.Month()), value.Day())
 }
 
 func formatOptionalDate(value *time.Time) string {
@@ -135,6 +135,7 @@ func formatOptionalDate(value *time.Time) string {
 	return formatDate(*value)
 }
 
+// formatInputDate keeps ISO format because HTML <input type="date"> requires it.
 func formatInputDate(value time.Time) string {
 	if value.IsZero() {
 		return ""
@@ -146,7 +147,7 @@ func formatDateTime(value time.Time) string {
 	if value.IsZero() {
 		return "-"
 	}
-	return value.Format("2006/01/02 15:04")
+	return fmt.Sprintf("%d年%d月%d日 %02d:%02d", value.Year(), int(value.Month()), value.Day(), value.Hour(), value.Minute())
 }
 
 func roomStatusLabel(status string) string {

@@ -117,6 +117,14 @@
   const formatFen = (fen) => (Number(fen || 0) / 100).toFixed(2)
   const formatPercent = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`
   const escapeText = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]))
+  const formatMonthLabel = (value) => {
+    const text = String(value ?? '')
+    const ym = text.match(/^(\d{4})-(\d{2})$/)
+    if (ym) return `${ym[1]}年${Number(ym[2])}月`
+    const ymd = text.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (ymd) return `${ymd[1]}年${Number(ymd[2])}月${Number(ymd[3])}日`
+    return text
+  }
   const currentYear = () => Number(statsYear.value || statsPage.dataset.selectedYear || statsPage.dataset.defaultYear)
   const pushYearToURL = () => {
     if (!window.history?.replaceState) return
@@ -139,7 +147,7 @@
     document.getElementById('statsOverviewGrid').innerHTML = [
       tileHTML('已收总额', `¥${formatFen(data.total_paid_fen)}`, '当前筛选范围'),
       tileHTML('平均月收', `¥${formatFen(data.average_monthly_fen)}`, '按月份平均'),
-      tileHTML('最高单月', data.peak_month ? `¥${formatFen(data.peak_month_paid_fen)}` : '暂无数据', data.peak_month || ''),
+      tileHTML('最高单月', data.peak_month ? `¥${formatFen(data.peak_month_paid_fen)}` : '暂无数据', data.peak_month ? formatMonthLabel(data.peak_month) : ''),
       tileHTML('当前房间数', `${data.total_rooms || 0} 间`, `已出租 ${data.occupied_rooms || 0} 间`),
       tileHTML('当前在租', `${data.active_tenants || 0} 人`, '当前有效租客'),
       tileHTML('估算出租率', formatPercent(data.occupancy_rate), '基于当前房态')
@@ -168,7 +176,7 @@
     })
     document.getElementById('incomeTableWrap').innerHTML = dataTable(
       ['月份', '已收金额'],
-      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(month.month)}</td><td class="px-3 py-3">¥${formatFen(month.paid_fen)}</td></tr>`)
+      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(formatMonthLabel(month.month))}</td><td class="px-3 py-3">¥${formatFen(month.paid_fen)}</td></tr>`)
     )
   }
 
@@ -185,7 +193,7 @@
     })
     document.getElementById('occupancyTableWrap').innerHTML = dataTable(
       ['月份', '估算出租房间', '房间总数', '估算出租率'],
-      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(month.month)}</td><td class="px-3 py-3">${escapeText(month.occupied_rooms)} 间</td><td class="px-3 py-3">${escapeText(month.total_rooms)} 间</td><td class="px-3 py-3">${formatPercent(month.rate)}</td></tr>`)
+      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(formatMonthLabel(month.month))}</td><td class="px-3 py-3">${escapeText(month.occupied_rooms)} 间</td><td class="px-3 py-3">${escapeText(month.total_rooms)} 间</td><td class="px-3 py-3">${formatPercent(month.rate)}</td></tr>`)
     )
   }
 
@@ -201,7 +209,7 @@
     replaceChart('projection', 'projectionChart', {
       type: 'bar',
       data: {
-        labels: (data.months || []).map((month) => month.month),
+        labels: (data.months || []).map((month) => formatMonthLabel(month.month)),
         datasets: [{ label: '预测应收（元）', data: (data.months || []).map((month) => Number(month.total_fen || 0) / 100), backgroundColor: '#93C5FD', borderRadius: 12 }]
       },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
@@ -220,7 +228,7 @@
     })
     document.getElementById('projectionTableWrap').innerHTML = dataTable(
       ['月份', '预测应收', '涉及租客数'],
-      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(month.month)}</td><td class="px-3 py-3">¥${formatFen(month.total_fen)}</td><td class="px-3 py-3">${escapeText(month.tenant_count)} 人</td></tr>`)
+      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(formatMonthLabel(month.month))}</td><td class="px-3 py-3">¥${formatFen(month.total_fen)}</td><td class="px-3 py-3">${escapeText(month.tenant_count)} 人</td></tr>`)
     )
   }
 

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -310,7 +311,7 @@ func paymentToRow(payment model.Payment, now time.Time) paymentRow {
 	if overdue {
 		overdueDays = int(today.Sub(payDate).Hours() / 24)
 	}
-	nextLabel := formatAPIDate(payment.PayDate)
+	nextLabel := formatDisplayDate(payment.PayDate)
 	if model.RentTypeOrDefault(payment.Tenant.RentType) == model.RentTypeDaily {
 		nextLabel = "每日"
 	}
@@ -327,7 +328,7 @@ func paymentToRow(payment model.Payment, now time.Time) paymentRow {
 		AmountFen:         payment.Amount,
 		AmountText:        service.FormatFen(payment.Amount),
 		PayDate:           payment.PayDate,
-		PayDateLabel:      formatAPIDate(payment.PayDate),
+		PayDateLabel:      formatDisplayDate(payment.PayDate),
 		NextDueLabel:      nextLabel,
 		Paid:              payment.Paid,
 		StatusLabel:       paymentStatusLabelText(payment.Paid),
@@ -373,7 +374,7 @@ func paymentSummaryScopes(c *gin.Context) map[string]paymentSummaryScope {
 	unpaidActive := paid == "false" && excluded == "false" && tenantStatus != model.TenantStatusCheckout
 	paidActive := paid == "true" && excluded == "false"
 	excludedActive := excluded == "true"
-	checkoutActive := tenantStatus == model.TenantStatusCheckout && excluded == "false"
+	checkoutActive := tenantStatus == model.TenantStatusCheckout && excluded == "false" && paid == "false"
 	_ = period
 	_ = typeFilter
 
@@ -387,7 +388,7 @@ func paymentSummaryScopes(c *gin.Context) map[string]paymentSummaryScope {
 			Active: paidActive,
 		},
 		"checkout": {
-			URL:    paymentListURL(c, map[string]string{"paid": "all", "excluded": "false", "tenant_status": model.TenantStatusCheckout, "page": ""}),
+			URL:    paymentListURL(c, map[string]string{"paid": "false", "excluded": "false", "tenant_status": model.TenantStatusCheckout, "page": ""}),
 			Active: checkoutActive,
 		},
 		"excluded": {
@@ -641,6 +642,12 @@ func paymentFilterFromQuery(c *gin.Context) repository.PaymentFilter {
 	filter.Overdue = boolQuery(c.Query("overdue"))
 	if tenantID, err := strconv.ParseUint(c.Query("tenant_id"), 10, 64); err == nil {
 		filter.TenantID = uint(tenantID)
+		// A direct tenant pick from the dropdown is authoritative; the human-
+		// readable label still in `q` would otherwise LIKE-match nothing and
+		// AND the result down to zero rows.
+		if filter.TenantID > 0 {
+			filter.Query = ""
+		}
 	}
 	if fromDate, ok := dateQuery(c.Query("from")); ok {
 		filter.FromDate = fromDate
@@ -848,6 +855,8 @@ func paymentAPIDateOnly(value time.Time) time.Time {
 	return time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, value.Location())
 }
 
+// formatAPIDate emits ISO yyyy-MM-dd for JSON API consumers. JavaScript on the
+// frontend reformats it into the Chinese display style via formatDisplayDate.
 func formatAPIDate(value time.Time) string {
 	if value.IsZero() {
 		return ""
@@ -860,6 +869,15 @@ func formatOptionalAPIDate(value *time.Time) string {
 		return ""
 	}
 	return value.Format("2006-01-02")
+}
+
+// formatDisplayDate renders a Chinese-style date used for server-rendered
+// labels (e.g., "2026年5月23日"). Returns empty string for zero values.
+func formatDisplayDate(value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+	return fmt.Sprintf("%d年%d月%d日", value.Year(), int(value.Month()), value.Day())
 }
 
 func overdueLabelText(days int) string {

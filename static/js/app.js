@@ -414,10 +414,17 @@ const escapeHTML = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => 
   '"': '&quot;'
 }[char]))
 
+// Render dates in Chinese form (年月日). Accepts:
+//   YYYY-MM-DD  → YYYY年M月D日
+//   YYYY-MM     → YYYY年M月
+// Anything else is returned as-is so already-localized labels survive.
 const formatDisplayDate = (value) => {
   if (!value || value === '-') return '-'
   const text = String(value)
-  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10).replaceAll('-', '/')
+  const ymd = text.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (ymd) return `${ymd[1]}年${Number(ymd[2])}月${Number(ymd[3])}日`
+  const ym = text.match(/^(\d{4})-(\d{2})$/)
+  if (ym) return `${ym[1]}年${Number(ym[2])}月`
   return text
 }
 
@@ -693,6 +700,7 @@ const initTenantSearchComboBox = (root) => {
   root.dataset.tenantSearchComboboxReady = 'true'
   const input = root.querySelector('[data-tenant-search-input]')
   const list = root.querySelector('[data-tenant-search-list]')
+  const hidden = root.querySelector('[data-tenant-search-hidden]')
   const form = input?.closest('form')
   if (!input || !list) return
 
@@ -778,15 +786,20 @@ const initTenantSearchComboBox = (root) => {
     if (form.dispatchEvent(event)) form.submit()
   }
   const selectTenant = (tenant) => {
+    // Show a human-readable label, but submit via tenant_id so the backend
+    // gets an exact match instead of LIKE'ing the dash-joined label.
     input.value = tenantSearchOptionLabel(tenant)
+    if (hidden) hidden.value = tenant.id ?? ''
     suppressOpen = true
-    input.dispatchEvent(new Event('input', { bubbles: true }))
     close()
     submitFilter()
   }
 
   input.addEventListener('focus', openWithTenants)
   input.addEventListener('input', () => {
+    // Any manual typing invalidates a prior dropdown selection — go back to
+    // freeform LIKE search on q.
+    if (hidden && hidden.value) hidden.value = ''
     if (suppressOpen) {
       suppressOpen = false
       return
@@ -1544,7 +1557,7 @@ const renderProjectionMonthsDetail = (projection, fullURL) => {
   const summary = `<p class="mb-4 text-sm font-bold text-stone-600">合计应收 ¥${escapeHTML(projection.total_text)}，仅含当前在租租客，不含未来新签租约。</p>`
   return dashboardTable(
     ['月份', '应收总额', '参与租客数'],
-    (projection.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeHTML(month.month)}</td><td class="px-3 py-3">¥${escapeHTML(month.total_text)}</td><td class="px-3 py-3">${escapeHTML(month.tenant_count)}</td></tr>`),
+    (projection.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeHTML(formatDisplayDate(month.month))}</td><td class="px-3 py-3">¥${escapeHTML(month.total_text)}</td><td class="px-3 py-3">${escapeHTML(month.tenant_count)}</td></tr>`),
     summary
   ) + fullListLink(fullURL)
 }
