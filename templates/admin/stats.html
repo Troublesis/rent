@@ -1,99 +1,101 @@
 {{define "content"}}
 <div class="space-y-6" data-stats-page data-default-year="{{.DefaultYear}}" data-selected-year="{{.Year}}">
-  <section class="card p-5 shadow-lg shadow-stone-200/60 md:sticky md:top-4 md:z-10">
+  <section class="card p-4 sm:p-5 shadow-lg shadow-stone-200/60 md:sticky md:top-4 md:z-10">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <p class="text-xs font-black tracking-[0.35em] text-amber-700">统计筛选</p>
-        <h3 class="mt-2 text-2xl font-black">收租数据分析</h3>
-        <p class="mt-2 text-sm text-stone-600">当前先提供收入、出租率估算和未来应收预测，更多分析会分阶段补齐。</p>
+      <div class="min-w-0">
+        <p class="text-[0.65rem] sm:text-xs font-black tracking-[0.3em] sm:tracking-[0.35em] text-amber-700">统计筛选</p>
+        <h3 class="mt-2 text-xl sm:text-2xl font-black">收租数据分析</h3>
+        <p class="mt-2 text-xs sm:text-sm text-stone-600">当前先提供收入、出租率估算和未来应收预测，更多分析会分阶段补齐。</p>
       </div>
-      <form class="flex flex-col gap-3 sm:flex-row sm:items-end" data-stats-filter method="get" action="/admin/stats">
-        <label class="block">
+      <form class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end" data-stats-filter method="get" action="/admin/stats">
+        <label class="block w-full sm:w-auto">
           <span class="mb-2 block text-xs font-black text-stone-500">年份</span>
-          <select id="statsYear" class="input min-w-[9rem]" name="year">
+          <select id="statsYear" class="input w-full sm:min-w-[9rem]" name="year">
             {{range .YearOptions}}
               <option value="{{.}}" {{if eq . $.Year}}selected{{end}}>{{.}} 年</option>
             {{end}}
           </select>
         </label>
-        <button class="btn-primary" type="submit">应用筛选</button>
-        <a class="btn-secondary text-center" href="/admin/stats" data-stats-reset>重置</a>
+        <div class="flex gap-2 sm:gap-3">
+          <button class="btn-primary flex-1 sm:flex-none" type="submit">应用筛选</button>
+          <a class="btn-secondary flex-1 sm:flex-none text-center" href="/admin/stats" data-stats-reset>重置</a>
+        </div>
       </form>
     </div>
   </section>
 
-  <section class="card p-6" id="statsOverviewSection">
+  <section class="card p-4 sm:p-6" id="statsOverviewSection">
     <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-      <div>
-        <h3 class="text-2xl font-black">收入总览</h3>
-        <p class="mt-2 text-sm text-stone-600">按当前筛选范围汇总已收金额和当前经营状态。</p>
+      <div class="min-w-0">
+        <h3 class="text-xl sm:text-2xl font-black">收入总览</h3>
+        <p class="mt-2 text-xs sm:text-sm text-stone-600">按当前筛选范围汇总已收金额和当前经营状态。</p>
       </div>
-      <span class="badge">核心指标</span>
+      <span class="badge self-start md:self-auto">核心指标</span>
     </div>
-    <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" id="statsOverviewGrid">
-      <div class="rounded-[1.5rem] bg-white/60 p-5 text-sm text-stone-500">正在加载...</div>
+    <div class="mt-5 sm:mt-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3" id="statsOverviewGrid">
+      <div class="rounded-2xl sm:rounded-[1.5rem] bg-white/60 p-4 sm:p-5 text-sm text-stone-500">正在加载...</div>
     </div>
   </section>
 
-  <section class="card p-6" id="statsIncomeSection">
+  <section class="card p-4 sm:p-6" id="statsIncomeSection">
     <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-      <div>
-        <h3 class="text-2xl font-black">月度收入明细</h3>
-        <p class="mt-2 text-sm text-stone-600">只统计已标记“已收”且未排除的收款记录。</p>
+      <div class="min-w-0">
+        <h3 class="text-xl sm:text-2xl font-black">月度收入明细</h3>
+        <p class="mt-2 text-xs sm:text-sm text-stone-600">只统计已标记“已收”且未排除的收款记录。</p>
       </div>
-      <span class="badge">按月汇总</span>
+      <span class="badge self-start md:self-auto">按月汇总</span>
     </div>
-    <div class="mt-6 rounded-[1.5rem] bg-white/55 p-4">
-      <div class="relative h-[220px] sm:h-[320px]">
+    <div class="mt-5 sm:mt-6 rounded-2xl sm:rounded-[1.5rem] bg-white/55 p-3 sm:p-4">
+      <div class="relative h-[200px] xs:h-[240px] sm:h-[320px]">
         <canvas id="incomeChart"></canvas>
       </div>
       <p class="mt-4 hidden rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" id="incomeError">数据加载失败，请刷新重试</p>
     </div>
-    <div class="mt-6 overflow-x-auto" id="incomeTableWrap">
+    <div class="mt-5 sm:mt-6 stats-table-wrap" id="incomeTableWrap">
       <p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">正在加载...</p>
     </div>
   </section>
 
-  <section class="card p-6" id="statsOccupancySection">
+  <section class="card p-4 sm:p-6" id="statsOccupancySection">
     <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-      <div>
-        <h3 class="text-2xl font-black">出租率分析</h3>
-        <p class="mt-2 text-sm text-stone-600">出租率根据租客入住和退租日期估算，未包含房态历史变更。</p>
+      <div class="min-w-0">
+        <h3 class="text-xl sm:text-2xl font-black">出租率分析</h3>
+        <p class="mt-2 text-xs sm:text-sm text-stone-600">出租率根据租客入住和退租日期估算，未包含房态历史变更。</p>
       </div>
-      <span class="badge">估算数据</span>
+      <span class="badge self-start md:self-auto">估算数据</span>
     </div>
-    <div class="mt-6 rounded-[1.5rem] bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800" id="occupancyNote">出租率根据租客入住和退租日期估算，未包含房态历史变更。</div>
-    <div class="mt-6 rounded-[1.5rem] bg-white/55 p-4">
-      <div class="relative h-[220px] sm:h-[320px]">
+    <div class="mt-5 sm:mt-6 rounded-2xl sm:rounded-[1.5rem] bg-amber-50 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold text-amber-800" id="occupancyNote">出租率根据租客入住和退租日期估算，未包含房态历史变更。</div>
+    <div class="mt-5 sm:mt-6 rounded-2xl sm:rounded-[1.5rem] bg-white/55 p-3 sm:p-4">
+      <div class="relative h-[200px] xs:h-[240px] sm:h-[320px]">
         <canvas id="occupancyChart"></canvas>
       </div>
       <p class="mt-4 hidden rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" id="occupancyError">数据加载失败，请刷新重试</p>
     </div>
-    <div class="mt-6 overflow-x-auto" id="occupancyTableWrap">
+    <div class="mt-5 sm:mt-6 stats-table-wrap" id="occupancyTableWrap">
       <p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">正在加载...</p>
     </div>
   </section>
 
-  <section class="card p-6" id="statsProjectionSection">
+  <section class="card p-4 sm:p-6" id="statsProjectionSection">
     <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-      <div>
-        <h3 class="text-2xl font-black">收益预测</h3>
-        <p class="mt-2 text-sm text-stone-600">基于当前在租租客和租金周期估算未来十二个月应收。</p>
+      <div class="min-w-0">
+        <h3 class="text-xl sm:text-2xl font-black">收益预测</h3>
+        <p class="mt-2 text-xs sm:text-sm text-stone-600">基于当前在租租客和租金周期估算未来十二个月应收。</p>
       </div>
-      <span class="badge">预测值</span>
+      <span class="badge self-start md:self-auto">预测值</span>
     </div>
-    <div class="mt-6 rounded-[1.5rem] bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800" id="projectionNote">以下数据为预测值，基于当前在租租客和租金周期估算，不含未来新增租约。</div>
-    <div class="mt-6 grid gap-4 md:grid-cols-4" id="projectionSummary">
-      <div class="rounded-[1.5rem] bg-white/60 p-5 text-sm text-stone-500">正在加载...</div>
+    <div class="mt-5 sm:mt-6 rounded-2xl sm:rounded-[1.5rem] bg-amber-50 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold text-amber-800" id="projectionNote">以下数据为预测值，基于当前在租租客和租金周期估算，不含未来新增租约。</div>
+    <div class="mt-5 sm:mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4" id="projectionSummary">
+      <div class="rounded-2xl sm:rounded-[1.5rem] bg-white/60 p-4 sm:p-5 text-sm text-stone-500">正在加载...</div>
     </div>
-    <div class="mt-6 grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
-      <div class="rounded-[1.5rem] bg-white/55 p-4">
-        <div class="relative h-[220px] sm:h-[320px]">
+    <div class="mt-5 sm:mt-6 grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
+      <div class="rounded-2xl sm:rounded-[1.5rem] bg-white/55 p-3 sm:p-4">
+        <div class="relative h-[200px] xs:h-[240px] sm:h-[320px]">
           <canvas id="projectionChart"></canvas>
         </div>
         <p class="mt-4 hidden rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" id="projectionError">数据加载失败，请刷新重试</p>
       </div>
-      <div class="rounded-[1.5rem] bg-white/55 p-4">
+      <div class="rounded-2xl sm:rounded-[1.5rem] bg-white/55 p-3 sm:p-4">
         <h4 class="px-2 text-sm font-black text-stone-600">收款构成</h4>
         <div class="relative mt-3 h-[220px] sm:h-[320px]">
           <canvas id="projectionBreakdownChart"></canvas>
@@ -101,7 +103,7 @@
         </div>
       </div>
     </div>
-    <div class="mt-6 overflow-x-auto" id="projectionTableWrap">
+    <div class="mt-5 sm:mt-6 stats-table-wrap" id="projectionTableWrap">
       <p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">正在加载...</p>
     </div>
   </section>
@@ -140,10 +142,10 @@
   const fetchJSON = (path) => fetch(path).then((response) => response.ok ? response.json() : Promise.reject(new Error('读取失败')))
 
   const tileHTML = (label, value, note = '') => `
-    <div class="rounded-[1.5rem] bg-white/65 p-5 shadow-sm shadow-stone-200/70">
-      <p class="text-xs font-black tracking-[0.25em] text-stone-500">${escapeText(label)}</p>
-      <p class="mt-3 text-3xl font-black text-stone-950">${escapeText(value)}</p>
-      ${note ? `<p class="mt-2 text-sm font-semibold text-stone-500">${escapeText(note)}</p>` : ''}
+    <div class="min-w-0 rounded-2xl sm:rounded-[1.5rem] bg-white/65 p-4 sm:p-5 shadow-sm shadow-stone-200/70">
+      <p class="truncate text-[0.65rem] sm:text-xs font-black tracking-[0.2em] sm:tracking-[0.25em] text-stone-500">${escapeText(label)}</p>
+      <p class="mt-2 sm:mt-3 break-all text-stone-950 font-black leading-tight" style="font-size:clamp(1.1rem,5vw,1.875rem);">${escapeText(value)}</p>
+      ${note ? `<p class="mt-1 sm:mt-2 text-xs sm:text-sm font-semibold text-stone-500 break-words">${escapeText(note)}</p>` : ''}
     </div>`
 
   const renderOverview = (data) => {
@@ -157,9 +159,13 @@
     ].join('')
   }
 
-  const dataTable = (headers, rows) => {
+  const dataTable = (headers, rows, rawRows = null) => {
     if (!rows.length) return '<p class="rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-500">暂无数据</p>'
-    return `<table class="w-full min-w-[620px] text-left text-sm"><thead class="text-stone-500"><tr>${headers.map((header) => `<th class="border-b border-stone-200 px-3 py-3">${escapeText(header)}</th>`).join('')}</tr></thead><tbody class="divide-y divide-stone-100">${rows.join('')}</tbody></table>`
+    const desktop = `<div class="hidden sm:block overflow-x-auto"><table class="w-full text-left text-sm"><thead class="text-stone-500"><tr>${headers.map((header) => `<th class="border-b border-stone-200 px-3 py-3 whitespace-nowrap">${escapeText(header)}</th>`).join('')}</tr></thead><tbody class="divide-y divide-stone-100">${rows.join('')}</tbody></table></div>`
+    const cards = rawRows && rawRows.length
+      ? `<div class="sm:hidden space-y-2">${rawRows.map((cells) => `<div class="rounded-2xl bg-white/65 px-4 py-3 shadow-sm shadow-stone-200/60"><div class="text-sm font-black text-stone-900">${escapeText(cells[0])}</div>${cells.slice(1).map((cell, idx) => `<div class="mt-1 flex items-baseline justify-between gap-3 text-xs"><span class="font-bold text-stone-500">${escapeText(headers[idx + 1] || '')}</span><span class="text-right font-semibold text-stone-800 break-all">${escapeText(cell)}</span></div>`).join('')}</div>`).join('')}</div>`
+      : ''
+    return cards + desktop
   }
 
   const replaceChart = (name, canvasID, config) => {
@@ -179,7 +185,8 @@
     })
     document.getElementById('incomeTableWrap').innerHTML = dataTable(
       ['月份', '已收金额'],
-      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(formatMonthLabel(month.month))}</td><td class="px-3 py-3">¥${formatFen(month.paid_fen)}</td></tr>`)
+      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(formatMonthLabel(month.month))}</td><td class="px-3 py-3">¥${formatFen(month.paid_fen)}</td></tr>`),
+      (data.months || []).map((month) => [formatMonthLabel(month.month), `¥${formatFen(month.paid_fen)}`])
     )
   }
 
@@ -196,7 +203,8 @@
     })
     document.getElementById('occupancyTableWrap').innerHTML = dataTable(
       ['月份', '估算出租房间', '房间总数', '估算出租率'],
-      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(formatMonthLabel(month.month))}</td><td class="px-3 py-3">${escapeText(month.occupied_rooms)} 间</td><td class="px-3 py-3">${escapeText(month.total_rooms)} 间</td><td class="px-3 py-3">${formatPercent(month.rate)}</td></tr>`)
+      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(formatMonthLabel(month.month))}</td><td class="px-3 py-3">${escapeText(month.occupied_rooms)} 间</td><td class="px-3 py-3">${escapeText(month.total_rooms)} 间</td><td class="px-3 py-3">${formatPercent(month.rate)}</td></tr>`),
+      (data.months || []).map((month) => [formatMonthLabel(month.month), `${month.occupied_rooms} 间`, `${month.total_rooms} 间`, formatPercent(month.rate)])
     )
   }
 
@@ -231,7 +239,8 @@
     })
     document.getElementById('projectionTableWrap').innerHTML = dataTable(
       ['月份', '预测应收', '涉及租客数'],
-      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(formatMonthLabel(month.month))}</td><td class="px-3 py-3">¥${formatFen(month.total_fen)}</td><td class="px-3 py-3">${escapeText(month.tenant_count)} 人</td></tr>`)
+      (data.months || []).map((month) => `<tr><td class="px-3 py-3 font-black">${escapeText(formatMonthLabel(month.month))}</td><td class="px-3 py-3">¥${formatFen(month.total_fen)}</td><td class="px-3 py-3">${escapeText(month.tenant_count)} 人</td></tr>`),
+      (data.months || []).map((month) => [formatMonthLabel(month.month), `¥${formatFen(month.total_fen)}`, `${month.tenant_count} 人`])
     )
   }
 
