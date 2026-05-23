@@ -39,8 +39,42 @@ func TestParseYuanToFenRejectsInvalidInput(t *testing.T) {
 }
 
 func TestFormatFen(t *testing.T) {
-	if got := FormatFen(150050); got != "1500.50" {
-		t.Fatalf("FormatFen = %q, want 1500.50", got)
+	tests := []struct {
+		name string
+		fen  int
+		want string
+	}{
+		{name: "thousands", fen: 150050, want: "1,500.50"},
+		{name: "millions", fen: 100000000, want: "1,000,000.00"},
+		{name: "small", fen: 5050, want: "50.50"},
+		{name: "negative", fen: -150050, want: "-1,500.50"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FormatFen(tt.fen); got != tt.want {
+				t.Fatalf("FormatFen(%d) = %q, want %q", tt.fen, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatFenAsYuanIntDisplay(t *testing.T) {
+	tests := []struct {
+		name string
+		fen  int
+		want string
+	}{
+		{name: "thousands", fen: 150000, want: "1,500"},
+		{name: "millions", fen: 100000000, want: "1,000,000"},
+		{name: "negative", fen: -150050, want: "-1,500"},
+		{name: "small", fen: 9900, want: "99"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FormatFenAsYuanIntDisplay(tt.fen); got != tt.want {
+				t.Fatalf("FormatFenAsYuanIntDisplay(%d) = %q, want %q", tt.fen, got, tt.want)
+			}
+		})
 	}
 }
 

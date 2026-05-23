@@ -18,7 +18,7 @@
           <div class="relative mt-2">
             <input class="input pr-10" type="search" placeholder="输入姓名、房间号或手机号" autocomplete="off" data-tenant-input data-label="租客">
             <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-stone-500">⌄</span>
-            <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-list></div>
+            <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden max-h-[min(60vh,22rem)] overflow-y-auto overscroll-contain rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-list></div>
           </div>
         </label>
         <input type="hidden" name="tenant_id" required data-tenant-hidden data-validate="required" data-label="租客">
@@ -140,7 +140,7 @@
               <input class="input pr-10" type="search" name="q" value="{{.Filter.Query}}" placeholder="搜索姓名、房间号或手机号" autocomplete="off" data-tenant-search-input>
               <input type="hidden" name="tenant_id" value="{{if .Filter.TenantID}}{{.Filter.TenantID}}{{end}}" data-tenant-search-hidden>
               <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-stone-500">⌄</span>
-              <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-search-list></div>
+              <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden max-h-[min(60vh,22rem)] overflow-y-auto overscroll-contain rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-search-list></div>
             </div>
           </label>
         </div>

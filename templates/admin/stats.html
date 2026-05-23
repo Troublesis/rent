@@ -114,7 +114,10 @@
   const statsYear = document.getElementById('statsYear')
   const charts = { income: null, occupancy: null, projection: null, projectionBreakdown: null }
 
-  const formatFen = (fen) => (Number(fen || 0) / 100).toFixed(2)
+  const formatFen = (fen) => {
+    const yuan = Number(fen || 0) / 100
+    return yuan.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
   const formatPercent = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`
   const escapeText = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]))
   const formatMonthLabel = (value) => {

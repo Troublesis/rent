@@ -71,9 +71,50 @@ func FormatFen(fen int) string {
 		sign = "-"
 		value = -value
 	}
-	return fmt.Sprintf("%s%d.%02d", sign, value/100, value%100)
+	return fmt.Sprintf("%s%s.%02d", sign, withThousandSeparators(value/100), value%100)
 }
 
 func FormatFenAsYuanInt(fen int) string {
 	return strconv.Itoa(fen / 100)
+}
+
+// FormatFenAsYuanIntDisplay formats a fen amount as an integer yuan string with
+// thousand separators for display purposes (e.g. 150000 -> "1,500"). For form
+// input field values use FormatFenAsYuanInt instead, which returns a raw
+// integer that <input type="number"> can accept.
+func FormatFenAsYuanIntDisplay(fen int) string {
+	sign := ""
+	value := fen
+	if value < 0 {
+		sign = "-"
+		value = -value
+	}
+	return sign + withThousandSeparators(value/100)
+}
+
+// withThousandSeparators returns the absolute integer formatted with ASCII
+// comma thousand separators, e.g. 1500 -> "1,500".
+func withThousandSeparators(value int) string {
+	if value < 0 {
+		value = -value
+	}
+	raw := strconv.Itoa(value)
+	if len(raw) <= 3 {
+		return raw
+	}
+	var b strings.Builder
+	remainder := len(raw) % 3
+	if remainder > 0 {
+		b.WriteString(raw[:remainder])
+		if len(raw) > remainder {
+			b.WriteByte(',')
+		}
+	}
+	for i := remainder; i < len(raw); i += 3 {
+		b.WriteString(raw[i : i+3])
+		if i+3 < len(raw) {
+			b.WriteByte(',')
+		}
+	}
+	return b.String()
 }

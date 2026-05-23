@@ -22,6 +22,7 @@ func NewTemplateRenderer(root string) *TemplateRenderer {
 	return &TemplateRenderer{root: root, funcMap: template.FuncMap{
 		"formatFen":          service.FormatFen,
 		"formatYuanInt":      formatYuanInt,
+		"formatYuanIntRaw":   formatYuanIntRaw,
 		"divideBy100":        service.FormatFen,
 		"formatDate":         formatDate,
 		"formatOptionalDate": formatOptionalDate,
@@ -117,7 +118,17 @@ func (r *TemplateRenderer) partialTemplateFiles(page string) ([]string, error) {
 	return files, nil
 }
 
+// formatYuanInt renders a fen amount as an integer yuan string with thousand
+// separators for display contexts (e.g. 150000 -> "1,500"). Do NOT use this in
+// <input type="number"> value attributes — browsers will reject commas. Use
+// formatYuanIntRaw in form input values instead.
 func formatYuanInt(fen int) string {
+	return service.FormatFenAsYuanIntDisplay(fen)
+}
+
+// formatYuanIntRaw renders a fen amount as a plain integer yuan string without
+// thousand separators (e.g. 150000 -> "1500"). Use only for form input values.
+func formatYuanIntRaw(fen int) string {
 	return service.FormatFenAsYuanInt(fen)
 }
 

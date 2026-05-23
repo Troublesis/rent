@@ -475,11 +475,16 @@ const initTenantComboBox = (root) => {
       list.innerHTML = '<div class="px-4 py-3 text-sm text-stone-500">未找到匹配租客</div>'
       return
     }
-    list.innerHTML = filtered.map((tenant, index) => {
+    const limit = 50
+    const visible = filtered.slice(0, limit)
+    const more = filtered.length > limit
+      ? `<div class="px-4 py-2 text-xs text-stone-500 bg-stone-50">显示前 ${limit} 条，共 ${filtered.length} 条，输入关键字精确查找</div>`
+      : ''
+    list.innerHTML = visible.map((tenant, index) => {
       const active = index === activeIndex ? 'bg-amber-50 text-amber-900' : 'hover:bg-stone-50'
       const label = tenant.id ? `${escapeHTML(tenant.name)} — ${escapeHTML(tenant.room_no)} — ${escapeHTML(tenant.phone)}` : '全部租客'
       return `<button class="block w-full px-4 py-3 text-left text-sm font-semibold ${active}" type="button" data-tenant-option="${index}">${label}</button>`
-    }).join('')
+    }).join('') + more
   }
 
   loadActiveTenants().then((items) => {
@@ -602,11 +607,16 @@ const initRoomComboBox = (root) => {
       message('未找到匹配房源')
       return
     }
-    list.innerHTML = filtered.map((room, index) => {
+    const limit = 50
+    const visible = filtered.slice(0, limit)
+    const more = filtered.length > limit
+      ? `<div class="px-4 py-2 text-xs text-stone-500 bg-stone-50">显示前 ${limit} 条，共 ${filtered.length} 条，输入关键字精确查找</div>`
+      : ''
+    list.innerHTML = visible.map((room, index) => {
       const active = index === activeIndex ? 'bg-amber-50 text-amber-900' : 'hover:bg-stone-50'
       const status = room.status_label ? `<span class="mt-1 block text-xs font-bold text-stone-500">${escapeHTML(room.status_label)}</span>` : ''
       return `<button class="block w-full px-4 py-3 text-left text-sm font-semibold ${active}" type="button" data-room-option="${index}"><span>${escapeHTML(roomOptionLabel(room))}</span>${status}</button>`
-    }).join('')
+    }).join('') + more
   }
   const open = () => {
     list.classList.remove('hidden')
@@ -761,10 +771,15 @@ const initTenantSearchComboBox = (root) => {
       message('未找到匹配租客')
       return
     }
-    list.innerHTML = filtered.map((tenant, index) => {
+    const limit = 50
+    const visible = filtered.slice(0, limit)
+    const more = filtered.length > limit
+      ? `<div class="px-4 py-2 text-xs text-stone-500 bg-stone-50">显示前 ${limit} 条，共 ${filtered.length} 条，输入关键字精确查找</div>`
+      : ''
+    list.innerHTML = visible.map((tenant, index) => {
       const active = index === activeIndex ? 'bg-amber-50 text-amber-900' : 'hover:bg-stone-50'
       return `<button class="block w-full px-4 py-3 text-left text-sm font-semibold ${active}" type="button" data-tenant-search-option="${index}">${escapeHTML(tenantSearchOptionLabel(tenant))}</button>`
-    }).join('')
+    }).join('') + more
   }
   const open = () => {
     list.classList.remove('hidden')

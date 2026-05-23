@@ -20,7 +20,7 @@
       </label>
       <label>
         <span id="rentAmountLabel" class="text-sm font-bold text-stone-600">租金金额（元/月） <span class="text-red-600">*</span></span>
-        <input class="input mt-2" type="number" name="rent_price" value="{{formatYuanInt (roomRentPrice .Room)}}" inputmode="numeric" pattern="[0-9]*" min="1" step="1" required data-validate="positive_integer" data-label="租金金额">
+        <input class="input mt-2" type="number" name="rent_price" value="{{formatYuanIntRaw (roomRentPrice .Room)}}" inputmode="numeric" pattern="[0-9]*" min="1" step="1" required data-validate="positive_integer" data-label="租金金额">
       </label>
       <label>
         <span class="text-sm font-bold text-stone-600">付款方式 <span class="text-red-600">*</span></span>
@@ -32,7 +32,7 @@
       </label>
       <label>
         <span class="text-sm font-bold text-stone-600">押金（元） <span class="text-red-600">*</span></span>
-        <input class="input mt-2" type="number" name="deposit" value="{{formatYuanInt .Room.Deposit}}" inputmode="numeric" pattern="[0-9]*" min="0" step="1" required data-validate="non_negative_integer" data-label="押金">
+        <input class="input mt-2" type="number" name="deposit" value="{{formatYuanIntRaw .Room.Deposit}}" inputmode="numeric" pattern="[0-9]*" min="0" step="1" required data-validate="non_negative_integer" data-label="押金">
       </label>
       <label>
         <span class="text-sm font-bold text-stone-600">面积（㎡） <span class="text-red-600">*</span></span>

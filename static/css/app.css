@@ -80,9 +80,11 @@ h1, h2, h3, .display-font {
   display: block;
   max-width: 100%;
   overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1;
   letter-spacing: -0.045em;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-count-value {
@@ -90,7 +92,7 @@ h1, h2, h3, .display-font {
 }
 
 .dashboard-money-value {
-  font-size: clamp(1.05rem, 5.25vw, 2.25rem);
+  font-size: clamp(0.9rem, 4.5vw, 2.25rem);
 }
 
 @media (min-width: 768px) {
@@ -1073,9 +1075,14 @@ input[type="date"].input::-webkit-calendar-picker-indicator {
 
 .payment-summary-tile-value {
   margin-top: 0.5rem;
-  font-size: 1.1rem;
+  font-size: clamp(0.85rem, 4.2vw, 1.1rem);
   font-weight: 900;
   letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 @media (min-width: 768px) {

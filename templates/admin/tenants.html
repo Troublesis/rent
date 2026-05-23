@@ -22,7 +22,7 @@
               <div class="relative">
                 <input id="tenant-search-input" class="input pr-10" type="search" name="q" value="{{.Filter.Query}}" placeholder="在{{.CurrentStatusLabel}}租客中搜索姓名、电话或房号" autocomplete="off" data-tenant-search-input>
                 <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-stone-500">⌄</span>
-                <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-search-list></div>
+                <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden max-h-[min(60vh,22rem)] overflow-y-auto overscroll-contain rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-search-list></div>
               </div>
             </label>
           </div>
