@@ -79,29 +79,45 @@
 <section id="payment-list-section" class="card overflow-hidden">
   <div class="space-y-5 border-b border-stone-300/70 p-4 md:p-5">
     <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <div class="rounded-2xl border border-stone-200 bg-white/55 p-3 md:p-4">
-        <p class="text-xs font-bold text-stone-500 md:text-sm">总待付款</p>
-        <p class="mt-2 text-lg font-black text-red-700 md:text-2xl">¥{{.Summary.TotalUnpaidAmountText}}</p>
-      </div>
-      <div class="rounded-2xl border border-stone-200 bg-white/55 p-3 md:p-4">
-        <p class="text-xs font-bold text-stone-500 md:text-sm">已付款</p>
-        <p class="mt-2 text-lg font-black text-emerald-700 md:text-2xl">¥{{.Summary.TotalPaidAmountText}}</p>
-      </div>
-      <a class="group rounded-2xl border bg-amber-50/80 p-3 transition hover:-translate-y-0.5 hover:shadow-lg md:p-4 {{if gt .Summary.CheckoutPendingCount 0}}border-amber-400 ring-2 ring-amber-300/50{{else}}border-stone-200{{end}}"
-         href="{{.CheckoutPendingURL}}"
-         hx-get="{{.CheckoutPendingURL}}" hx-target="#payment-list-section" hx-select="#payment-list-section"
+      {{$unpaid := index .SummaryScopes "unpaid"}}
+      <a class="payment-summary-tile payment-summary-tile-unpaid {{if $unpaid.Active}}is-active{{end}}"
+         href="{{$unpaid.URL}}"
+         hx-get="{{$unpaid.URL}}" hx-target="#payment-list-section" hx-select="#payment-list-section"
+         hx-swap="outerHTML" hx-push-url="true" title="筛选未付款记录">
+        <p class="payment-summary-tile-label">总待付款</p>
+        <p class="payment-summary-tile-value text-red-700">¥{{.Summary.TotalUnpaidAmountText}}</p>
+        <p class="payment-summary-tile-hint">点击筛选 →</p>
+      </a>
+      {{$paid := index .SummaryScopes "paid"}}
+      <a class="payment-summary-tile payment-summary-tile-paid {{if $paid.Active}}is-active{{end}}"
+         href="{{$paid.URL}}"
+         hx-get="{{$paid.URL}}" hx-target="#payment-list-section" hx-select="#payment-list-section"
+         hx-swap="outerHTML" hx-push-url="true" title="筛选已付款记录">
+        <p class="payment-summary-tile-label">已付款</p>
+        <p class="payment-summary-tile-value text-emerald-700">¥{{.Summary.TotalPaidAmountText}}</p>
+        <p class="payment-summary-tile-hint">点击筛选 →</p>
+      </a>
+      {{$checkout := index .SummaryScopes "checkout"}}
+      <a class="payment-summary-tile payment-summary-tile-checkout {{if $checkout.Active}}is-active{{end}} {{if gt .Summary.CheckoutPendingCount 0}}has-alert{{end}}"
+         href="{{$checkout.URL}}"
+         hx-get="{{$checkout.URL}}" hx-target="#payment-list-section" hx-select="#payment-list-section"
          hx-swap="outerHTML" hx-push-url="true" title="筛选已退租租客的未处理记录">
-        <p class="flex items-center gap-1.5 text-xs font-bold text-amber-800 md:text-sm">
+        <p class="payment-summary-tile-label">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
           已退租待处理
         </p>
-        <p class="mt-2 text-lg font-black text-amber-700 md:text-2xl">{{.Summary.CheckoutPendingCount}}</p>
-        <p class="mt-1 text-[0.65rem] font-bold tracking-wide text-amber-700/80 md:text-xs">点击筛选 →</p>
+        <p class="payment-summary-tile-value text-amber-700">{{.Summary.CheckoutPendingCount}}</p>
+        <p class="payment-summary-tile-hint">点击筛选 →</p>
       </a>
-      <div class="rounded-2xl border border-stone-200 bg-white/55 p-3 md:p-4">
-        <p class="text-xs font-bold text-stone-500 md:text-sm">排除记录</p>
-        <p class="mt-2 text-lg font-black text-stone-700 md:text-2xl">{{.Summary.ExcludedCount}}</p>
-      </div>
+      {{$excluded := index .SummaryScopes "excluded"}}
+      <a class="payment-summary-tile payment-summary-tile-excluded {{if $excluded.Active}}is-active{{end}}"
+         href="{{$excluded.URL}}"
+         hx-get="{{$excluded.URL}}" hx-target="#payment-list-section" hx-select="#payment-list-section"
+         hx-swap="outerHTML" hx-push-url="true" title="筛选已排除记录">
+        <p class="payment-summary-tile-label">排除记录</p>
+        <p class="payment-summary-tile-value text-stone-700">{{.Summary.ExcludedCount}}</p>
+        <p class="payment-summary-tile-hint">点击筛选 →</p>
+      </a>
     </div>
 
     <form class="space-y-4" method="get" action="/admin/payments"

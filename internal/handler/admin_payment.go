@@ -254,7 +254,7 @@ func (h *AdminPaymentHandler) buildPaymentListData(c *gin.Context) (gin.H, error
 		"GridViewURL":        paymentListURL(c, map[string]string{"view": adminPaymentViewGrid}),
 		"CardViewURL":        paymentListURL(c, map[string]string{"view": adminPaymentViewCard}),
 		"ClearFilterURL":     paymentClearURL(viewMode),
-		"CheckoutPendingURL": paymentListURL(c, map[string]string{"paid": "all", "excluded": "false", "tenant_status": "checkout", "page": ""}),
+		"SummaryScopes":      paymentSummaryScopes(c),
 		"SelectedSort":       paymentSortValue(filter),
 		"PaidChips":          paymentPaidChips(c),
 		"PeriodChips":        paymentPeriodChips(c),
@@ -272,6 +272,23 @@ func (h *AdminPaymentHandler) buildPaymentListData(c *gin.Context) (gin.H, error
 
 func isHTMXRequest(c *gin.Context) bool {
 	return c.GetHeader("HX-Request") == "true"
+}
+
+// hydrateQueryFromHXCurrentURL copies the query string from the HTMX
+// HX-Current-URL header onto the inbound request, so that subsequent
+// c.Query(...) calls reflect the filter context the user is currently viewing.
+// Without this, POST actions like /payments/:id/toggle would lose the active
+// filters and the rebuilt partial would snap back to the default view.
+func hydrateQueryFromHXCurrentURL(c *gin.Context) {
+	raw := c.GetHeader("HX-Current-URL")
+	if raw == "" {
+		return
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return
+	}
+	c.Request.URL.RawQuery = parsed.RawQuery
 }
 
 var (
@@ -339,6 +356,45 @@ func tenantStatusLabelDisplay(status string) string {
 func paymentChip(label string, c *gin.Context, key string, value string, active bool) filterChip {
 	overrides := map[string]string{key: value, "page": ""}
 	return filterChip{Label: label, URL: paymentListURL(c, overrides), Active: active}
+}
+
+type paymentSummaryScope struct {
+	URL    string
+	Active bool
+}
+
+func paymentSummaryScopes(c *gin.Context) map[string]paymentSummaryScope {
+	paid := paidFilterValue(c)
+	excluded := excludedFilterValue(c.Query("excluded"))
+	tenantStatus := strings.TrimSpace(c.Query("tenant_status"))
+	period := strings.TrimSpace(c.Query("period"))
+	typeFilter := strings.TrimSpace(c.Query("type"))
+
+	unpaidActive := paid == "false" && excluded == "false" && tenantStatus != model.TenantStatusCheckout
+	paidActive := paid == "true" && excluded == "false"
+	excludedActive := excluded == "true"
+	checkoutActive := tenantStatus == model.TenantStatusCheckout && excluded == "false"
+	_ = period
+	_ = typeFilter
+
+	return map[string]paymentSummaryScope{
+		"unpaid": {
+			URL:    paymentListURL(c, map[string]string{"paid": "false", "excluded": "false", "tenant_status": "", "page": ""}),
+			Active: unpaidActive,
+		},
+		"paid": {
+			URL:    paymentListURL(c, map[string]string{"paid": "true", "excluded": "false", "tenant_status": "", "page": ""}),
+			Active: paidActive,
+		},
+		"checkout": {
+			URL:    paymentListURL(c, map[string]string{"paid": "all", "excluded": "false", "tenant_status": model.TenantStatusCheckout, "page": ""}),
+			Active: checkoutActive,
+		},
+		"excluded": {
+			URL:    paymentListURL(c, map[string]string{"paid": "all", "excluded": "true", "tenant_status": "", "page": ""}),
+			Active: excludedActive,
+		},
+	}
 }
 
 func paymentPaidChips(c *gin.Context) []filterChip {
@@ -480,6 +536,7 @@ func (h *AdminPaymentHandler) Create(c *gin.Context) {
 
 func (h *AdminPaymentHandler) respondAfterPaymentCreate(c *gin.Context, errMsg string) {
 	if isHTMXRequest(c) {
+		hydrateQueryFromHXCurrentURL(c)
 		data, err := h.buildPaymentListData(c)
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
@@ -527,6 +584,7 @@ func (h *AdminPaymentHandler) UpdateExclusion(c *gin.Context) {
 
 func (h *AdminPaymentHandler) respondAfterPaymentAction(c *gin.Context, errMsg string) {
 	if isHTMXRequest(c) {
+		hydrateQueryFromHXCurrentURL(c)
 		data, err := h.buildPaymentListData(c)
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
