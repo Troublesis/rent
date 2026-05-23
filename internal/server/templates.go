@@ -42,8 +42,12 @@ func NewTemplateRenderer(root string) *TemplateRenderer {
 		"mediaPosterURL":     mediaPosterURL,
 		"isPlayableMedia":    isPlayableMedia,
 		"isOverdue":          isOverdue,
+		"deref":              derefTime,
+		"dict":               dictHelper,
 		"firstRune":          firstRune,
 		"seq":                seq,
+		"progressPercent":    progressPercent,
+		"subInt":             subInt,
 	}}
 }
 
@@ -272,6 +276,28 @@ func floorPlanLabel(bedrooms int, livingRooms int, bathrooms int) string {
 	return fmt.Sprintf("%d室%d厅%d卫", bedrooms, livingRooms, bathrooms)
 }
 
+func dictHelper(values ...interface{}) (map[string]interface{}, error) {
+	if len(values)%2 != 0 {
+		return nil, fmt.Errorf("dict expects an even number of arguments")
+	}
+	result := make(map[string]interface{}, len(values)/2)
+	for i := 0; i < len(values); i += 2 {
+		key, ok := values[i].(string)
+		if !ok {
+			return nil, fmt.Errorf("dict key %v is not a string", values[i])
+		}
+		result[key] = values[i+1]
+	}
+	return result, nil
+}
+
+func derefTime(value *time.Time) time.Time {
+	if value == nil {
+		return time.Time{}
+	}
+	return *value
+}
+
 func isOverdue(value time.Time) bool {
 	if value.IsZero() {
 		return false
@@ -304,4 +330,26 @@ func seq(start int, end int) []int {
 
 func yuanJSON(fen int) string {
 	return fmt.Sprintf("%s", service.FormatFen(fen))
+}
+
+func progressPercent(value int, target int) int {
+	if target <= 0 || value <= 0 {
+		return 0
+	}
+	pct := value * 100 / target
+	if pct > 100 {
+		return 100
+	}
+	if pct < 0 {
+		return 0
+	}
+	return pct
+}
+
+func subInt(a int, b int) int {
+	result := a - b
+	if result < 0 {
+		return 0
+	}
+	return result
 }

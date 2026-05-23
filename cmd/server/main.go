@@ -2,15 +2,10 @@ package main
 
 import (
 	"log"
-	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/troublesis/rent/config"
-	"github.com/troublesis/rent/internal/model"
 	"github.com/troublesis/rent/internal/server"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	"github.com/troublesis/rent/internal/storage"
 )
 
 func main() {
@@ -18,26 +13,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("load config: %v", err)
 	}
-	loc, err := cfg.Location()
+	if err := storage.ApplyTimezone(cfg); err != nil {
+		log.Fatalf("%v", err)
+	}
+	if err := storage.EnsureDirs(cfg); err != nil {
+		log.Fatalf("%v", err)
+	}
+	db, err := storage.Open(cfg, "")
 	if err != nil {
-		log.Fatalf("load timezone: %v", err)
+		log.Fatalf("%v", err)
 	}
-	time.Local = loc
-	if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
-		log.Fatalf("create upload directory: %v", err)
-	}
-	if dbDir := filepath.Dir(cfg.DBPath); dbDir != "." {
-		if err := os.MkdirAll(dbDir, 0755); err != nil {
-			log.Fatalf("create database directory: %v", err)
-		}
-	}
-
-	db, err := gorm.Open(sqlite.Open(cfg.DBPath), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("open database: %v", err)
-	}
-	if err := db.AutoMigrate(&model.Room{}, &model.RoomMedia{}, &model.Tenant{}, &model.Payment{}, &model.AppSetting{}); err != nil {
-		log.Fatalf("migrate database: %v", err)
+	if err := storage.Migrate(db); err != nil {
+		log.Fatalf("%v", err)
 	}
 
 	router := server.NewRouter(cfg, db)

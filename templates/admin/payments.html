@@ -1,10 +1,16 @@
 {{define "content"}}
 <section class="space-y-6">
-  <form class="card space-y-5 p-6" method="post" action="/admin/payments" data-validate-form>
-    <div>
-      <h3 class="text-2xl font-black">新增收款</h3>
-      <p class="mt-2 text-sm text-stone-600">记录租金、水电费或其他费用。</p>
-    </div>
+  <details class="card overflow-hidden" data-payment-create-card>
+    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-4 md:cursor-default md:p-6">
+      <div class="min-w-0">
+        <h3 class="text-lg font-black md:text-2xl">新增收款</h3>
+        <p class="mt-1 text-xs text-stone-600 md:mt-2 md:text-sm">记录租金、水电费或其他费用。</p>
+      </div>
+      <span class="shrink-0 rounded-full bg-stone-900/5 px-3 py-1.5 text-xs font-black text-stone-600 md:hidden" data-payment-create-toggle>展开</span>
+    </summary>
+    <form class="space-y-5 px-4 pb-5 md:px-6 md:pb-6" method="post" action="/admin/payments"
+          hx-post="/admin/payments" hx-target="#payment-list-section" hx-select="#payment-list-section"
+          hx-swap="outerHTML" hx-push-url="false" data-validate-form data-payment-create-form>
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
       <div data-tenant-combobox data-tenant-mode="form">
         <label class="block">
@@ -46,197 +52,252 @@
       <span id="payment-note-counter" class="mt-1 block text-right text-xs text-stone-500">0 / 500 字</span>
     </label>
     <button class="btn-primary w-full md:w-auto" type="submit">保存收款</button>
-  </form>
+    </form>
+  </details>
 
-  <section class="card overflow-hidden" data-payments-table data-payment-view="{{.ViewMode}}">
-    <div class="space-y-5 border-b border-stone-300/70 p-5">
-      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-payments-summary>
-        <div class="rounded-2xl border border-stone-200 bg-white/55 p-4">
-          <p class="text-sm font-bold text-stone-500">总待付款</p>
-          <p class="mt-2 text-2xl font-black">¥0.00</p>
-        </div>
-        <div class="rounded-2xl border border-stone-200 bg-white/55 p-4">
-          <p class="text-sm font-bold text-stone-500">已付款</p>
-          <p class="mt-2 text-2xl font-black">¥0.00</p>
-        </div>
-        <div class="rounded-2xl border border-stone-200 bg-white/55 p-4">
-          <p class="text-sm font-bold text-stone-500">已退租待处理</p>
-          <p class="mt-2 text-2xl font-black">0</p>
-        </div>
-        <div class="rounded-2xl border border-stone-200 bg-white/55 p-4">
-          <p class="text-sm font-bold text-stone-500">排除记录</p>
-          <p class="mt-2 text-2xl font-black">0</p>
-        </div>
-      </div>
-
-      <form class="space-y-4" method="get" action="/admin/payments" data-payments-filter>
-        <input type="hidden" name="view" value="{{.ViewMode}}">
-        <div class="grid gap-3 lg:grid-cols-[1fr_0.85fr_auto]">
-          <label class="block">
-            <span class="sr-only">搜索租客</span>
-            <input class="input" type="search" name="q" value="{{.Filter.Query}}" placeholder="搜索姓名、房间号或手机号" data-payment-filter="q">
-          </label>
-          <select class="input" name="sort" data-payment-sort-select>
-            <option value="next_pay_date:asc" {{if eq .SelectedSort "next_pay_date:asc"}}selected{{end}}>月份升序</option>
-            <option value="next_pay_date:desc" {{if eq .SelectedSort "next_pay_date:desc"}}selected{{end}}>月份降序</option>
-            <option value="amount:desc" {{if eq .SelectedSort "amount:desc"}}selected{{end}}>金额从高到低</option>
-            <option value="amount:asc" {{if eq .SelectedSort "amount:asc"}}selected{{end}}>金额从低到高</option>
-            <option value="tenant:asc" {{if eq .SelectedSort "tenant:asc"}}selected{{end}}>租客名称</option>
-          </select>
-          <a class="btn-secondary text-center" href="{{.ClearFilterURL}}" data-payments-reset>清空</a>
-        </div>
-
-        <div class="grid gap-4 lg:grid-cols-2">
-          <fieldset class="space-y-2 text-sm font-bold text-stone-600">
-            <legend class="text-xs font-black text-stone-500">付款状态</legend>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="paid" value="all" {{if eq .FilterPaid "all"}}checked{{end}} data-payment-filter="paid">
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">全部</span>
-              </label>
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="paid" value="false" {{if eq .FilterPaid "false"}}checked{{end}} data-payment-filter="paid">
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">未付款</span>
-              </label>
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="paid" value="true" {{if eq .FilterPaid "true"}}checked{{end}} data-payment-filter="paid">
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">已付款</span>
-              </label>
-            </div>
-          </fieldset>
-
-          <fieldset class="space-y-2 text-sm font-bold text-stone-600">
-            <legend class="text-xs font-black text-stone-500">收款月份</legend>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="period" value="" {{if eq .Filter.Period ""}}checked{{end}} data-payment-filter="period">
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">全部月份</span>
-              </label>
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="period" value="today" {{if eq .Filter.Period "today"}}checked{{end}} data-payment-filter="period">
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">当日</span>
-              </label>
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="period" value="week" {{if eq .Filter.Period "week"}}checked{{end}} data-payment-filter="period">
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">当周</span>
-              </label>
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="period" value="month" {{if eq .Filter.Period "month"}}checked{{end}} data-payment-filter="period">
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">当月</span>
-              </label>
-            </div>
-          </fieldset>
-
-          <fieldset class="space-y-2 text-sm font-bold text-stone-600">
-            <legend class="text-xs font-black text-stone-500">收款类型</legend>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="type" value="" {{if eq .Filter.Type ""}}checked{{end}} data-payment-filter="type">
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">全部类型</span>
-              </label>
-              {{range .PaymentTypes}}
-                <label class="payment-scope-option min-w-0">
-                  <input class="sr-only" type="radio" name="type" value="{{.Value}}" {{if eq $.Filter.Type .Value}}checked{{end}} data-payment-filter="type">
-                  <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">{{.Label}}</span>
-                </label>
-              {{end}}
-            </div>
-          </fieldset>
-
-          <fieldset class="space-y-2 text-sm font-bold text-stone-600" data-payment-excluded-filter>
-            <legend class="text-xs font-black text-stone-500">记录范围</legend>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="excluded" value="all" {{if eq .FilterExcluded "all"}}checked{{end}}>
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">全部</span>
-              </label>
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="excluded" value="false" {{if eq .FilterExcluded "false"}}checked{{end}}>
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">正常记录</span>
-              </label>
-              <label class="payment-scope-option min-w-0">
-                <input class="sr-only" type="radio" name="excluded" value="true" {{if eq .FilterExcluded "true"}}checked{{end}}>
-                <span class="w-full justify-center px-2 text-center text-xs sm:text-sm">已排除</span>
-              </label>
-            </div>
-          </fieldset>
-        </div>
-      </form>
-    </div>
-
-    <div class="border-b border-stone-300/70 px-5 py-4">
-      {{template "admin_payment_view_switcher" .}}
-      <div class="mt-3 flex justify-end pr-2 text-xs font-black text-stone-400" aria-hidden="true">← →</div>
-    </div>
-
-    <section class="overflow-hidden">
-      <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth pb-3" data-payment-swipe>
-        <div class="w-full shrink-0 snap-start" data-payment-view-pane="list" data-payments-table-view>
-          <div class="overflow-x-auto">
-            <table class="payments-table w-full min-w-[920px] table-fixed text-left text-sm">
-              <thead class="border-b border-stone-300/70 bg-white/60 text-stone-500">
-                <tr>
-                  <th class="payment-sticky-left col-tenant px-5 py-4"><button class="font-black" type="button" data-payment-sort="tenant">租客 <span data-sort-indicator="tenant"></span></button></th>
-                  <th class="col-month px-5 py-4"><button class="font-black" type="button" data-payment-sort="next_pay_date">租金月份 <span data-sort-indicator="next_pay_date">↑</span></button></th>
-                  <th class="col-amount px-5 py-4"><button class="font-black" type="button" data-payment-sort="amount">金额 <span data-sort-indicator="amount"></span></button></th>
-                  <th class="col-status px-5 py-4"><button class="font-black" type="button" data-payment-sort="status">付款状态 <span data-sort-indicator="status"></span></button></th>
-                  <th class="col-note px-5 py-4">备注</th>
-                  <th class="payment-sticky-right col-actions px-5 py-4">操作</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-stone-200/80" data-payments-body>
-                <tr><td class="px-5 py-10 text-center text-stone-500" colspan="6">正在加载收款记录...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="w-full shrink-0 snap-start" data-payment-view-pane="grid">
-          <div class="grid gap-5 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" data-payments-grid>
-            <div class="rounded-2xl border border-stone-200 bg-white/60 p-4 text-center text-stone-500">正在加载收款记录...</div>
-          </div>
-        </div>
-
-        <div class="w-full shrink-0 snap-start" data-payment-view-pane="card">
-          <div class="public-room-masonry p-4" data-payments-cards>
-            <div class="rounded-2xl border border-stone-200 bg-white/60 p-4 text-center text-stone-500">正在加载收款记录...</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div class="cursor-pointer border-t border-stone-200/70 p-4 text-center text-sm text-stone-500" data-payments-footer>下拉加载更多记录</div>
-  </section>
+  {{template "admin_payment_list" .}}
 </section>
 
 <div class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 p-4" data-payment-exclude-modal>
   <div class="w-full max-w-md rounded-3xl bg-[var(--paper-soft)] p-6 shadow-2xl">
-    <h3 class="text-xl font-black">确认将该记录标记为“不再记录”？</h3>
-    <p class="mt-3 text-sm text-stone-600">该操作后此付款记录将不再出现在默认列表。</p>
-    <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+    <h3 class="text-xl font-black">确认将该记录标记为"不再记录"？</h3>
+    <p class="mt-3 text-sm text-stone-600">该操作后此付款记录将不再出现在默认列表。可在「记录范围」筛选中查看已排除的记录。</p>
+    <form method="post" action="" class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end"
+          hx-post="" hx-target="#payment-list-section" hx-select="#payment-list-section"
+          hx-swap="outerHTML" hx-push-url="false"
+          data-payment-exclude-form>
+      <input type="hidden" name="excluded" value="true">
+      <input type="hidden" name="return_to" value="/admin/payments">
       <button class="btn-secondary" type="button" data-payment-exclude-cancel>取消</button>
-      <button class="btn-primary" type="button" data-payment-exclude-confirm>确认</button>
-    </div>
+      <button class="btn-danger" type="submit">确认</button>
+    </form>
   </div>
 </div>
 {{end}}
 
-{{define "admin_payment_view_switcher"}}
-<div class="card flex flex-col gap-3 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3">
-  <p class="px-1 text-xs font-black text-stone-700 sm:px-2 sm:text-sm">浏览方式</p>
-  <nav class="grid grid-cols-3 gap-1.5 sm:gap-2" aria-label="收款记录浏览方式">
-    <a class="public-room-view-button {{if eq .ViewMode "list"}}public-room-view-active{{end}}" href="{{.ListViewURL}}" data-payment-view-link data-payment-view-value="list" {{if eq .ViewMode "list"}}aria-current="page"{{end}}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg>
-      <span>列表</span>
-    </a>
-    <a class="public-room-view-button {{if eq .ViewMode "grid"}}public-room-view-active{{end}}" href="{{.GridViewURL}}" data-payment-view-link data-payment-view-value="grid" {{if eq .ViewMode "grid"}}aria-current="page"{{end}}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z"/></svg>
-      <span>网格</span>
-    </a>
-    <a class="public-room-view-button {{if eq .ViewMode "card"}}public-room-view-active{{end}}" href="{{.CardViewURL}}" data-payment-view-link data-payment-view-value="card" {{if eq .ViewMode "card"}}aria-current="page"{{end}}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h5v8H6zM13 4h5v5h-5zM13 11h5v9h-5zM6 14h5v6H6z"/></svg>
-      <span>卡片</span>
-    </a>
-  </nav>
+{{define "admin_payment_list"}}
+<section id="payment-list-section" class="card overflow-hidden">
+  <div class="space-y-5 border-b border-stone-300/70 p-4 md:p-5">
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div class="rounded-2xl border border-stone-200 bg-white/55 p-3 md:p-4">
+        <p class="text-xs font-bold text-stone-500 md:text-sm">总待付款</p>
+        <p class="mt-2 text-lg font-black text-red-700 md:text-2xl">¥{{.Summary.TotalUnpaidAmountText}}</p>
+      </div>
+      <div class="rounded-2xl border border-stone-200 bg-white/55 p-3 md:p-4">
+        <p class="text-xs font-bold text-stone-500 md:text-sm">已付款</p>
+        <p class="mt-2 text-lg font-black text-emerald-700 md:text-2xl">¥{{.Summary.TotalPaidAmountText}}</p>
+      </div>
+      <a class="group rounded-2xl border bg-amber-50/80 p-3 transition hover:-translate-y-0.5 hover:shadow-lg md:p-4 {{if gt .Summary.CheckoutPendingCount 0}}border-amber-400 ring-2 ring-amber-300/50{{else}}border-stone-200{{end}}"
+         href="{{.CheckoutPendingURL}}"
+         hx-get="{{.CheckoutPendingURL}}" hx-target="#payment-list-section" hx-select="#payment-list-section"
+         hx-swap="outerHTML" hx-push-url="true" title="筛选已退租租客的未处理记录">
+        <p class="flex items-center gap-1.5 text-xs font-bold text-amber-800 md:text-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+          已退租待处理
+        </p>
+        <p class="mt-2 text-lg font-black text-amber-700 md:text-2xl">{{.Summary.CheckoutPendingCount}}</p>
+        <p class="mt-1 text-[0.65rem] font-bold tracking-wide text-amber-700/80 md:text-xs">点击筛选 →</p>
+      </a>
+      <div class="rounded-2xl border border-stone-200 bg-white/55 p-3 md:p-4">
+        <p class="text-xs font-bold text-stone-500 md:text-sm">排除记录</p>
+        <p class="mt-2 text-lg font-black text-stone-700 md:text-2xl">{{.Summary.ExcludedCount}}</p>
+      </div>
+    </div>
+
+    <form class="space-y-4" method="get" action="/admin/payments"
+          hx-get="/admin/payments" hx-target="#payment-list-section" hx-select="#payment-list-section"
+          hx-swap="outerHTML" hx-push-url="true">
+      <input type="hidden" name="view" value="{{.ViewMode}}">
+      <div class="grid gap-3 md:grid-cols-[1fr_auto]">
+        <div data-tenant-search-combobox data-search-status="all">
+          <label class="block">
+            <span class="sr-only">搜索租客</span>
+            <div class="relative">
+              <input class="input pr-10" type="search" name="q" value="{{.Filter.Query}}" placeholder="搜索姓名、房间号或手机号" autocomplete="off" data-tenant-search-input>
+              <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-stone-500">⌄</span>
+              <div class="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl" data-tenant-search-list></div>
+            </div>
+          </label>
+        </div>
+        <div class="grid grid-cols-2 gap-3 md:w-48">
+          <button class="btn-secondary" type="submit">筛选</button>
+          <a class="btn-secondary text-center" href="{{.ClearFilterURL}}"
+             hx-get="{{.ClearFilterURL}}" hx-target="#payment-list-section" hx-select="#payment-list-section"
+             hx-swap="outerHTML" hx-push-url="true">清空</a>
+        </div>
+      </div>
+
+    </form>
+
+    <div class="flex flex-wrap gap-2">
+      {{template "admin_payment_pill_filter" dict "Label" "付款状态" "Chips" .PaidChips}}
+      {{template "admin_payment_pill_filter" dict "Label" "收款月份" "Chips" .PeriodChips}}
+      {{template "admin_payment_pill_filter" dict "Label" "收款类型" "Chips" .TypeChips}}
+      {{template "admin_payment_pill_filter" dict "Label" "租客状态" "Chips" .TenantStatusChips}}
+      {{template "admin_payment_pill_filter" dict "Label" "记录范围" "Chips" .ExcludedChips}}
+    </div>
+  </div>
+
+  <div class="hidden overflow-x-auto md:block">
+    <table class="payments-table w-full min-w-[920px] table-fixed text-left text-sm">
+      <thead class="border-b border-stone-300/70 bg-white/60 text-stone-500" hx-boost="true" hx-target="#payment-list-section" hx-select="#payment-list-section" hx-swap="outerHTML" hx-push-url="true">
+        <tr>
+          {{range .SortHeaders}}
+            <th class="{{if eq .Key "tenant"}}payment-sticky-left col-tenant{{else if eq .Key "next_pay_date"}}col-month{{else if eq .Key "amount"}}col-amount{{else if eq .Key "status"}}col-status{{end}} px-5 py-4">
+              <a class="font-black {{if .Active}}text-amber-800{{end}}" href="{{.URL}}">{{.Label}} {{if .Indicator}}<span>{{.Indicator}}</span>{{end}}</a>
+            </th>
+          {{end}}
+          <th class="col-note px-5 py-4">备注</th>
+          <th class="payment-sticky-right col-actions px-5 py-4">操作</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-stone-200/80">
+        {{range .Rows}}
+          {{template "admin_payment_row" .}}
+        {{else}}
+          <tr><td class="px-5 py-10 text-center text-stone-500" colspan="6">还没有符合条件的收款记录。</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="md:hidden">
+    {{range .Rows}}
+      {{template "admin_payment_mobile_card" .}}
+    {{else}}
+      <p class="px-5 py-10 text-center text-sm text-stone-500">还没有符合条件的收款记录。</p>
+    {{end}}
+  </div>
+
+  {{if .HasMore}}
+    <div class="cursor-pointer border-t border-stone-200/70 p-4 text-center text-sm text-stone-500"
+         hx-get="{{.NextPageURL}}" hx-trigger="revealed" hx-target="this" hx-swap="outerHTML"
+         hx-select="#payment-list-section">下拉自动加载…</div>
+  {{else if .Rows}}
+    <div class="border-t border-stone-200/70 p-4 text-center text-xs text-stone-500">已显示全部 {{.Total}} 条记录</div>
+  {{end}}
+</section>
+{{end}}
+
+{{define "admin_payment_mobile_card"}}
+<article class="border-b border-stone-200/70 px-4 py-4 {{if .Excluded}}bg-stone-100/60{{end}}">
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0 flex-1">
+      <a class="payment-tenant-link block truncate text-base font-black" href="/admin/tenants/{{.TenantID}}">{{.TenantName}}</a>
+      <p class="mt-0.5 truncate text-xs font-bold text-stone-500">{{.RoomNo}} · {{.RoomTitle}}</p>
+      <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+        {{if eq .TenantStatus "checkout"}}<span class="badge bg-amber-100 text-amber-800">已退租</span>{{end}}
+        {{if .Excluded}}
+          <span class="badge bg-stone-200 text-stone-600">已排除</span>
+        {{else if .Paid}}
+          <span class="badge bg-emerald-100 text-emerald-800">已付款</span>
+        {{else}}
+          <span class="badge bg-red-100 text-red-700">未付款</span>
+        {{end}}
+        <span class="badge bg-stone-100 text-stone-600">{{.TypeLabel}}</span>
+      </div>
+    </div>
+    <div class="text-right">
+      <p class="text-lg font-black text-stone-950">¥{{.AmountText}}</p>
+      <p class="mt-0.5 text-xs font-bold text-stone-500">{{.NextDueLabel}}</p>
+      {{if .Overdue}}<p class="mt-0.5 text-[0.65rem] font-black text-red-700">{{.OverdueLabel}}</p>{{end}}
+    </div>
+  </div>
+  {{if .Note}}<p class="mt-2 text-xs text-stone-600">{{.Note}}</p>{{end}}
+  {{if and .Excluded .ExclusionNote}}<p class="mt-1 text-xs text-stone-500">排除备注：{{.ExclusionNote}}</p>{{end}}
+  <div class="mt-3 flex flex-wrap gap-2">
+    <form method="post" action="/admin/payments/{{.ID}}/toggle" class="contents"
+          hx-post="/admin/payments/{{.ID}}/toggle"
+          hx-target="#payment-list-section" hx-select="#payment-list-section"
+          hx-swap="outerHTML" hx-push-url="false">
+      <input type="hidden" name="return_to" value="/admin/payments">
+      <button class="payment-action-button flex-1 {{if .Paid}}btn-secondary{{else}}btn-primary{{end}}" type="submit">
+        {{if .Paid}}标为未付{{else}}标为已付{{end}}
+      </button>
+    </form>
+    {{if eq .TenantStatus "checkout"}}
+      {{if .Excluded}}
+        <form method="post" action="/admin/payments/{{.ID}}/exclusion" class="contents"
+              hx-post="/admin/payments/{{.ID}}/exclusion"
+              hx-target="#payment-list-section" hx-select="#payment-list-section"
+              hx-swap="outerHTML" hx-push-url="false">
+          <input type="hidden" name="excluded" value="false">
+          <input type="hidden" name="return_to" value="/admin/payments">
+          <button class="payment-action-button flex-1 btn-secondary" type="submit">恢复记录</button>
+        </form>
+      {{else}}
+        <button class="payment-action-button flex-1 btn-danger" type="button"
+                data-payment-exclude="{{.ID}}">不再记录</button>
+      {{end}}
+    {{end}}
+  </div>
+</article>
+{{end}}
+
+{{define "admin_payment_pill_filter"}}
+{{$active := not (index .Chips 0).Active}}
+<div class="payment-filter-pill" data-payment-filter-active="{{if $active}}true{{else}}false{{end}}">
+  <select class="payment-filter-pill-select" data-payment-mobile-filter aria-label="{{.Label}}">
+    {{range .Chips}}
+      <option value="{{.URL}}" {{if .Active}}selected{{end}}>{{.Label}}</option>
+    {{end}}
+  </select>
 </div>
+{{end}}
+
+{{define "admin_payment_row"}}
+<tr class="bg-white/20 transition hover:bg-white/55">
+  <td class="payment-sticky-left col-tenant px-5 py-4">
+    <a class="payment-tenant-link block min-w-0 truncate font-black" href="/admin/tenants/{{.TenantID}}">{{.TenantName}}</a>
+    <p class="mt-1 truncate text-xs font-bold text-stone-500">{{.RoomNo}} · {{.RoomTitle}}</p>
+    {{if eq .TenantStatus "checkout"}}<span class="badge mt-1 inline-flex bg-stone-200 text-stone-700">已退租</span>{{end}}
+  </td>
+  <td class="col-month px-5 py-4">
+    <p class="font-bold text-stone-700">{{.NextDueLabel}}</p>
+    {{if .Overdue}}<p class="mt-1 text-xs font-black text-red-700">{{.OverdueLabel}}</p>{{end}}
+  </td>
+  <td class="col-amount px-5 py-4 font-black text-stone-950">¥{{.AmountText}}</td>
+  <td class="col-status px-5 py-4">
+    {{if .Excluded}}
+      <span class="badge bg-stone-200 text-stone-600">已排除</span>
+    {{else if .Paid}}
+      <span class="badge bg-emerald-100 text-emerald-800">已付款</span>
+    {{else}}
+      <span class="badge bg-red-100 text-red-700">未付款</span>
+    {{end}}
+    <p class="mt-1 text-xs font-bold text-stone-500">{{.TypeLabel}}</p>
+  </td>
+  <td class="col-note px-5 py-4">
+    <p class="text-xs text-stone-600">{{if .Note}}{{.Note}}{{else}}—{{end}}</p>
+    {{if .Excluded}}<p class="mt-1 text-xs text-stone-500">排除备注：{{if .ExclusionNote}}{{.ExclusionNote}}{{else}}-{{end}}</p>{{end}}
+  </td>
+  <td class="payment-sticky-right col-actions px-5 py-4">
+    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+      <form method="post" action="/admin/payments/{{.ID}}/toggle" class="contents"
+            hx-post="/admin/payments/{{.ID}}/toggle"
+            hx-target="#payment-list-section" hx-select="#payment-list-section"
+            hx-swap="outerHTML" hx-push-url="false">
+        <input type="hidden" name="return_to" value="/admin/payments">
+        <button class="payment-action-button {{if .Paid}}btn-secondary{{else}}btn-primary{{end}}" type="submit">
+          {{if .Paid}}标为未付{{else}}标为已付{{end}}
+        </button>
+      </form>
+      {{if eq .TenantStatus "checkout"}}
+        {{if .Excluded}}
+          <form method="post" action="/admin/payments/{{.ID}}/exclusion" class="contents"
+                hx-post="/admin/payments/{{.ID}}/exclusion"
+                hx-target="#payment-list-section" hx-select="#payment-list-section"
+                hx-swap="outerHTML" hx-push-url="false">
+            <input type="hidden" name="excluded" value="false">
+            <input type="hidden" name="return_to" value="/admin/payments">
+            <button class="payment-action-button btn-secondary" type="submit">恢复记录</button>
+          </form>
+        {{else}}
+          <button class="payment-action-button btn-danger" type="button"
+                  data-payment-exclude="{{.ID}}">不再记录</button>
+        {{end}}
+      {{end}}
+    </div>
+  </td>
+</tr>
 {{end}}

@@ -1,5 +1,5 @@
 {{define "content"}}
-<div class="space-y-6" data-stats-page data-default-year="{{.Year}}">
+<div class="space-y-6" data-stats-page data-default-year="{{.DefaultYear}}" data-selected-year="{{.Year}}">
   <section class="card p-5 shadow-lg shadow-stone-200/60 md:sticky md:top-4 md:z-10">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
@@ -7,15 +7,17 @@
         <h3 class="mt-2 text-2xl font-black">收租数据分析</h3>
         <p class="mt-2 text-sm text-stone-600">当前先提供收入、出租率估算和未来应收预测，更多分析会分阶段补齐。</p>
       </div>
-      <form class="flex flex-col gap-3 sm:flex-row sm:items-end" data-stats-filter>
+      <form class="flex flex-col gap-3 sm:flex-row sm:items-end" data-stats-filter method="get" action="/admin/stats">
         <label class="block">
           <span class="mb-2 block text-xs font-black text-stone-500">年份</span>
           <select id="statsYear" class="input min-w-[9rem]" name="year">
-            <option value="{{.Year}}">{{.Year}} 年</option>
+            {{range .YearOptions}}
+              <option value="{{.}}" {{if eq . $.Year}}selected{{end}}>{{.}} 年</option>
+            {{end}}
           </select>
         </label>
         <button class="btn-primary" type="submit">应用筛选</button>
-        <button class="btn-secondary" type="button" data-stats-reset>重置</button>
+        <a class="btn-secondary text-center" href="/admin/stats" data-stats-reset>重置</a>
       </form>
     </div>
   </section>
@@ -42,7 +44,7 @@
       <span class="badge">按月汇总</span>
     </div>
     <div class="mt-6 rounded-[1.5rem] bg-white/55 p-4">
-      <div class="relative h-[260px] sm:h-[320px]">
+      <div class="relative h-[220px] sm:h-[320px]">
         <canvas id="incomeChart"></canvas>
       </div>
       <p class="mt-4 hidden rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" id="incomeError">数据加载失败，请刷新重试</p>
@@ -62,7 +64,7 @@
     </div>
     <div class="mt-6 rounded-[1.5rem] bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800" id="occupancyNote">出租率根据租客入住和退租日期估算，未包含房态历史变更。</div>
     <div class="mt-6 rounded-[1.5rem] bg-white/55 p-4">
-      <div class="relative h-[260px] sm:h-[320px]">
+      <div class="relative h-[220px] sm:h-[320px]">
         <canvas id="occupancyChart"></canvas>
       </div>
       <p class="mt-4 hidden rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" id="occupancyError">数据加载失败，请刷新重试</p>
@@ -86,14 +88,14 @@
     </div>
     <div class="mt-6 grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
       <div class="rounded-[1.5rem] bg-white/55 p-4">
-        <div class="relative h-[260px] sm:h-[320px]">
+        <div class="relative h-[220px] sm:h-[320px]">
           <canvas id="projectionChart"></canvas>
         </div>
         <p class="mt-4 hidden rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" id="projectionError">数据加载失败，请刷新重试</p>
       </div>
       <div class="rounded-[1.5rem] bg-white/55 p-4">
         <h4 class="px-2 text-sm font-black text-stone-600">收款构成</h4>
-        <div class="relative mt-3 h-[260px] sm:h-[320px]">
+        <div class="relative mt-3 h-[220px] sm:h-[320px]">
           <canvas id="projectionBreakdownChart"></canvas>
           <p class="absolute inset-0 hidden items-center justify-center rounded-2xl bg-white/70 text-sm font-bold text-stone-500" id="projectionBreakdownEmpty">暂无构成数据</p>
         </div>
@@ -115,13 +117,13 @@
   const formatFen = (fen) => (Number(fen || 0) / 100).toFixed(2)
   const formatPercent = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`
   const escapeText = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]))
-  const fillYearOptions = () => {
-    const defaultYear = Number(statsPage.dataset.defaultYear)
-    statsYear.innerHTML = Array.from({ length: 4 }, (_, index) => defaultYear - index)
-      .map((year) => `<option value="${year}">${year} 年</option>`)
-      .join('')
+  const currentYear = () => Number(statsYear.value || statsPage.dataset.selectedYear || statsPage.dataset.defaultYear)
+  const pushYearToURL = () => {
+    if (!window.history?.replaceState) return
+    const url = new URL(window.location.href)
+    url.searchParams.set('year', String(currentYear()))
+    window.history.replaceState(null, '', url.toString())
   }
-  const currentYear = () => Number(statsYear.value || statsPage.dataset.defaultYear)
   const statsPath = (path) => `${path}?year=${encodeURIComponent(currentYear())}`
 
   const fetchJSON = (path) => fetch(path).then((response) => response.ok ? response.json() : Promise.reject(new Error('读取失败')))
@@ -238,14 +240,19 @@
     fetchJSON('/api/stats/projection/detail?period=12months').then(renderProjection).catch(() => showError('projectionError'))
   }
 
-  fillYearOptions()
-
   statsForm.addEventListener('submit', (event) => {
     event.preventDefault()
+    pushYearToURL()
     loadStats()
   })
-  document.querySelector('[data-stats-reset]').addEventListener('click', () => {
+  statsYear.addEventListener('change', () => {
+    pushYearToURL()
+    loadStats()
+  })
+  document.querySelector('[data-stats-reset]')?.addEventListener('click', (event) => {
+    event.preventDefault()
     statsYear.value = statsPage.dataset.defaultYear
+    pushYearToURL()
     loadStats()
   })
 

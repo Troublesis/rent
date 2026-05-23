@@ -31,10 +31,24 @@ func NewAdminStatsHandler(renderer Renderer, paymentService *service.PaymentServ
 }
 
 func (h *AdminStatsHandler) Page(c *gin.Context) {
+	now := time.Now()
+	year := now.Year()
+	if value := c.Query("year"); value != "" {
+		if parsedYear, err := strconv.Atoi(value); err == nil && parsedYear > 2000 && parsedYear < 2100 {
+			year = parsedYear
+		}
+	}
+	defaultYear := now.Year()
+	yearOptions := make([]int, 0, 4)
+	for i := 0; i < 4; i++ {
+		yearOptions = append(yearOptions, defaultYear-i)
+	}
 	h.renderer.Render(c, http.StatusOK, "admin_base.html", "admin/stats.html", gin.H{
-		"Title": "数据统计",
-		"Year":  time.Now().Year(),
-		"Error": queryError(c),
+		"Title":       "数据统计",
+		"Year":        year,
+		"DefaultYear": defaultYear,
+		"YearOptions": yearOptions,
+		"Error":       queryError(c),
 	})
 }
 

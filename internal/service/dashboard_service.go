@@ -297,9 +297,20 @@ func dateOnly(value time.Time) time.Time {
 	return time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, value.Location())
 }
 
+// daysBetween returns the number of whole calendar days between two instants,
+// counted using the calendar dates only so that DST transitions (23 h or 25 h
+// days) do not silently drop or add a day. The end date is exclusive.
 func daysBetween(start time.Time, end time.Time) int {
 	if !end.After(start) {
 		return 0
 	}
-	return int(end.Sub(start).Hours() / 24)
+	startDate := dateOnly(start)
+	endDate := dateOnly(end)
+	if !endDate.After(startDate) {
+		return 0
+	}
+	// Round to the nearest 24h after normalizing both ends to the same wall
+	// clock — this protects against DST drift inside the [start, end] window.
+	delta := endDate.Sub(startDate)
+	return int((delta + 12*time.Hour) / (24 * time.Hour))
 }

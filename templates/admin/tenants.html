@@ -88,20 +88,42 @@
 
 {{define "admin_tenant_list_items"}}
 <div class="card overflow-hidden">
-  <div class="grid grid-cols-[0.72fr_0.8fr_0.72fr_0.78fr_0.58fr] gap-2 border-b border-stone-300/70 bg-white/35 px-3 py-2 text-[0.68rem] font-black text-stone-500 sm:grid-cols-[0.8fr_1fr_0.75fr_0.85fr_0.62fr] sm:pr-52 sm:text-xs" hx-boost="true" hx-target="#tenant-list-section" hx-select="#tenant-list-section" hx-swap="outerHTML" hx-push-url="true">
+  <div class="hidden gap-2 border-b border-stone-300/70 bg-white/35 px-3 py-2 text-[0.68rem] font-black text-stone-500 sm:grid sm:grid-cols-[0.8fr_1fr_0.75fr_0.85fr_0.62fr] sm:pr-52 sm:text-xs" hx-boost="true" hx-target="#tenant-list-section" hx-select="#tenant-list-section" hx-swap="outerHTML" hx-push-url="true">
     {{range .SortLinks}}
       <a class="min-w-0 truncate transition hover:text-amber-800 {{if .Indicator}}text-amber-800{{end}}" href="{{.URL}}">{{.Label}}{{if .Indicator}} {{.Indicator}}{{end}}</a>
     {{end}}
   </div>
+  <div class="grid grid-cols-3 gap-2 border-b border-stone-300/70 bg-white/35 px-3 py-2 text-[0.68rem] font-black text-stone-500 sm:hidden" hx-boost="true" hx-target="#tenant-list-section" hx-select="#tenant-list-section" hx-swap="outerHTML" hx-push-url="true">
+    {{$mobileSorts := .MobileSortLinks}}{{if not $mobileSorts}}{{$mobileSorts = .SortLinks}}{{end}}
+    {{range $index, $link := $mobileSorts}}{{if lt $index 3}}
+      <a class="min-w-0 truncate transition hover:text-amber-800 {{if $link.Indicator}}text-amber-800{{end}}" href="{{$link.URL}}">{{$link.Label}}{{if $link.Indicator}} {{$link.Indicator}}{{end}}</a>
+    {{end}}{{end}}
+  </div>
   <div class="divide-y divide-stone-300/60">
     {{range .Tenants}}
+      {{$overdue := false}}{{if and (eq .Status "active") .LeaseEndDate}}{{if isOverdue (deref .LeaseEndDate)}}{{$overdue = true}}{{end}}{{end}}
       <article class="relative bg-white/20 transition hover:bg-white/55">
-        <a class="grid grid-cols-[0.72fr_0.8fr_0.72fr_0.78fr_0.58fr] gap-2 px-3 py-3 text-xs sm:grid-cols-[0.8fr_1fr_0.75fr_0.85fr_0.62fr] sm:items-center sm:pr-52 sm:text-sm" href="/admin/tenants/{{.ID}}" aria-label="查看{{.Name}}详情">
-          <span class="min-w-0 truncate font-black text-stone-950">{{.Name}}</span>
+        <a class="hidden gap-2 px-3 py-3 text-xs sm:grid sm:grid-cols-[0.8fr_1fr_0.75fr_0.85fr_0.62fr] sm:items-center sm:pr-52 sm:text-sm" href="/admin/tenants/{{.ID}}" aria-label="查看{{.Name}}详情">
+          <span class="min-w-0 truncate font-black text-stone-950">{{.Name}}{{if $overdue}} <span class="ml-1 inline-flex h-2 w-2 rounded-full bg-red-600 align-middle" aria-label="租约已到期"></span>{{end}}</span>
           <span class="min-w-0 truncate font-bold text-stone-700">{{.Room.RoomNo}} · {{.Room.Title}}</span>
           <span class="min-w-0 truncate font-black text-amber-800">¥{{formatYuanInt .RentPrice}} / {{rentUnitLabel .RentType}}</span>
           <span class="min-w-0 truncate font-bold text-stone-600">{{formatDate .CheckinDate}}</span>
           <span class="min-w-0"><span class="badge max-w-full truncate px-2 py-0.5 text-[0.65rem] sm:text-xs">{{tenantStatusLabel .Status}}</span></span>
+        </a>
+        <a class="grid grid-cols-3 gap-2 px-3 py-3 text-xs sm:hidden" href="/admin/tenants/{{.ID}}" aria-label="查看{{.Name}}详情">
+          <div class="min-w-0 truncate">
+            <p class="truncate font-black text-stone-950">{{.Name}}{{if $overdue}} <span class="ml-1 inline-flex h-2 w-2 rounded-full bg-red-600 align-middle" aria-label="租约已到期"></span>{{end}}</p>
+            <p class="mt-0.5 text-[0.65rem] font-bold text-stone-500">{{formatDate .CheckinDate}} 入住</p>
+          </div>
+          <div class="min-w-0 truncate">
+            <p class="truncate font-bold text-stone-700">{{.Room.RoomNo}}</p>
+            <p class="mt-0.5 truncate text-[0.65rem] text-stone-500">{{.Room.Title}}</p>
+          </div>
+          <div class="min-w-0 truncate text-right">
+            <p class="truncate font-black text-amber-800">¥{{formatYuanInt .RentPrice}}</p>
+            <p class="mt-0.5 text-[0.65rem] font-bold text-stone-500">/ {{rentUnitLabel .RentType}}</p>
+            <span class="mt-1 inline-flex badge max-w-full truncate px-2 py-0.5 text-[0.6rem]">{{tenantStatusLabel .Status}}</span>
+          </div>
         </a>
         {{template "admin_tenant_list_actions" .}}
       </article>
@@ -115,11 +137,13 @@
 
 {{define "admin_tenant_card_items"}}
 {{range .Tenants}}
+  {{$overdue := false}}{{if and (eq .Status "active") .LeaseEndDate}}{{if isOverdue (deref .LeaseEndDate)}}{{$overdue = true}}{{end}}{{end}}
   <article class="card public-room-masonry-card overflow-hidden p-3">
     <div class="p-3">
       <div class="flex flex-wrap items-center gap-2">
         <span class="badge">{{tenantStatusLabel .Status}}</span>
         <span class="text-xs font-black text-stone-500">{{paymentTermsLabel .PaymentTerms}}</span>
+        {{if $overdue}}<span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[0.65rem] font-black text-red-700">租约已到期</span>{{end}}
       </div>
       <h3 class="mt-4 text-xl font-black leading-tight">{{.Name}}</h3>
       <p class="mt-3 text-sm font-bold leading-6 text-stone-700">{{.Room.RoomNo}} · {{.Room.Title}}</p>

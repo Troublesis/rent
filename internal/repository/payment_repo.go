@@ -9,19 +9,20 @@ import (
 )
 
 type PaymentFilter struct {
-	Paid     *bool
-	Type     string
-	TenantID uint
-	Query    string
-	Excluded *bool
-	Period   string
-	Overdue  *bool
-	Page     int
-	Limit    int
-	SortBy   string
-	SortDir  string
-	FromDate time.Time
-	ToDate   time.Time
+	Paid         *bool
+	Type         string
+	TenantID     uint
+	TenantStatus string
+	Query        string
+	Excluded     *bool
+	Period       string
+	Overdue      *bool
+	Page         int
+	Limit        int
+	SortBy       string
+	SortDir      string
+	FromDate     time.Time
+	ToDate       time.Time
 }
 
 type PaymentListResult struct {
@@ -226,6 +227,9 @@ func applyPaymentFilter(query *gorm.DB, filter PaymentFilter, now time.Time) *go
 		like := "%" + strings.TrimSpace(filter.Query) + "%"
 		query = query.Where("tenants.name LIKE ? OR tenants.phone LIKE ? OR rooms.room_no LIKE ?", like, like, like)
 	}
+	if status := strings.TrimSpace(filter.TenantStatus); status != "" {
+		query = query.Where("tenants.status = ?", status)
+	}
 	if start, end, ok := paymentPeriodRange(filter.Period, now); ok {
 		query = query.Where("payments.pay_date >= ? AND payments.pay_date < ?", start, end)
 	}
@@ -271,7 +275,7 @@ func applyPaymentSort(query *gorm.DB, filter PaymentFilter, joined bool) *gorm.D
 }
 
 func paymentFilterNeedsJoins(filter PaymentFilter) bool {
-	return strings.TrimSpace(filter.Query) != ""
+	return strings.TrimSpace(filter.Query) != "" || strings.TrimSpace(filter.TenantStatus) != ""
 }
 
 func joinPaymentTenantRoom(query *gorm.DB) *gorm.DB {

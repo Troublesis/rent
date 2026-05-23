@@ -6,6 +6,35 @@ document.addEventListener('click', (event) => {
   }
 })
 
+const drawerRoot = document.querySelector('[data-drawer]')
+const drawerToggle = document.querySelector('[data-drawer-toggle]')
+
+const setDrawerOpen = (open) => {
+  if (!drawerRoot) return
+  drawerRoot.dataset.open = open ? 'true' : 'false'
+  drawerRoot.setAttribute('aria-hidden', open ? 'false' : 'true')
+  document.body.style.overflow = open ? 'hidden' : ''
+  if (drawerToggle) drawerToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+}
+
+drawerToggle?.addEventListener('click', () => {
+  setDrawerOpen(drawerRoot?.dataset.open !== 'true')
+})
+
+document.querySelectorAll('[data-drawer-close]').forEach((node) => {
+  node.addEventListener('click', () => setDrawerOpen(false))
+})
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && drawerRoot?.dataset.open === 'true') {
+    setDrawerOpen(false)
+  }
+})
+
+document.querySelectorAll('.admin-drawer-panel a').forEach((node) => {
+  node.addEventListener('click', () => setDrawerOpen(false))
+})
+
 document.addEventListener('click', (event) => {
   const target = event.target.closest('[data-toggle-panel]')
   if (!target) return
@@ -675,7 +704,10 @@ const initTenantSearchComboBox = (root) => {
   let loadFailed = false
   let suppressOpen = false
 
-  const currentStatus = () => form?.querySelector('input[name="status"]')?.value || 'active'
+  const currentStatus = () => {
+    if (root.dataset.searchStatus) return root.dataset.searchStatus
+    return form?.querySelector('input[name="status"]')?.value || 'active'
+  }
   const close = () => list.classList.add('hidden')
   const message = (text, extraClass = 'text-stone-500') => {
     list.innerHTML = `<div class="px-4 py-3 text-sm ${extraClass}">${escapeHTML(text)}</div>`
@@ -804,7 +836,98 @@ const initTenantSearchComboBoxes = (scope = document) => {
 
 initTenantSearchComboBoxes()
 
-const initPaymentsTable = () => {
+const initPaymentsExcludeModal = () => {
+  const modal = document.querySelector('[data-payment-exclude-modal]')
+  if (!modal) return
+  const form = modal.querySelector('[data-payment-exclude-form]')
+  const cancel = modal.querySelector('[data-payment-exclude-cancel]')
+  const open = (paymentID) => {
+    if (!form || !paymentID) return
+    const action = `/admin/payments/${paymentID}/exclusion`
+    form.setAttribute('action', action)
+    form.setAttribute('hx-post', action)
+    if (window.htmx?.process) window.htmx.process(form)
+    modal.classList.remove('hidden')
+    modal.classList.add('flex')
+  }
+  const close = () => {
+    modal.classList.add('hidden')
+    modal.classList.remove('flex')
+  }
+  document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-payment-exclude]')
+    if (trigger) {
+      event.preventDefault()
+      open(trigger.dataset.paymentExclude)
+      return
+    }
+    if (event.target === modal) close()
+  })
+  cancel?.addEventListener('click', close)
+  form?.addEventListener('htmx:afterRequest', (event) => {
+    if (event.detail?.successful !== false) close()
+  })
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !modal.classList.contains('hidden')) close()
+  })
+}
+
+initPaymentsExcludeModal()
+
+const initPaymentCreateForm = () => {
+  const form = document.querySelector('[data-payment-create-form]')
+  if (!form) return
+  form.addEventListener('htmx:afterRequest', (event) => {
+    if (event.detail?.successful === false) return
+    if (event.detail?.xhr?.status >= 400) return
+    form.reset()
+    form.querySelectorAll('[data-tenant-hidden]').forEach((field) => { field.value = '' })
+    form.querySelectorAll('[data-counter-target]').forEach((field) => field.dispatchEvent(new Event('input', { bubbles: true })))
+  })
+}
+
+initPaymentCreateForm()
+
+const initPaymentMobileFilters = () => {
+  document.addEventListener('change', (event) => {
+    const select = event.target.closest('[data-payment-mobile-filter]')
+    if (!select) return
+    const url = select.value
+    if (!url) return
+    if (window.htmx) {
+      window.htmx.ajax('GET', url, {
+        target: '#payment-list-section',
+        select: '#payment-list-section',
+        swap: 'outerHTML'
+      })
+      if (window.history?.pushState) window.history.pushState({}, '', url)
+    } else {
+      window.location.href = url
+    }
+  })
+}
+
+initPaymentMobileFilters()
+
+const initPaymentCreateToggle = () => {
+  const card = document.querySelector('[data-payment-create-card]')
+  if (!card) return
+  const toggle = card.querySelector('[data-payment-create-toggle]')
+  const desktop = window.matchMedia('(min-width: 768px)')
+  const apply = () => {
+    if (desktop.matches) {
+      card.open = true
+    }
+    if (toggle) toggle.textContent = card.open ? '收起' : '展开'
+  }
+  card.addEventListener('toggle', apply)
+  desktop.addEventListener?.('change', apply)
+  apply()
+}
+
+initPaymentCreateToggle()
+
+const initPaymentsTable_DISABLED = () => {
   const root = document.querySelector('[data-payments-table]')
   if (!root) return
   const body = root.querySelector('[data-payments-body]')
@@ -1179,7 +1302,8 @@ const renderPaymentActions = (payment) => {
   return `${remindButton}${excludeButton}${restoreForm}${toggleForm}`
 }
 
-initPaymentsTable()
+// initPaymentsTable() — legacy client-side renderer, kept for reference but no
+// longer invoked. The payments page now renders server-side via HTMX swaps.
 
 const dashboardDetailConfig = {
   'rooms-total': { title: '总房源 — 明细', url: '/api/rooms?include_all=true', type: 'rooms', fullURL: '/admin/rooms' },
