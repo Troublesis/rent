@@ -26,3 +26,16 @@
 2026-05-23T12:02:44Z [backup] Uploading to https://alist.troublesis.win/dav/rent-20260523T120244Z.tar.gz
 2026-05-23T12:02:45Z [backup] Listing remote backups for rotation (keep last 10)
 2026-05-23T12:02:45Z [backup] Done. archive=rent-20260523T120244Z.tar.gz size=1.1M env=yes kept=2 pruned=0
+2026-05-23T12:17:28Z [backup] Snapshotting SQLite DB from /Users/troublesis/code/rent/data/rent.db
+2026-05-23T12:17:28Z [backup] Included app env file from /Users/troublesis/code/rent/.env
+2026-05-23T12:17:28Z [backup] Creating archive rent-20260523T121728Z.tar.gz
+2026-05-23T12:17:29Z [backup] Archive size: 1.1M
+2026-05-23T12:17:29Z [backup] Uploading to https://alist.troublesis.win/dav/rent-20260523T121728Z.tar.gz
+2026-05-23T12:17:29Z [backup] Listing remote backups for rotation (keep last 10)
+2026-05-23T12:17:29Z [backup] Done. archive=rent-20260523T121728Z.tar.gz size=1.1M env=yes kept=4 pruned=0
+2026-05-23T12:17:35Z [backup] Snapshotting SQLite DB from /Users/troublesis/code/rent/data/rent.db
+2026-05-23T12:17:35Z [backup] Included app env file from /Users/troublesis/code/rent/.env
+2026-05-23T12:17:35Z [backup] No changes since last backup (hash=4defa849ca930b921dee506407833d698863d90c66f235727f24099f50434061…) — skipping upload and rotation.
+2026-05-23T12:17:36Z [backup] Snapshotting SQLite DB from /Users/troublesis/code/rent/data/rent.db
+2026-05-23T12:17:36Z [backup] Included app env file from /Users/troublesis/code/rent/.env
+2026-05-23T12:17:36Z [backup] No changes since last backup (hash=4defa849ca930b921dee506407833d698863d90c66f235727f24099f50434061…) — skipping upload and rotation.

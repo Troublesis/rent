@@ -70,6 +70,7 @@ BACKUP_KEEP_N="${BACKUP_KEEP_N:-30}"
 BACKUP_PREFIX="${BACKUP_PREFIX:-rent}"
 UPLOAD_TIMEOUT="${UPLOAD_TIMEOUT:-300}"
 LOCK_FILE="${LOCK_FILE:-/tmp/rent-backup.lock}"
+STATE_FILE="${STATE_FILE:-${SCRIPT_DIR}/.last-backup-hash}"
 APP_ENV_FILE="${APP_ENV_FILE-}"
 [[ "$WEBDAV_URL" == */ ]] || WEBDAV_URL="${WEBDAV_URL}/"
 
@@ -87,6 +88,18 @@ done
 for bin in sqlite3 curl gzip tar; do
   command -v "$bin" >/dev/null 2>&1 || die "Missing required binary: $bin"
 done
+
+if command -v sha256sum >/dev/null 2>&1; then
+  HASH_CMD=(sha256sum)
+elif command -v shasum >/dev/null 2>&1; then
+  HASH_CMD=(shasum -a 256)
+else
+  die "Missing required binary: sha256sum or shasum"
+fi
+
+hash_file() {
+  "${HASH_CMD[@]}" "$1" | awk '{print $1}'
+}
 
 # ---------- single-instance lock ----------
 if command -v flock >/dev/null 2>&1; then
@@ -121,6 +134,25 @@ else
   log "WARN: APP_ENV_FILE empty — archive will NOT contain the app .env"
 fi
 
+# ---------- change detection ----------
+DB_HASH="$(hash_file "${TMP}/rent.db")"
+ENV_HASH=""
+if [[ "$ENV_INCLUDED" == "yes" ]]; then
+  ENV_HASH="$(hash_file "${TMP}/app.env")"
+fi
+CURRENT_HASH="${DB_HASH}:${ENV_HASH}"
+
+if [[ -f "$STATE_FILE" ]]; then
+  LAST_HASH="$(cat "$STATE_FILE" 2>/dev/null || true)"
+else
+  LAST_HASH=""
+fi
+
+if [[ -n "$LAST_HASH" && "$LAST_HASH" == "$CURRENT_HASH" ]]; then
+  log "No changes since last backup (hash=${DB_HASH%%:*}…) — skipping upload and rotation."
+  exit 0
+fi
+
 # ---------- bundle ----------
 log "Creating archive $ARCHIVE_NAME"
 if [[ "$ENV_INCLUDED" == "yes" ]]; then
@@ -141,6 +173,7 @@ else
     --retry 3 --retry-delay 5 \
     -T "$ARCHIVE_PATH" "${WEBDAV_URL}${ARCHIVE_NAME}" \
     || die "WebDAV upload failed"
+  printf '%s\n' "$CURRENT_HASH" >"$STATE_FILE" || log "WARN: failed to update state file $STATE_FILE"
 fi
 
 # ---------- rotation ----------
