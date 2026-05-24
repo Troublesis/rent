@@ -7,6 +7,7 @@
     <dl class="mt-8 grid gap-4">
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">房源</dt><dd class="mt-1 font-black">{{.Tenant.Room.RoomNo}} · {{.Tenant.Room.Title}}</dd></div>
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">入住日期</dt><dd class="mt-1 font-black">{{formatDate .Tenant.CheckinDate}}</dd></div>
+      <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">租约到期日</dt><dd class="mt-1 font-black">{{if .Tenant.LeaseEndDate}}{{formatOptionalDate .Tenant.LeaseEndDate}}{{else}}未约定{{end}}</dd></div>
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">租金 / 押金</dt><dd class="mt-1 font-black">¥{{formatYuanInt .Tenant.RentPrice}} / {{rentUnitLabel .Tenant.RentType}} · 押金 ¥{{formatYuanInt .Tenant.Deposit}}</dd></div>
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">付款方式</dt><dd class="mt-1 font-black">{{paymentTermsLabel .Tenant.PaymentTerms}}</dd></div>
       <div class="rounded-2xl bg-white/50 p-4"><dt class="text-xs text-stone-500">紧急联系人</dt><dd class="mt-1 font-black">{{if .Tenant.EmergencyContact}}{{.Tenant.EmergencyContact}}{{else}}未填写{{end}}</dd></div>
@@ -22,23 +23,43 @@
     {{end}}
   </article>
   <article class="card overflow-hidden">
-    <div class="border-b border-stone-300/70 p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stone-300/70 p-6">
       <h3 class="text-2xl font-black">收款记录</h3>
+      <div class="flex flex-wrap gap-2" role="group" aria-label="收款状态筛选">
+        {{range .PaidChips}}
+          <a class="rounded-full px-4 py-1.5 text-xs font-black transition {{if .Active}}bg-stone-900 text-white{{else}}bg-white/70 text-stone-600 hover:bg-white{{end}}"
+             href="{{.URL}}"
+             hx-get="{{.URL}}"
+             hx-target="#tenant-payments"
+             hx-swap="outerHTML"
+             hx-push-url="true">{{.Label}}</a>
+        {{end}}
+      </div>
     </div>
-    <div class="divide-y divide-stone-200/80">
-      {{range .Tenant.Payments}}
-        <div class="flex items-start justify-between gap-4 p-5 {{if .Excluded}}bg-stone-200/40 text-stone-500{{end}}">
-          <div class="min-w-0 flex-1">
-            <p class="font-black">{{paymentTypeLabel .Type}} · ¥{{formatFen .Amount}}</p>
-            <p class="truncate text-sm text-stone-500" title="{{formatDate .PayDate}} · {{.Note}}">{{formatDate .PayDate}} · {{.Note}}</p>
-            {{if .Excluded}}<p class="mt-1 truncate text-xs font-bold text-stone-500" title="已排除：{{if .ExclusionNote}}{{.ExclusionNote}}{{else}}未填写原因{{end}}">已排除：{{if .ExclusionNote}}{{.ExclusionNote}}{{else}}未填写原因{{end}}</p>{{end}}
-          </div>
-          <span class="badge shrink-0 whitespace-nowrap">{{if .Paid}}已收{{else}}未收{{end}}</span>
-        </div>
-      {{else}}
-        <p class="p-8 text-center text-stone-500">还没有收款记录。</p>
-      {{end}}
-    </div>
+    {{template "admin_tenant_payments" .}}
   </article>
 </section>
+{{end}}
+
+{{define "admin_tenant_payments"}}
+<div id="tenant-payments" class="divide-y divide-stone-200/80">
+  {{range .FilteredPayments}}
+    <a class="flex items-start justify-between gap-4 p-5 transition hover:bg-white/60 {{if .Excluded}}bg-stone-200/40 text-stone-500{{end}}"
+       href="{{$.PaymentsLinkPrefix}}"
+       title="跳转至收款记录页查看更多">
+      <div class="min-w-0 flex-1">
+        <p class="font-black">{{paymentTypeLabel .Type}} · ¥{{formatFen .Amount}}</p>
+        <p class="truncate text-sm text-stone-500" title="{{formatDate .PayDate}} · {{.Note}}">{{formatDate .PayDate}} · {{.Note}}</p>
+        {{if .Excluded}}<p class="mt-1 truncate text-xs font-bold text-stone-500" title="已排除：{{if .ExclusionNote}}{{.ExclusionNote}}{{else}}未填写原因{{end}}">已排除：{{if .ExclusionNote}}{{.ExclusionNote}}{{else}}未填写原因{{end}}</p>{{end}}
+      </div>
+      <span class="badge shrink-0 whitespace-nowrap">{{if .Paid}}已收{{else}}未收{{end}}</span>
+    </a>
+  {{else}}
+    <p class="p-8 text-center text-stone-500">
+      {{if eq $.PaidFilter "true"}}暂无已收款记录。
+      {{else if eq $.PaidFilter "all"}}还没有收款记录。
+      {{else}}没有未收款记录。{{end}}
+    </p>
+  {{end}}
+</div>
 {{end}}

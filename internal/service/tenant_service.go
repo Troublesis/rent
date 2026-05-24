@@ -43,6 +43,10 @@ func (s *TenantService) GetTenant(id uint) (*model.Tenant, error) {
 	return s.tenantRepo.GetTenant(id)
 }
 
+func (s *TenantService) ListTenantsByRoomID(roomID uint) ([]model.Tenant, error) {
+	return s.tenantRepo.ListTenantsByRoomID(roomID)
+}
+
 func (s *TenantService) CheckInTenant(input TenantInput) (*model.Tenant, error) {
 	var tenant *model.Tenant
 	if err := s.db.Transaction(func(tx *gorm.DB) error {

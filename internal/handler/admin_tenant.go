@@ -186,11 +186,79 @@ func (h *AdminTenantHandler) Detail(c *gin.Context) {
 		c.String(http.StatusNotFound, "租客不存在")
 		return
 	}
-	h.renderer.Render(c, http.StatusOK, "admin_base.html", "admin/tenant_detail.html", gin.H{
-		"Title":  "租客详情",
-		"Tenant": tenant,
-		"Error":  queryError(c),
-	})
+	paidFilter := normalizeTenantPaidFilter(c.Query("paid"))
+	filteredPayments := filterTenantPaymentsByPaid(tenant.Payments, paidFilter)
+	data := gin.H{
+		"Title":              "租客详情",
+		"Tenant":             tenant,
+		"FilteredPayments":   filteredPayments,
+		"PaidFilter":         paidFilter,
+		"PaidChips":          tenantPaymentPaidChips(id, paidFilter),
+		"PaymentsLinkPrefix": tenantPaymentsLinkPrefix(id, paidFilter),
+		"PaymentsPartialURL": tenantDetailURL(id, paidFilter),
+		"Error":              queryError(c),
+	}
+	if isHTMXRequest(c) {
+		h.renderer.RenderPartial(c, http.StatusOK, "admin/tenant_detail.html", "admin_tenant_payments", data)
+		return
+	}
+	h.renderer.Render(c, http.StatusOK, "admin_base.html", "admin/tenant_detail.html", data)
+}
+
+func normalizeTenantPaidFilter(value string) string {
+	switch value {
+	case "true", "all":
+		return value
+	default:
+		return "false"
+	}
+}
+
+func filterTenantPaymentsByPaid(payments []model.Payment, paidFilter string) []model.Payment {
+	if paidFilter == "all" {
+		return payments
+	}
+	wantPaid := paidFilter == "true"
+	filtered := make([]model.Payment, 0, len(payments))
+	for _, payment := range payments {
+		if payment.Paid == wantPaid {
+			filtered = append(filtered, payment)
+		}
+	}
+	return filtered
+}
+
+func tenantPaymentPaidChips(tenantID uint, current string) []filterChip {
+	options := []struct {
+		Value string
+		Label string
+	}{
+		{Value: "false", Label: "未收"},
+		{Value: "true", Label: "已收"},
+		{Value: "all", Label: "全部"},
+	}
+	chips := make([]filterChip, len(options))
+	for i, option := range options {
+		chips[i] = filterChip{
+			Label:  option.Label,
+			URL:    tenantDetailURL(tenantID, option.Value),
+			Active: current == option.Value,
+		}
+	}
+	return chips
+}
+
+func tenantDetailURL(tenantID uint, paidFilter string) string {
+	values := url.Values{}
+	values.Set("paid", paidFilter)
+	return "/admin/tenants/" + strconv.FormatUint(uint64(tenantID), 10) + "?" + values.Encode()
+}
+
+func tenantPaymentsLinkPrefix(tenantID uint, paidFilter string) string {
+	values := url.Values{}
+	values.Set("tenant_id", strconv.FormatUint(uint64(tenantID), 10))
+	values.Set("paid", paidFilter)
+	return "/admin/payments?" + values.Encode()
 }
 
 func (h *AdminTenantHandler) Edit(c *gin.Context) {

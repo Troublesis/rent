@@ -255,17 +255,17 @@ func (h *AdminRoomHandler) APIList(c *gin.Context) {
 
 func (h *AdminRoomHandler) New(c *gin.Context) {
 	room := model.Room{Status: model.RoomStatusVacant, RentType: model.RentTypeMonthly, PaymentTerms: model.PaymentTerms1M1D, Area: 1}
-	h.renderForm(c, http.StatusOK, room, "/admin/rooms", "新增房源", "")
+	h.renderForm(c, http.StatusOK, room, nil, "/admin/rooms", "新增房源", "")
 }
 
 func (h *AdminRoomHandler) Create(c *gin.Context) {
 	input, err := roomInputFromForm(c)
 	if err != nil {
-		h.renderForm(c, http.StatusBadRequest, roomFromInput(input), "/admin/rooms", "新增房源", "表单数据不正确")
+		h.renderForm(c, http.StatusBadRequest, roomFromInput(input), nil, "/admin/rooms", "新增房源", "表单数据不正确")
 		return
 	}
 	if _, err := h.roomService.CreateRoom(input); err != nil {
-		h.renderForm(c, http.StatusBadRequest, roomFromInput(input), "/admin/rooms", "新增房源", userFacingError(err))
+		h.renderForm(c, http.StatusBadRequest, roomFromInput(input), nil, "/admin/rooms", "新增房源", userFacingError(err))
 		return
 	}
 	c.Redirect(http.StatusSeeOther, "/admin/rooms")
@@ -289,7 +289,8 @@ func (h *AdminRoomHandler) Edit(c *gin.Context) {
 		c.String(http.StatusNotFound, "房源不存在")
 		return
 	}
-	h.renderForm(c, http.StatusOK, *room, adminRoomBaseURL(id), "编辑房源", "")
+	tenants := h.roomTenantHistory(id)
+	h.renderForm(c, http.StatusOK, *room, tenants, adminRoomBaseURL(id), "编辑房源", "")
 }
 
 func (h *AdminRoomHandler) Update(c *gin.Context) {
@@ -299,14 +300,25 @@ func (h *AdminRoomHandler) Update(c *gin.Context) {
 	}
 	input, err := roomInputFromForm(c)
 	if err != nil {
-		h.renderForm(c, http.StatusBadRequest, h.roomFromFailedUpdate(id, input), adminRoomBaseURL(id), "编辑房源", "表单数据不正确")
+		h.renderForm(c, http.StatusBadRequest, h.roomFromFailedUpdate(id, input), h.roomTenantHistory(id), adminRoomBaseURL(id), "编辑房源", "表单数据不正确")
 		return
 	}
 	if _, err := h.roomService.UpdateRoom(id, input); err != nil {
-		h.renderForm(c, http.StatusBadRequest, h.roomFromFailedUpdate(id, input), adminRoomBaseURL(id), "编辑房源", userFacingError(err))
+		h.renderForm(c, http.StatusBadRequest, h.roomFromFailedUpdate(id, input), h.roomTenantHistory(id), adminRoomBaseURL(id), "编辑房源", userFacingError(err))
 		return
 	}
 	c.Redirect(http.StatusSeeOther, adminRoomEditURL(id))
+}
+
+func (h *AdminRoomHandler) roomTenantHistory(roomID uint) []model.Tenant {
+	if h.tenantService == nil {
+		return nil
+	}
+	tenants, err := h.tenantService.ListTenantsByRoomID(roomID)
+	if err != nil {
+		return nil
+	}
+	return tenants
 }
 
 func (h *AdminRoomHandler) Delete(c *gin.Context) {
@@ -343,11 +355,12 @@ func (h *AdminRoomHandler) roomFromFailedUpdate(id uint, input service.RoomInput
 	return room
 }
 
-func (h *AdminRoomHandler) renderForm(c *gin.Context, status int, room model.Room, action string, title string, errorMessage string) {
+func (h *AdminRoomHandler) renderForm(c *gin.Context, status int, room model.Room, tenants []model.Tenant, action string, title string, errorMessage string) {
 	room = roomFormDefaults(room)
 	h.renderer.Render(c, status, "admin_base.html", "admin/room_form.html", gin.H{
 		"Title":        title,
 		"Room":         room,
+		"Tenants":      tenants,
 		"Action":       action,
 		"Statuses":     roomStatusOptions(),
 		"RentTypes":    rentTypeOptions(),

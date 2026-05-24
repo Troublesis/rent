@@ -97,6 +97,17 @@ func (r *TenantRepository) GetTenant(id uint) (*model.Tenant, error) {
 	return &tenant, nil
 }
 
+func (r *TenantRepository) ListTenantsByRoomID(roomID uint) ([]model.Tenant, error) {
+	var tenants []model.Tenant
+	if err := r.db.Model(&model.Tenant{}).
+		Where("room_id = ?", roomID).
+		Order("checkin_date DESC, created_at DESC").
+		Find(&tenants).Error; err != nil {
+		return nil, err
+	}
+	return tenants, nil
+}
+
 func (r *TenantRepository) GetActiveTenantByRoomID(roomID uint) (*model.Tenant, error) {
 	var tenant model.Tenant
 	if err := r.db.Where("room_id = ? AND status = ?", roomID, model.TenantStatusActive).First(&tenant).Error; err != nil {

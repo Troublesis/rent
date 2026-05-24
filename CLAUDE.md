@@ -41,7 +41,7 @@ my-rent-system/
 │
 ├── cmd/
 │   └── server/
-│       └── main.go            # Entry point: wires up router, DB, starts server
+│       └── main.go            # Entry point: loads config, opens DB, delegates to internal/server
 │
 ├── internal/
 │   ├── auth/
@@ -60,10 +60,13 @@ my-rent-system/
 │   │   ├── room_repo.go       # DB queries for rooms
 │   │   ├── tenant_repo.go     # DB queries for tenants
 │   │   └── payment_repo.go    # DB queries for payments
-│   └── service/
-│       ├── room_service.go    # Business logic for rooms
-│       ├── tenant_service.go  # Business logic for tenants (check-in/out flow)
-│       └── payment_service.go # Business logic for billing
+│   ├── service/
+│   │   ├── room_service.go    # Business logic for rooms
+│   │   ├── tenant_service.go  # Business logic for tenants (check-in/out flow)
+│   │   └── payment_service.go # Business logic for billing
+│   ├── server/                # Router setup + html/template registration
+│   ├── storage/               # File upload storage (data/uploads)
+│   └── seed/                  # Dev/demo seed data
 │
 ├── templates/
 │   ├── layout/
@@ -79,10 +82,14 @@ my-rent-system/
 │   │   └── settings.html
 │   ├── auth/
 │   │   └── login.html
-│   └── public/
-│       ├── index.html
-│       ├── rooms.html
-│       └── room_detail.html
+│   ├── public/
+│   │   ├── index.html
+│   │   ├── rooms.html
+│   │   └── room_detail.html
+│   └── components/            # HTMX partials (filters, room views, media frame)
+│
+├── scripts/
+│   └── backup/                # WebDAV SQLite backup (see scripts/backup/README.md)
 │
 ├── static/
 │   ├── css/
@@ -324,16 +331,32 @@ type Payment struct {
 
 ---
 
-## Phase 1 MVP Scope (Build in this order)
+## Status
 
-1. **Project bootstrap** — `main.go`, DB connection, GORM AutoMigrate, Gin router
-2. **Auth** — login/logout, session middleware, login page
-3. **Rooms CRUD** — list, create, edit, delete, image upload
-4. **Tenants** — check-in form, tenant list, checkout flow
-5. **Payments** — record payment, toggle paid/unpaid, list with filters
-6. **Dashboard** — KPI counts (rooms, tenants, arrears, monthly income)
-7. **Public listing page** — room cards, room detail, contact display
-8. **Stats page** — simple monthly income bar chart (use Chart.js CDN)
+Phase 1 MVP (rooms / tenants / payments / dashboard / public listing / stats) is
+complete. See `README.md` for the current feature list. Next work tracked under
+Phase 2 below.
+
+## HTMX partials
+
+- `templates/components/*.html` are partial fragments returned for HTMX requests.
+- Handlers detect the `HX-Request` header (see `internal/handler/shared.go`) and
+  render the partial instead of the full page — this keeps filter/tab/pagination
+  updates refresh-free as required by the UI rules.
+
+## Testing
+
+Test files live alongside source (`*_test.go`) across handler, service,
+repository, and server packages.
+
+```bash
+go test ./...                       # Run all tests
+go test ./internal/service/... -v   # Verbose run for one package
+go test -run TestCheckIn ./...      # Single test
+```
+
+Repositories and services use an in-memory SQLite DB per test (see
+`internal/repository/repository_test.go` for the setup pattern).
 
 ## Phase 2 (after MVP works)
 - WeChat Pay / Alipay integration
