@@ -229,6 +229,100 @@ See [CLAUDE.md](CLAUDE.md) for full route reference, schema, and conventions.
 
 ---
 
+## Makefile
+
+A `Makefile` is included for common tasks. Run `make` (or `make help`) to list all targets:
+
+```
+  build          Format, vet, then build the production binary
+  build-linux    Cross-compile for Linux amd64
+  db             Open SQLite shell on the app database
+  db-reset       Delete the local dev database (next run recreates it)
+  deploy         Build binary and restart the systemd service
+  dev            Start dev server with live reload
+  fmt            Format all Go source files
+  logs           Tail rent app logs (Ctrl-C to exit)
+  logs-caddy     Tail Caddy logs (Ctrl-C to exit)
+  reload-caddy   Reload Caddy config without downtime
+  restart        Restart the systemd service
+  run            Run dev server directly (no live reload)
+  seed           Seed realistic dev data (drops and recreates DB)
+  seed-bulk      Seed bulk data (~1200 rooms) for perf/UI testing
+  start          Start the systemd service
+  status         Show status of rent + caddy services
+  stop           Stop the systemd service
+  test           Run all tests
+  test-cover     Run tests and open HTML coverage report
+  test-v         Run all tests (verbose)
+  vet            Run go vet static analysis
+```
+
+---
+
+## Production & Operations
+
+The production setup uses Caddy as a reverse proxy with automatic HTTPS (Let's Encrypt),
+and the Go app runs as a systemd service.
+
+### Stack
+
+| Component     | Detail                                   |
+|---------------|------------------------------------------|
+| Domain        | `15158920228.xyz` — A record → this host |
+| TLS           | Let's Encrypt via Caddy (auto-renews)    |
+| Reverse proxy | Caddy `/etc/caddy/Caddyfile`             |
+| App process   | `systemd` unit `rent.service`            |
+| App binding   | `127.0.0.1:8080` (localhost only)        |
+
+### Daily operations
+
+```bash
+# Service status (rent + caddy)
+make status
+
+# Live log stream
+make logs          # app logs
+make logs-caddy    # Caddy / TLS logs
+
+# Restart app (e.g. after config change)
+make restart
+
+# Deploy a new build
+make deploy        # = go build + systemctl restart rent
+
+# Reload Caddy (after editing /etc/caddy/Caddyfile)
+make reload-caddy
+```
+
+### Editing Caddy config
+
+```bash
+sudoedit /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile   # validate first
+make reload-caddy
+```
+
+### Rotating secrets
+
+```bash
+openssl rand -hex 32                 # generate a new SESSION_SECRET
+sudoedit /home/opc/code/rent/.env    # update SESSION_SECRET (and ADMIN_PASSWORD)
+make restart                         # pick up the new values
+```
+
+> Note: rotating `SESSION_SECRET` invalidates all existing login sessions.
+
+### Cert troubleshooting
+
+Caddy auto-renews — nothing to do under normal operation. To force-check:
+
+```bash
+make logs-caddy          # look for renewal or error messages
+sudo caddy validate --config /etc/caddy/Caddyfile
+```
+
+---
+
 ## Troubleshooting
 
 | Symptom                                  | Fix                                                                 |

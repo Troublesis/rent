@@ -11,6 +11,7 @@ import (
 )
 
 type Config struct {
+	AppHost       string
 	AppPort       string
 	AppEnv        string
 	SessionSecret string
@@ -27,6 +28,7 @@ func Load() (Config, error) {
 	_ = godotenv.Load()
 
 	cfg := Config{
+		AppHost:       getEnv("APP_HOST", "0.0.0.0"),
 		AppPort:       getEnv("APP_PORT", "8080"),
 		AppEnv:        getEnv("APP_ENV", "development"),
 		SessionSecret: getEnv("SESSION_SECRET", "dev-session-secret-change-me"),
@@ -49,7 +51,7 @@ func Load() (Config, error) {
 }
 
 func (c Config) Addr() string {
-	return ":" + c.AppPort
+	return c.AppHost + ":" + c.AppPort
 }
 
 func (c Config) IsProduction() bool {

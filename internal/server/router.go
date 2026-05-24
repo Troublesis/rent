@@ -22,12 +22,13 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	}
 
 	router := gin.Default()
+	_ = router.SetTrustedProxies([]string{"127.0.0.1"})
 	router.MaxMultipartMemory = 10 << 20
 	router.Static("/static", "./static")
 	router.Static("/uploads", cfg.UploadDir)
 
 	store := cookie.NewStore([]byte(cfg.SessionSecret))
-	store.Options(sessions.Options{Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	store.Options(sessions.Options{Path: "/", HttpOnly: true, Secure: cfg.IsProduction(), SameSite: http.SameSiteLaxMode})
 	router.Use(sessions.Sessions("rent_session", store))
 
 	renderer := NewTemplateRenderer("templates")
