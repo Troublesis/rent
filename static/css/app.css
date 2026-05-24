@@ -32,7 +32,19 @@ h1, h2, h3, .display-font {
   border-radius: 1rem;
   padding: 0.85rem 1rem;
   color: rgba(245, 245, 244, 0.78);
-  transition: 160ms ease;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.nav-item:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid rgba(201, 141, 56, 0.7);
+  outline-offset: 2px;
 }
 
 .nav-item:hover, .nav-active {
