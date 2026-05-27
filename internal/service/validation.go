@@ -7,15 +7,19 @@ import (
 )
 
 var (
-	namePattern   = regexp.MustCompile(`^[\p{Han}A-Za-z]{2,20}$`)
+	// namePattern accepts Chinese characters, ASCII letters, digits and spaces.
+	// Leading/trailing whitespace is trimmed by validateName before matching;
+	// inner runs of spaces are allowed (e.g. "张 三", "John Smith").
+	namePattern   = regexp.MustCompile(`^[\p{Han}A-Za-z0-9 ]+$`)
 	phonePattern  = regexp.MustCompile(`^1[3-9]\d{9}$`)
-	roomNoPattern = regexp.MustCompile(`^[A-Za-z0-9]{1,10}$`)
+	roomNoPattern = regexp.MustCompile(`^[\p{Han}A-Za-z0-9 ]+$`)
 )
 
 func validateName(value string) (string, error) {
 	trimmed := strings.TrimSpace(value)
-	if !namePattern.MatchString(trimmed) {
-		return "", fmt.Errorf("姓名需填写 2-20 个中文或英文字母")
+	length := len([]rune(trimmed))
+	if length < 2 || length > 20 || !namePattern.MatchString(trimmed) {
+		return "", fmt.Errorf("姓名需为 2-20 位中文、字母、数字或空格")
 	}
 	return trimmed, nil
 }
@@ -33,8 +37,9 @@ func validatePhone(value string, required bool, label string) (string, error) {
 
 func validateRoomNo(value string) (string, error) {
 	trimmed := strings.TrimSpace(value)
-	if !roomNoPattern.MatchString(trimmed) {
-		return "", fmt.Errorf("房间号需为 1-10 位字母或数字")
+	length := len([]rune(trimmed))
+	if length < 1 || length > 20 || !roomNoPattern.MatchString(trimmed) {
+		return "", fmt.Errorf("房间号需为 1-20 位中文、字母、数字或空格")
 	}
 	return trimmed, nil
 }

@@ -46,7 +46,7 @@ const (
 
 type Room struct {
 	ID           uint   `gorm:"primarykey"`
-	RoomNo       string `gorm:"uniqueIndex;not null"`
+	RoomNo       string `gorm:"index;not null"`
 	Title        string `gorm:"not null"`
 	Description  string
 	Price        int

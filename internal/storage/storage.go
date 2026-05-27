@@ -68,10 +68,36 @@ func Open(cfg config.Config, override string) (*gorm.DB, error) {
 
 // Migrate runs GORM AutoMigrate against every registered model.
 func Migrate(db *gorm.DB) error {
+	if err := dropLegacyRoomNoUniqueIndex(db); err != nil {
+		return fmt.Errorf("relax room_no unique index: %w", err)
+	}
 	if err := db.AutoMigrate(AllModels()...); err != nil {
 		return fmt.Errorf("migrate database: %w", err)
 	}
 	return nil
+}
+
+// dropLegacyRoomNoUniqueIndex removes the historical UNIQUE index on
+// rooms.room_no. The model now uses a non-unique index, but GORM AutoMigrate
+// does not downgrade an existing UNIQUE index, so we drop it explicitly. The
+// non-unique index is re-created by AutoMigrate immediately after.
+func dropLegacyRoomNoUniqueIndex(db *gorm.DB) error {
+	if !db.Migrator().HasTable(&model.Room{}) {
+		return nil
+	}
+	var count int64
+	const probe = `SELECT COUNT(*) FROM sqlite_master
+		WHERE type = 'index'
+		  AND tbl_name = 'rooms'
+		  AND name = 'idx_rooms_room_no'
+		  AND sql LIKE 'CREATE UNIQUE%'`
+	if err := db.Raw(probe).Scan(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return nil
+	}
+	return db.Exec("DROP INDEX IF EXISTS idx_rooms_room_no").Error
 }
 
 // Reset drops every managed table and then re-runs the migrations. Intended

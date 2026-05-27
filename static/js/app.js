@@ -335,10 +335,10 @@ const normalizeURLField = (field) => {
 
 const validators = {
   required: (value, label) => value.trim() ? '' : `${label}不能为空`,
-  name: (value) => /^[一-龥A-Za-z]{2,20}$/.test(value.trim()) ? '' : '姓名需填写 2-20 个中文或英文字母',
+  name: (value) => /^[一-龥A-Za-z0-9 ]{2,20}$/.test(value.trim()) ? '' : '姓名需为 2-20 位中文、字母、数字或空格',
   phone: (value) => /^1[3-9]\d{9}$/.test(value.trim()) ? '' : '手机号格式不正确',
   optional_phone: (value) => value.trim() === '' || /^1[3-9]\d{9}$/.test(value.trim()) ? '' : '紧急联系人手机号格式不正确',
-  room_no: (value) => /^[A-Za-z0-9]{1,10}$/.test(value.trim()) ? '' : '房间号需为 1-10 位字母或数字',
+  room_no: (value) => /^[一-龥A-Za-z0-9 ]{1,20}$/.test(value.trim()) ? '' : '房间号需为 1-20 位中文、字母、数字或空格',
   address: (value) => value.trim().length >= 5 ? '' : '地址至少需要 5 个字符',
   positive_integer: (value, label) => /^[1-9]\d*$/.test(value.trim()) ? '' : `${label}需为大于 0 的整数`,
   non_negative_integer: (value, label) => /^\d+$/.test(value.trim()) ? '' : `${label}需为大于或等于 0 的整数`,

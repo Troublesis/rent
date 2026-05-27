@@ -7,7 +7,7 @@
   <title>{{.Title}} · 房东账本</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="{{asset "/static/css/app.css"}}">
 </head>
 <body class="min-h-screen bg-[var(--paper)] text-[var(--ink)]">
   <header class="admin-topbar lg:hidden">
@@ -93,7 +93,7 @@
     </a>
   </nav>
 
-  <script src="/static/js/app.js"></script>
+  <script src="{{asset "/static/js/app.js"}}"></script>
 </body>
 </html>
 {{end}}

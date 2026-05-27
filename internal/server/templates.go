@@ -3,8 +3,10 @@ package server
 import (
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,12 +16,17 @@ import (
 )
 
 type TemplateRenderer struct {
-	root    string
-	funcMap template.FuncMap
+	root         string
+	funcMap      template.FuncMap
+	assetVersion string
 }
 
 func NewTemplateRenderer(root string) *TemplateRenderer {
-	return &TemplateRenderer{root: root, funcMap: template.FuncMap{
+	renderer := &TemplateRenderer{
+		root:         root,
+		assetVersion: computeAssetVersion("static"),
+	}
+	renderer.funcMap = template.FuncMap{
 		"formatFen":          service.FormatFen,
 		"formatYuanInt":      formatYuanInt,
 		"formatYuanIntRaw":   formatYuanIntRaw,
@@ -49,7 +56,51 @@ func NewTemplateRenderer(root string) *TemplateRenderer {
 		"seq":                seq,
 		"progressPercent":    progressPercent,
 		"subInt":             subInt,
-	}}
+		"asset":              renderer.assetURL,
+	}
+	return renderer
+}
+
+// assetURL appends a cache-busting fingerprint to a static asset path so that
+// browsers reload changed JS/CSS without manual hard-refresh. The version is
+// computed once at startup from the latest mtime under ./static.
+func (r *TemplateRenderer) assetURL(path string) string {
+	if r.assetVersion == "" {
+		return path
+	}
+	separator := "?"
+	if strings.Contains(path, "?") {
+		separator = "&"
+	}
+	return path + separator + "v=" + r.assetVersion
+}
+
+// computeAssetVersion walks the static asset directory once and returns a
+// short fingerprint derived from the most recent file mtime. Falls back to
+// the current time if the directory cannot be read (e.g. tests run from an
+// unusual cwd) so that callers still get a non-empty version.
+func computeAssetVersion(root string) string {
+	var latest time.Time
+	err := filepath.WalkDir(root, func(_ string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return nil
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		info, infoErr := entry.Info()
+		if infoErr != nil {
+			return nil
+		}
+		if info.ModTime().After(latest) {
+			latest = info.ModTime()
+		}
+		return nil
+	})
+	if err != nil || latest.IsZero() {
+		latest = time.Now()
+	}
+	return strconv.FormatInt(latest.Unix(), 36)
 }
 
 func (r *TemplateRenderer) Render(c *gin.Context, status int, layout string, page string, data gin.H) {
