@@ -886,8 +886,8 @@ input[type="date"].input::-webkit-calendar-picker-indicator {
 }
 
 .payments-table .col-actions {
-  width: 180px;
-  min-width: 180px;
+  width: 220px;
+  min-width: 220px;
 }
 
 .payments-table .col-note {

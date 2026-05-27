@@ -62,10 +62,10 @@ const (
 )
 
 func adminTenantViewFromQuery(c *gin.Context) string {
-	if c.Query("view") == adminTenantViewCard {
-		return adminTenantViewCard
+	if c.Query("view") == adminTenantViewList {
+		return adminTenantViewList
 	}
-	return adminTenantViewList
+	return adminTenantViewCard
 }
 
 func tenantStatusQueryValue(filter repository.TenantFilter) string {
@@ -410,8 +410,8 @@ func tenantFilterFromQuery(c *gin.Context) repository.TenantFilter {
 	return repository.TenantFilter{
 		Status:  tenantStatusFromQuery(c.Query("status")),
 		Query:   strings.TrimSpace(c.Query("q")),
-		SortBy:  c.DefaultQuery("sort_by", "name"),
-		SortDir: c.DefaultQuery("sort_dir", "asc"),
+		SortBy:  c.DefaultQuery("sort_by", "checkin_date"),
+		SortDir: c.DefaultQuery("sort_dir", "desc"),
 	}
 }
 
