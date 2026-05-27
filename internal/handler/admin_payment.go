@@ -202,6 +202,10 @@ func (h *AdminPaymentHandler) List(c *gin.Context) {
 		return
 	}
 	if isHTMXRequest(c) {
+		if page, _ := data["Page"].(int); page > 1 {
+			h.renderer.RenderPartial(c, http.StatusOK, "admin/payments.html", "admin_payment_load_more", data)
+			return
+		}
 		h.renderer.RenderPartial(c, http.StatusOK, "admin/payments.html", "admin_payment_list", data)
 		return
 	}

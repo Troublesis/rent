@@ -176,7 +176,7 @@
           <th class="payment-sticky-right col-actions px-5 py-4">操作</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-stone-200/80">
+      <tbody id="payment-table-body" class="divide-y divide-stone-200/80">
         {{range .Rows}}
           {{template "admin_payment_row" .}}
         {{else}}
@@ -186,7 +186,7 @@
     </table>
   </div>
 
-  <div class="md:hidden">
+  <div id="payment-mobile-list" class="md:hidden">
     {{range .Rows}}
       {{template "admin_payment_mobile_card" .}}
     {{else}}
@@ -195,13 +195,25 @@
   </div>
 
   {{if .HasMore}}
-    <div class="cursor-pointer border-t border-stone-200/70 p-4 text-center text-sm text-stone-500"
-         hx-get="{{.NextPageURL}}" hx-trigger="revealed" hx-target="this" hx-swap="outerHTML"
-         hx-select="#payment-list-section">下拉自动加载…</div>
+    <div id="payment-load-more"
+         class="cursor-pointer border-t border-stone-200/70 p-4 text-center text-sm text-stone-500"
+         hx-get="{{.NextPageURL}}" hx-trigger="revealed" hx-target="this" hx-swap="outerHTML">下拉自动加载…</div>
   {{else if .Rows}}
-    <div class="border-t border-stone-200/70 p-4 text-center text-xs text-stone-500">已显示全部 {{.Total}} 条记录</div>
+    <div id="payment-load-more" class="border-t border-stone-200/70 p-4 text-center text-xs text-stone-500">已显示全部 {{.Total}} 条记录</div>
   {{end}}
 </section>
+{{end}}
+
+{{define "admin_payment_load_more"}}
+{{if .HasMore}}
+<div id="payment-load-more"
+     class="cursor-pointer border-t border-stone-200/70 p-4 text-center text-sm text-stone-500"
+     hx-get="{{.NextPageURL}}" hx-trigger="revealed" hx-target="this" hx-swap="outerHTML">下拉自动加载…</div>
+{{else}}
+<div id="payment-load-more" class="border-t border-stone-200/70 p-4 text-center text-xs text-stone-500">已显示全部 {{.Total}} 条记录</div>
+{{end}}
+<tbody id="payment-table-body" hx-swap-oob="beforeend">{{range .Rows}}{{template "admin_payment_row" .}}{{end}}</tbody>
+<div id="payment-mobile-list" hx-swap-oob="beforeend">{{range .Rows}}{{template "admin_payment_mobile_card" .}}{{end}}</div>
 {{end}}
 
 {{define "admin_payment_mobile_card"}}
