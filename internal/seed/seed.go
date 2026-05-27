@@ -166,8 +166,8 @@ type tenantSpec struct {
 	CheckinDayShift  int
 	LeaseMonths      int // 0 → no lease end date
 	LeaseEndOverride *time.Time
-	RentPriceYn      int  // overrides room rent price when > 0
-	DepositYn        int  // overrides room deposit when > 0
+	RentPriceYn      int // overrides room rent price when > 0
+	DepositYn        int // overrides room deposit when > 0
 	RentType         string
 	PaymentTerms     string
 	Notes            string

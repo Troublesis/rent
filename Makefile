@@ -19,7 +19,7 @@ run: ## Run dev server directly (no live reload)
 	go run $(CMD)
 
 fmt: ## Format all Go source files
-	gofmt -w ./...
+	gofmt -w .
 
 vet: ## Run go vet static analysis
 	go vet ./...
