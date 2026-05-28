@@ -208,11 +208,10 @@
 {{if .HasMore}}
 <div id="payment-load-more"
      class="cursor-pointer border-t border-stone-200/70 p-4 text-center text-sm text-stone-500"
-     hx-get="{{.NextPageURL}}" hx-trigger="revealed" hx-target="this" hx-swap="outerHTML">下拉自动加载…</div>
+     hx-get="{{.NextPageURL}}" hx-trigger="revealed" hx-target="this" hx-swap="outerHTML">下拉自动加载…<table hidden aria-hidden="true"><tbody hx-swap-oob="beforeend:#payment-table-body">{{range .Rows}}{{template "admin_payment_row" .}}{{end}}</tbody></table></div>
 {{else}}
-<div id="payment-load-more" class="border-t border-stone-200/70 p-4 text-center text-xs text-stone-500">已显示全部 {{.Total}} 条记录</div>
+<div id="payment-load-more" class="border-t border-stone-200/70 p-4 text-center text-xs text-stone-500">已显示全部 {{.Total}} 条记录<table hidden aria-hidden="true"><tbody hx-swap-oob="beforeend:#payment-table-body">{{range .Rows}}{{template "admin_payment_row" .}}{{end}}</tbody></table></div>
 {{end}}
-<tbody hx-swap-oob="beforeend:#payment-table-body">{{range .Rows}}{{template "admin_payment_row" .}}{{end}}</tbody>
 <div hx-swap-oob="beforeend:#payment-mobile-list">{{range .Rows}}{{template "admin_payment_mobile_card" .}}{{end}}</div>
 {{end}}
 
