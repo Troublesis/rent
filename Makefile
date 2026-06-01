@@ -1,8 +1,10 @@
 BINARY  := rent-app
 CMD     := ./cmd/server
 SERVICE := rent
+GOBIN   := $(shell go env GOPATH)/bin
+AIR     := $(GOBIN)/air
 
-.PHONY: help dev build run stop restart logs status fmt vet test test-cover seed seed-bulk
+.PHONY: help dev build run stop restart logs status fmt vet test test-cover seed seed-bulk install-tools
 
 # ── default ────────────────────────────────────────────────────────────────────
 
@@ -12,8 +14,14 @@ help:
 
 # ── development ────────────────────────────────────────────────────────────────
 
-dev: ## Start dev server with live reload (requires: go install github.com/air-verse/air@latest)
-	air
+dev: $(AIR) ## Start dev server with live reload (auto-installs air if missing)
+	$(AIR)
+
+install-tools: $(AIR) ## Install dev tooling (air for live reload)
+
+$(AIR):
+	@echo "Installing air to $(GOBIN)..."
+	@go install github.com/air-verse/air@latest
 
 run: ## Run dev server directly (no live reload)
 	go run $(CMD)
