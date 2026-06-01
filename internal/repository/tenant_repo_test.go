@@ -23,7 +23,8 @@ func TestTenantRepositoryListTenantsSearchesTenantAndRoom(t *testing.T) {
 		{name: "phone", query: "3002", want: "李四"},
 		{name: "room number", query: "T101", want: "张三"},
 		{name: "room title", query: "安静", want: "李四"},
-		{name: "search option label", query: "张三 - T101 - 13800003001", want: "张三"},
+		{name: "legacy search option label", query: "张三 - T101 - 13800003001", want: "张三"},
+		{name: "search option label", query: "张三 · T101 · 向阳主卧", want: "张三"},
 	}
 
 	for _, tt := range tests {

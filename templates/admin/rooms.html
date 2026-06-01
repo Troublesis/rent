@@ -5,7 +5,7 @@
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h3 class="text-2xl font-black">房源管理</h3>
-          <p class="mt-2 text-sm text-stone-600">按房号、标题或状态筛选房源，左右滑动切换列表、网格或卡片。</p>
+          <p class="mt-2 text-sm text-stone-600">按房号、标题或状态筛选房源，点击按钮切换列表或卡片。</p>
         </div>
         <a class="btn-primary text-center" href="/admin/rooms/new">新增房源</a>
       </div>
@@ -45,16 +45,21 @@
 {{end}}
 
 {{define "admin_room_view_switcher"}}
-<div class="mt-4 flex justify-end pr-2 text-xs font-black text-stone-400" aria-hidden="true">← →</div>
+<div class="mt-4 flex justify-end">
+  <div class="admin-view-toggle" role="group" aria-label="切换浏览方式">
+    <a class="admin-view-toggle-option {{if eq .ViewMode "list"}}admin-view-toggle-active{{end}}" href="{{.ListViewURL}}" data-room-view-link data-room-view-value="list"{{if eq .ViewMode "list"}} aria-current="page"{{end}}>列表</a>
+    <a class="admin-view-toggle-option {{if eq .ViewMode "card"}}admin-view-toggle-active{{end}}" href="{{.CardViewURL}}" data-room-view-link data-room-view-value="card"{{if eq .ViewMode "card"}} aria-current="page"{{end}}>卡片</a>
+  </div>
+</div>
 {{end}}
 
 {{define "admin_room_results"}}
-<section class="mt-2 overflow-hidden">
-  <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth pb-3" data-room-view-swipe>
-    <div class="w-full shrink-0 snap-start" data-room-view-pane="list">
+<section class="mt-2">
+  <div data-room-view-panes>
+    <div data-room-view-pane="list" {{if ne .ViewMode "list"}}hidden{{end}}>
       {{template "admin_room_list_items" .}}
     </div>
-    <div class="w-full shrink-0 snap-start" data-room-view-pane="card">
+    <div data-room-view-pane="card" {{if ne .ViewMode "card"}}hidden{{end}}>
       <div class="admin-room-card-grid">
         {{template "admin_room_card_items" .}}
       </div>

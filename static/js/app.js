@@ -42,187 +42,99 @@ document.addEventListener('click', (event) => {
   if (panel) panel.classList.toggle('hidden')
 })
 
-const roomViewTimers = new WeakMap()
-
-const roomViewRoots = (scope) => {
-  const current = scope?.matches?.('[data-room-view-root]') ? [scope] : []
-  const nested = scope?.querySelectorAll ? Array.from(scope.querySelectorAll('[data-room-view-root]')) : []
-  return [...current, ...nested]
-}
-
-const roomURLWithView = (href, view) => {
-  try {
-    const url = new URL(href, window.location.origin)
-    if (url.pathname !== '/admin/rooms') return href
-    url.searchParams.set('view', view)
-    return `${url.pathname}${url.search}${url.hash}`
-  } catch {
-    return href
+const buildViewToggle = ({ pathname, rootSelector, paneAttr, linkAttr, valueAttr, rootDataKey }) => {
+  const viewRoots = (scope) => {
+    const current = scope?.matches?.(rootSelector) ? [scope] : []
+    const nested = scope?.querySelectorAll ? Array.from(scope.querySelectorAll(rootSelector)) : []
+    return [...current, ...nested]
   }
-}
 
-const syncRoomFilterLinks = (root, view) => {
-  root.querySelectorAll('a[href^="/admin/rooms"]').forEach((link) => {
-    if (link.matches('[data-room-view-link]')) return
-    const nextHref = roomURLWithView(link.getAttribute('href'), view)
-    link.setAttribute('href', nextHref)
-    if (link.hasAttribute('hx-get')) link.setAttribute('hx-get', nextHref)
-  })
-}
-
-const setRoomView = (root, view, replaceURL = false) => {
-  if (!root || !view) return
-  root.dataset.roomView = view
-  root.querySelectorAll('[data-room-view-link]').forEach((link) => {
-    const active = link.dataset.roomViewValue === view
-    link.classList.toggle('public-room-view-active', active)
-    if (active) {
-      link.setAttribute('aria-current', 'page')
-    } else {
-      link.removeAttribute('aria-current')
+  const urlWithView = (href, view) => {
+    try {
+      const url = new URL(href, window.location.origin)
+      if (url.pathname !== pathname) return href
+      url.searchParams.set('view', view)
+      return `${url.pathname}${url.search}${url.hash}`
+    } catch {
+      return href
     }
-  })
-  const viewInput = root.querySelector('input[name="view"]')
-  if (viewInput) viewInput.value = view
-  syncRoomFilterLinks(root, view)
-  const activeLink = root.querySelector(`[data-room-view-link][data-room-view-value="${view}"]`)
-  if (replaceURL && activeLink?.href && window.history?.replaceState) {
-    window.history.replaceState(null, '', activeLink.href)
   }
-}
 
-const scrollToRoomView = (root, view, behavior = 'auto') => {
-  const swipe = root?.querySelector('[data-room-view-swipe]')
-  const pane = root?.querySelector(`[data-room-view-pane="${view}"]`)
-  if (!swipe || !pane) return
-  swipe.scrollTo({ left: pane.offsetLeft, behavior })
-}
-
-const initRoomViews = (scope = document) => {
-  roomViewRoots(scope).forEach((root) => {
-    if (root.dataset.roomViewReady === 'true') return
-    root.dataset.roomViewReady = 'true'
-    const initialView = root.dataset.roomView || 'list'
-    window.requestAnimationFrame(() => scrollToRoomView(root, initialView))
-    const swipe = root.querySelector('[data-room-view-swipe]')
-    swipe?.addEventListener('scroll', () => {
-      window.clearTimeout(roomViewTimers.get(root))
-      const timer = window.setTimeout(() => {
-        const panes = Array.from(root.querySelectorAll('[data-room-view-pane]'))
-        const nearestPane = panes.reduce((nearest, pane) => {
-          if (!nearest) return pane
-          const currentDistance = Math.abs(pane.offsetLeft - swipe.scrollLeft)
-          const nearestDistance = Math.abs(nearest.offsetLeft - swipe.scrollLeft)
-          return currentDistance < nearestDistance ? pane : nearest
-        }, null)
-        setRoomView(root, nearestPane?.dataset.roomViewPane || 'list', true)
-      }, 120)
-      roomViewTimers.set(root, timer)
+  const syncFilterLinks = (root, view) => {
+    root.querySelectorAll(`a[href^="${pathname}"]`).forEach((link) => {
+      if (link.matches(`[${linkAttr}]`)) return
+      const nextHref = urlWithView(link.getAttribute('href'), view)
+      link.setAttribute('href', nextHref)
+      if (link.hasAttribute('hx-get')) link.setAttribute('hx-get', nextHref)
     })
+  }
+
+  const showPane = (root, view) => {
+    root.querySelectorAll(`[${paneAttr}]`).forEach((pane) => {
+      const active = pane.getAttribute(paneAttr) === view
+      pane.hidden = !active
+    })
+  }
+
+  const setView = (root, view, replaceURL = false) => {
+    if (!root || !view) return
+    root.dataset[rootDataKey] = view
+    root.querySelectorAll(`[${linkAttr}]`).forEach((link) => {
+      const active = link.getAttribute(valueAttr) === view
+      link.classList.toggle('admin-view-toggle-active', active)
+      if (active) link.setAttribute('aria-current', 'page')
+      else link.removeAttribute('aria-current')
+    })
+    const viewInput = root.querySelector('input[name="view"]')
+    if (viewInput) viewInput.value = view
+    syncFilterLinks(root, view)
+    showPane(root, view)
+    if (replaceURL && window.history?.replaceState) {
+      const activeLink = root.querySelector(`[${linkAttr}][${valueAttr}="${view}"]`)
+      window.history.replaceState(null, '', activeLink?.href || urlWithView(window.location.href, view))
+    }
+  }
+
+  const init = (scope = document) => {
+    viewRoots(scope).forEach((root) => {
+      if (root.dataset[`${rootDataKey}Ready`] === 'true') return
+      root.dataset[`${rootDataKey}Ready`] = 'true'
+      setView(root, root.dataset[rootDataKey] || 'list', false)
+    })
+  }
+
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest(`[${linkAttr}]`)
+    if (!link) return
+    const root = link.closest(rootSelector)
+    if (!root) return
+    event.preventDefault()
+    setView(root, link.getAttribute(valueAttr) || 'list', true)
   })
+
+  return { init }
 }
 
-document.addEventListener('click', (event) => {
-  const link = event.target.closest('[data-room-view-link]')
-  if (!link) return
-  const root = link.closest('[data-room-view-root]')
-  if (!root) return
-  event.preventDefault()
-  const nextView = link.dataset.roomViewValue || 'list'
-  setRoomView(root, nextView, true)
-  scrollToRoomView(root, nextView, 'smooth')
+const roomViewToggle = buildViewToggle({
+  pathname: '/admin/rooms',
+  rootSelector: '[data-room-view-root]',
+  paneAttr: 'data-room-view-pane',
+  linkAttr: 'data-room-view-link',
+  valueAttr: 'data-room-view-value',
+  rootDataKey: 'roomView',
 })
 
-const tenantViewTimers = new WeakMap()
-
-const tenantViewRoots = (scope) => {
-  const current = scope?.matches?.('[data-tenant-view-root]') ? [scope] : []
-  const nested = scope?.querySelectorAll ? Array.from(scope.querySelectorAll('[data-tenant-view-root]')) : []
-  return [...current, ...nested]
-}
-
-const tenantURLWithView = (href, view) => {
-  try {
-    const url = new URL(href, window.location.origin)
-    if (url.pathname !== '/admin/tenants') return href
-    url.searchParams.set('view', view)
-    return `${url.pathname}${url.search}${url.hash}`
-  } catch {
-    return href
-  }
-}
-
-const syncTenantFilterLinks = (root, view) => {
-  root.querySelectorAll('a[href^="/admin/tenants"]').forEach((link) => {
-    if (link.matches('[data-tenant-view-link]')) return
-    const nextHref = tenantURLWithView(link.getAttribute('href'), view)
-    link.setAttribute('href', nextHref)
-    if (link.hasAttribute('hx-get')) link.setAttribute('hx-get', nextHref)
-  })
-}
-
-const setTenantView = (root, view, replaceURL = false) => {
-  if (!root || !view) return
-  root.dataset.tenantView = view
-  root.querySelectorAll('[data-tenant-view-link]').forEach((link) => {
-    const active = link.dataset.tenantViewValue === view
-    link.classList.toggle('public-room-view-active', active)
-    if (active) {
-      link.setAttribute('aria-current', 'page')
-    } else {
-      link.removeAttribute('aria-current')
-    }
-  })
-  const viewInput = root.querySelector('input[name="view"]')
-  if (viewInput) viewInput.value = view
-  syncTenantFilterLinks(root, view)
-  const activeLink = root.querySelector(`[data-tenant-view-link][data-tenant-view-value="${view}"]`)
-  if (replaceURL && window.history?.replaceState) {
-    window.history.replaceState(null, '', activeLink?.href || tenantURLWithView(window.location.href, view))
-  }
-}
-
-const scrollToTenantView = (root, view, behavior = 'auto') => {
-  const swipe = root?.querySelector('[data-tenant-view-swipe]')
-  const pane = root?.querySelector(`[data-tenant-view-pane="${view}"]`)
-  if (!swipe || !pane) return
-  swipe.scrollTo({ left: pane.offsetLeft, behavior })
-}
-
-const initTenantViews = (scope = document) => {
-  tenantViewRoots(scope).forEach((root) => {
-    if (root.dataset.tenantViewReady === 'true') return
-    root.dataset.tenantViewReady = 'true'
-    const initialView = root.dataset.tenantView || 'list'
-    window.requestAnimationFrame(() => scrollToTenantView(root, initialView))
-    const swipe = root.querySelector('[data-tenant-view-swipe]')
-    swipe?.addEventListener('scroll', () => {
-      window.clearTimeout(tenantViewTimers.get(root))
-      const timer = window.setTimeout(() => {
-        const panes = Array.from(root.querySelectorAll('[data-tenant-view-pane]'))
-        const nearestPane = panes.reduce((nearest, pane) => {
-          if (!nearest) return pane
-          const currentDistance = Math.abs(pane.offsetLeft - swipe.scrollLeft)
-          const nearestDistance = Math.abs(nearest.offsetLeft - swipe.scrollLeft)
-          return currentDistance < nearestDistance ? pane : nearest
-        }, null)
-        setTenantView(root, nearestPane?.dataset.tenantViewPane || 'list', true)
-      }, 120)
-      tenantViewTimers.set(root, timer)
-    })
-  })
-}
-
-document.addEventListener('click', (event) => {
-  const link = event.target.closest('[data-tenant-view-link]')
-  if (!link) return
-  const root = link.closest('[data-tenant-view-root]')
-  if (!root) return
-  event.preventDefault()
-  const nextView = link.dataset.tenantViewValue || 'list'
-  setTenantView(root, nextView, true)
-  scrollToTenantView(root, nextView, 'smooth')
+const tenantViewToggle = buildViewToggle({
+  pathname: '/admin/tenants',
+  rootSelector: '[data-tenant-view-root]',
+  paneAttr: 'data-tenant-view-pane',
+  linkAttr: 'data-tenant-view-link',
+  valueAttr: 'data-tenant-view-value',
+  rootDataKey: 'tenantView',
 })
+
+const initRoomViews = (scope) => roomViewToggle.init(scope)
+const initTenantViews = (scope) => tenantViewToggle.init(scope)
 
 document.addEventListener('htmx:afterSwap', (event) => {
   initRoomViews(event.target)
