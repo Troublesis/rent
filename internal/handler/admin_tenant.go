@@ -39,6 +39,7 @@ type tenantAPIItem struct {
 	Phone             string `json:"phone"`
 	RoomID            uint   `json:"room_id"`
 	RoomNo            string `json:"room_no"`
+	RoomTitle         string `json:"room_title"`
 	CheckinDate       string `json:"checkin_date"`
 	LeaseEndDate      string `json:"lease_end_date"`
 	OverdueDays       int    `json:"overdue_days"`
@@ -493,6 +494,7 @@ func tenantToAPIItem(tenant model.Tenant, now time.Time) tenantAPIItem {
 		Phone:             tenant.Phone,
 		RoomID:            tenant.RoomID,
 		RoomNo:            tenant.Room.RoomNo,
+		RoomTitle:         tenant.Room.Title,
 		CheckinDate:       formatAPIDate(tenant.CheckinDate),
 		LeaseEndDate:      formatOptionalAPIDate(tenant.LeaseEndDate),
 		OverdueDays:       overdueDays,

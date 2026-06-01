@@ -696,8 +696,8 @@ const initRoomComboBoxes = (scope = document) => {
 
 initRoomComboBoxes()
 
-const tenantSearchOptionLabel = (tenant) => `${tenant.name || ''} - ${tenant.room_no || ''} - ${tenant.phone || ''}`
-const tenantListSearchText = (tenant) => `${tenant.name || ''} ${tenant.room_no || ''} ${tenant.phone || ''} ${tenantSearchOptionLabel(tenant)}`.toLowerCase()
+const tenantSearchOptionLabel = (tenant) => `${tenant.name || ''} · ${tenant.room_no || ''} · ${tenant.room_title || ''}`
+const tenantListSearchText = (tenant) => `${tenant.name || ''} ${tenant.room_no || ''} ${tenant.room_title || ''} ${tenant.phone || ''} ${tenantSearchOptionLabel(tenant)}`.toLowerCase()
 
 const tenantSearchOptionsURL = (status) => {
   const params = new URLSearchParams()
