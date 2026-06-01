@@ -350,7 +350,8 @@ const loadActiveTenants = () => {
   return activeTenantsRequest
 }
 
-const tenantSearchText = (tenant) => `${tenant.name || ''} ${tenant.room_no || ''} ${tenant.phone || ''}`.toLowerCase()
+const tenantComboOptionLabel = (tenant) => `${tenant.name || ''} · ${tenant.room_no || ''} · ${tenant.room_title || ''}`
+const tenantSearchText = (tenant) => `${tenant.name || ''} ${tenant.room_no || ''} ${tenant.room_title || ''} ${tenant.phone || ''} ${tenantComboOptionLabel(tenant)}`.toLowerCase()
 
 const initTenantComboBox = (root) => {
   const input = root.querySelector('[data-tenant-input]')
@@ -370,7 +371,7 @@ const initTenantComboBox = (root) => {
   }
   const selectTenant = (tenant) => {
     hidden.value = tenant.id || ''
-    input.value = tenant.id ? tenant.name : ''
+    input.value = tenant.id ? tenantComboOptionLabel(tenant) : ''
     showFieldError(hidden, '')
     hidden.dispatchEvent(new Event('change', { bubbles: true }))
     close()
@@ -378,7 +379,7 @@ const initTenantComboBox = (root) => {
   const updateFiltered = () => {
     const query = input.value.trim().toLowerCase()
     filtered = tenants.filter((tenant) => query === '' || tenantSearchText(tenant).includes(query))
-    if (allowAll) filtered = [{ id: '', name: '全部租客', room_no: '', phone: '' }, ...filtered]
+    if (allowAll) filtered = [{ id: '', name: '全部租客', room_no: '', room_title: '', phone: '' }, ...filtered]
     activeIndex = Math.min(activeIndex, Math.max(filtered.length - 1, 0))
   }
   const render = () => {
@@ -394,7 +395,7 @@ const initTenantComboBox = (root) => {
       : ''
     list.innerHTML = visible.map((tenant, index) => {
       const active = index === activeIndex ? 'bg-amber-50 text-amber-900' : 'hover:bg-stone-50'
-      const label = tenant.id ? `${escapeHTML(tenant.name)} — ${escapeHTML(tenant.room_no)} — ${escapeHTML(tenant.phone)}` : '全部租客'
+      const label = tenant.id ? escapeHTML(tenantComboOptionLabel(tenant)) : '全部租客'
       return `<button class="block w-full px-4 py-3 text-left text-sm font-semibold ${active}" type="button" data-tenant-option="${index}">${label}</button>`
     }).join('') + more
   }
