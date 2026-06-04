@@ -1,0 +1,83 @@
+{{define "payment_edit_panel"}}
+<tr class="bg-amber-50/60" data-payment-edit-panel="{{.Row.ID}}">
+  <td class="px-5 py-4" colspan="6">
+    <form class="flex flex-col gap-4 md:flex-row md:items-end md:gap-3"
+          method="post" action="/admin/payments/{{.Row.ID}}"
+          hx-post="/admin/payments/{{.Row.ID}}"
+          hx-target="#payment-list-section" hx-select="#payment-list-section"
+          hx-swap="outerHTML" hx-push-url="false"
+          data-payment-edit-form>
+      <input type="hidden" name="return_to" value="/admin/payments">
+      <label class="block md:w-40">
+        <span class="text-sm font-bold text-stone-600">金额（元） <span class="text-red-600">*</span></span>
+        <input class="input mt-1" name="amount" inputmode="decimal" required
+               value="{{.Row.AmountYuan}}" data-validate="positive_amount" data-label="金额">
+      </label>
+      <label class="block md:min-w-[200px] md:flex-1">
+        <span class="text-sm font-bold text-stone-600">备注 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
+        <input class="input mt-1" name="note" value="{{.Row.Note}}" maxlength="1000"
+               data-validate="notes" data-label="备注">
+      </label>
+      <div class="flex items-end gap-2">
+        {{if .Row.Excluded}}
+          <form method="post" action="/admin/payments/{{.Row.ID}}/exclusion" class="contents"
+                hx-post="/admin/payments/{{.Row.ID}}/exclusion"
+                hx-target="#payment-list-section" hx-select="#payment-list-section"
+                hx-swap="outerHTML" hx-push-url="false">
+            <input type="hidden" name="excluded" value="false">
+            <input type="hidden" name="return_to" value="/admin/payments">
+            <button class="btn-secondary whitespace-nowrap" type="submit">恢复记录</button>
+          </form>
+        {{else}}
+          <button class="btn-danger whitespace-nowrap" type="button"
+                  data-payment-exclude="{{.Row.ID}}">不再记录</button>
+        {{end}}
+        <button class="btn-primary whitespace-nowrap" type="submit">保存</button>
+        <button class="btn-secondary whitespace-nowrap" type="button"
+                data-payment-edit-cancel>取消</button>
+      </div>
+    </form>
+  </td>
+</tr>
+{{end}}
+
+{{define "payment_edit_panel_mobile"}}
+<div class="bg-amber-50/60 px-4 py-4" data-payment-edit-panel="{{.Row.ID}}">
+  <form class="space-y-3"
+        method="post" action="/admin/payments/{{.Row.ID}}"
+        hx-post="/admin/payments/{{.Row.ID}}"
+        hx-target="#payment-list-section" hx-select="#payment-list-section"
+        hx-swap="outerHTML" hx-push-url="false"
+        data-payment-edit-form>
+    <input type="hidden" name="return_to" value="/admin/payments">
+    <label class="block">
+      <span class="text-sm font-bold text-stone-600">金额（元） <span class="text-red-600">*</span></span>
+      <input class="input mt-1" name="amount" inputmode="decimal" required
+             value="{{.Row.AmountYuan}}" data-validate="positive_amount" data-label="金额">
+    </label>
+    <label class="block">
+      <span class="text-sm font-bold text-stone-600">备注 <span class="rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-500">选填</span></span>
+      <input class="input mt-1" name="note" value="{{.Row.Note}}" maxlength="1000"
+             data-validate="notes" data-label="备注">
+    </label>
+    <div class="flex gap-2">
+      {{if .Row.Excluded}}
+        <form method="post" action="/admin/payments/{{.Row.ID}}/exclusion" class="contents"
+              hx-post="/admin/payments/{{.Row.ID}}/exclusion"
+              hx-target="#payment-list-section" hx-select="#payment-list-section"
+              hx-swap="outerHTML" hx-push-url="false">
+          <input type="hidden" name="excluded" value="false">
+          <input type="hidden" name="return_to" value="/admin/payments">
+          <button class="btn-secondary" type="submit">恢复记录</button>
+        </form>
+      {{else}}
+        <button class="btn-danger" type="button"
+                data-payment-exclude="{{.Row.ID}}">不再记录</button>
+      {{end}}
+      <button class="btn-primary" type="submit">保存</button>
+      <button class="btn-secondary" type="button"
+              data-payment-edit-cancel>取消</button>
+    </div>
+  </form>
+</div>
+{{end}}

@@ -36,10 +36,12 @@ type paymentRow struct {
 	TypeLabel         string
 	AmountText        string
 	AmountFen         int
+	AmountYuan        string
 	PayDate           time.Time
 	PayDateLabel      string
 	NextDueLabel      string
 	Paid              bool
+	PaidAtLabel       string
 	StatusLabel       string
 	Excluded          bool
 	ExclusionNote     string
@@ -319,6 +321,10 @@ func paymentToRow(payment model.Payment, now time.Time) paymentRow {
 	if model.RentTypeOrDefault(payment.Tenant.RentType) == model.RentTypeDaily {
 		nextLabel = "每日"
 	}
+	paidAtLabel := ""
+	if payment.Paid && payment.PaidAt != nil {
+		paidAtLabel = formatDisplayDate(*payment.PaidAt) + "收款"
+	}
 	return paymentRow{
 		ID:                payment.ID,
 		TenantID:          payment.TenantID,
@@ -331,10 +337,12 @@ func paymentToRow(payment model.Payment, now time.Time) paymentRow {
 		TypeLabel:         paymentTypeLabelText(payment.Type),
 		AmountFen:         payment.Amount,
 		AmountText:        service.FormatFen(payment.Amount),
+		AmountYuan:        service.FormatFenAsInputValue(payment.Amount),
 		PayDate:           payment.PayDate,
 		PayDateLabel:      formatDisplayDate(payment.PayDate),
 		NextDueLabel:      nextLabel,
 		Paid:              payment.Paid,
+		PaidAtLabel:       paidAtLabel,
 		StatusLabel:       paymentStatusLabelText(payment.Paid),
 		Excluded:          payment.Excluded,
 		ExclusionNote:     payment.ExclusionNote,
@@ -587,6 +595,42 @@ func (h *AdminPaymentHandler) UpdateExclusion(c *gin.Context) {
 	h.respondAfterPaymentAction(c, "")
 }
 
+func (h *AdminPaymentHandler) Edit(c *gin.Context) {
+	id, ok := parseUintParam(c, "id")
+	if !ok {
+		return
+	}
+	payment, err := h.paymentService.GetPayment(id)
+	if err != nil {
+		c.String(http.StatusNotFound, "未找到收款记录")
+		return
+	}
+	row := paymentToRow(*payment, time.Now())
+	templateName := "payment_edit_panel"
+	if c.Query("mobile") == "1" {
+		templateName = "payment_edit_panel_mobile"
+	}
+	h.renderer.RenderPartial(c, http.StatusOK, "components/payment_edit_panel.html", templateName, gin.H{
+		"Row": row,
+	})
+}
+
+func (h *AdminPaymentHandler) Update(c *gin.Context) {
+	id, ok := parseUintParam(c, "id")
+	if !ok {
+		return
+	}
+	input := service.PaymentEditInput{
+		AmountYuan: c.PostForm("amount"),
+		Note:       c.PostForm("note"),
+	}
+	if _, err := h.paymentService.UpdatePaymentFields(id, input); err != nil {
+		h.respondAfterPaymentAction(c, userFacingError(err))
+		return
+	}
+	h.respondAfterPaymentAction(c, "")
+}
+
 func (h *AdminPaymentHandler) respondAfterPaymentAction(c *gin.Context, errMsg string) {
 	if isHTMXRequest(c) {
 		hydrateQueryFromHXCurrentURL(c)
@@ -597,6 +641,7 @@ func (h *AdminPaymentHandler) respondAfterPaymentAction(c *gin.Context, errMsg s
 		}
 		if errMsg != "" {
 			data["Error"] = errMsg
+			c.Header("X-Payment-Error", errMsg)
 		}
 		h.renderer.RenderPartial(c, http.StatusOK, "admin/payments.html", "admin_payment_list", data)
 		return

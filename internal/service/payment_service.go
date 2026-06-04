@@ -17,6 +17,11 @@ type PaymentInput struct {
 	Note       string
 }
 
+type PaymentEditInput struct {
+	AmountYuan string
+	Note       string
+}
+
 type PaymentListItem struct {
 	Payment        model.Payment
 	NextDueDate    time.Time
@@ -135,6 +140,10 @@ func (s *PaymentService) TogglePaid(id uint) error {
 	if updatedPayment.Paid {
 		updatedPayment.Excluded = false
 		updatedPayment.ExclusionNote = ""
+		now := time.Now()
+		updatedPayment.PaidAt = &now
+	} else {
+		updatedPayment.PaidAt = nil
 	}
 	return s.paymentRepo.UpdatePayment(&updatedPayment)
 }
@@ -143,9 +152,6 @@ func (s *PaymentService) SetExcluded(id uint, excluded bool, note string) error 
 	payment, err := s.paymentRepo.GetPayment(id)
 	if err != nil {
 		return err
-	}
-	if excluded && payment.Tenant.Status != model.TenantStatusCheckout {
-		return fmt.Errorf("只有已退租租客的付款记录可以不再记录")
 	}
 	exclusionNote, err := validateNotes(note, "排除备注")
 	if err != nil {
@@ -159,6 +165,35 @@ func (s *PaymentService) SetExcluded(id uint, excluded bool, note string) error 
 		updatedPayment.ExclusionNote = ""
 	}
 	return s.paymentRepo.UpdatePayment(&updatedPayment)
+}
+
+func (s *PaymentService) UpdatePaymentFields(id uint, input PaymentEditInput) (*model.Payment, error) {
+	payment, err := s.paymentRepo.GetPayment(id)
+	if err != nil {
+		return nil, err
+	}
+	amount, err := ParseYuanToFen(input.AmountYuan)
+	if err != nil {
+		return nil, fmt.Errorf("收款金额不正确：%w", err)
+	}
+	if amount <= 0 {
+		return nil, fmt.Errorf("收款金额需大于 0")
+	}
+	note, err := validateNotes(input.Note, "备注")
+	if err != nil {
+		return nil, err
+	}
+	updatedPayment := *payment
+	updatedPayment.Amount = amount
+	updatedPayment.Note = note
+	if err := s.paymentRepo.UpdatePayment(&updatedPayment); err != nil {
+		return nil, err
+	}
+	return &updatedPayment, nil
+}
+
+func (s *PaymentService) GetPayment(id uint) (*model.Payment, error) {
+	return s.paymentRepo.GetPayment(id)
 }
 
 func (s *PaymentService) SumPaidByMonth(year int, month time.Month) (int, error) {

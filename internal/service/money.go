@@ -78,6 +78,18 @@ func FormatFenAsYuanInt(fen int) string {
 	return strconv.Itoa(fen / 100)
 }
 
+// FormatFenAsInputValue converts fen to a plain decimal yuan string without
+// thousand separators, suitable for pre-filling an <input> field (e.g. 150000 → "1500.00").
+func FormatFenAsInputValue(fen int) string {
+	sign := ""
+	value := fen
+	if value < 0 {
+		sign = "-"
+		value = -value
+	}
+	return fmt.Sprintf("%s%d.%02d", sign, value/100, value%100)
+}
+
 // FormatFenAsYuanIntDisplay formats a fen amount as an integer yuan string with
 // thousand separators for display purposes (e.g. 150000 -> "1,500"). For form
 // input field values use FormatFenAsYuanInt instead, which returns a raw

@@ -810,7 +810,8 @@ const initPaymentsExcludeModal = () => {
   })
   cancel?.addEventListener('click', close)
   form?.addEventListener('htmx:afterRequest', (event) => {
-    if (event.detail?.successful !== false) close()
+    const errorHeader = event.detail?.xhr?.getResponseHeader('X-Payment-Error')
+    if (!errorHeader) close()
   })
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !modal.classList.contains('hidden')) close()
@@ -818,6 +819,65 @@ const initPaymentsExcludeModal = () => {
 }
 
 initPaymentsExcludeModal()
+
+const initPaymentErrorDismiss = () => {
+  document.addEventListener('click', (event) => {
+    const dismiss = event.target.closest('[data-payment-error-dismiss]')
+    if (!dismiss) return
+    const banner = dismiss.closest('[data-payment-error]')
+    if (banner) banner.remove()
+  })
+}
+
+initPaymentErrorDismiss()
+
+const initPaymentEditPanel = () => {
+  document.addEventListener('click', (event) => {
+    const editTrigger = event.target.closest('[data-payment-edit]')
+    if (editTrigger) {
+      event.preventDefault()
+      const paymentID = editTrigger.dataset.paymentEdit
+      if (!paymentID) return
+      // Close any existing edit panel first
+      document.querySelectorAll('[data-payment-edit-panel]').forEach((panel) => panel.remove())
+      // Desktop: insert panel row after the current row
+      const row = editTrigger.closest('[data-payment-row]')
+      if (row) {
+        const placeholder = document.createElement('tr')
+        placeholder.id = 'payment-edit-placeholder'
+        placeholder.innerHTML = '<td class="px-5 py-3 text-center text-sm text-stone-500" colspan="6">正在加载…</td>'
+        row.after(placeholder)
+        htmx.ajax('GET', `/admin/payments/${paymentID}/edit`, {
+          target: '#payment-edit-placeholder',
+          swap: 'outerHTML',
+        })
+        return
+      }
+      // Mobile: insert panel after the current card
+      const card = editTrigger.closest('[data-payment-card]')
+      if (card) {
+        const placeholder = document.createElement('div')
+        placeholder.id = 'payment-edit-placeholder'
+        placeholder.className = 'bg-amber-50/60 px-4 py-3 text-center text-sm text-stone-500'
+        card.after(placeholder)
+        htmx.ajax('GET', `/admin/payments/${paymentID}/edit?mobile=1`, {
+          target: '#payment-edit-placeholder',
+          swap: 'outerHTML',
+        })
+        return
+      }
+    }
+    // Cancel button
+    const cancelTrigger = event.target.closest('[data-payment-edit-cancel]')
+    if (cancelTrigger) {
+      event.preventDefault()
+      const panel = cancelTrigger.closest('[data-payment-edit-panel]')
+      if (panel) panel.remove()
+    }
+  })
+}
+
+initPaymentEditPanel()
 
 const initPaymentCreateForm = () => {
   const form = document.querySelector('[data-payment-create-form]')

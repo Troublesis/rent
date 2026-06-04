@@ -126,7 +126,7 @@ func TestPaymentExclusionRemovesUnpaidAggregate(t *testing.T) {
 	}
 }
 
-func TestPaymentExclusionRequiresCheckoutTenant(t *testing.T) {
+func TestPaymentExclusionAllowsActiveTenant(t *testing.T) {
 	db := newTestDB(t)
 	roomRepo := repository.NewRoomRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
@@ -148,15 +148,18 @@ func TestPaymentExclusionRequiresCheckoutTenant(t *testing.T) {
 		t.Fatalf("RecordPayment returned error: %v", err)
 	}
 
-	if err := paymentService.SetExcluded(payment.ID, true, "仍在租"); err == nil {
-		t.Fatal("SetExcluded should reject active tenant payments")
+	if err := paymentService.SetExcluded(payment.ID, true, "线下结清"); err != nil {
+		t.Fatalf("SetExcluded should allow active tenant payments: %v", err)
 	}
 	updatedPayment, err := paymentRepo.GetPayment(payment.ID)
 	if err != nil {
 		t.Fatalf("GetPayment returned error: %v", err)
 	}
-	if updatedPayment.Excluded {
-		t.Fatal("active tenant payment should not be excluded")
+	if !updatedPayment.Excluded {
+		t.Fatal("active tenant payment should be excluded")
+	}
+	if updatedPayment.ExclusionNote != "线下结清" {
+		t.Fatalf("exclusion note = %q, want %q", updatedPayment.ExclusionNote, "线下结清")
 	}
 }
 
