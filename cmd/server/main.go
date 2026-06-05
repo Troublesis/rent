@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os/signal"
+	"syscall"
 
 	"github.com/troublesis/rent/config"
 	"github.com/troublesis/rent/internal/server"
@@ -27,7 +30,12 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
-	router := server.NewRouter(cfg, db)
+	router, pushScheduler := server.NewRouter(cfg, db)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+	pushScheduler.Start(ctx)
+
 	log.Printf("rent app listening on http://localhost%s", cfg.Addr())
 	if err := router.Run(cfg.Addr()); err != nil {
 		log.Fatalf("run server: %v", err)

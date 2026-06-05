@@ -91,7 +91,7 @@ func newTestRouter(t *testing.T) http.Handler {
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
-	if err := db.AutoMigrate(&model.Room{}, &model.RoomMedia{}, &model.Tenant{}, &model.Payment{}, &model.AppSetting{}); err != nil {
+	if err := db.AutoMigrate(&model.Room{}, &model.RoomMedia{}, &model.Tenant{}, &model.Payment{}, &model.AppSetting{}, &model.PushConfig{}, &model.PushTemplate{}, &model.PushLog{}); err != nil {
 		t.Fatalf("migrate test db: %v", err)
 	}
 	t.Cleanup(func() {
@@ -100,7 +100,7 @@ func newTestRouter(t *testing.T) http.Handler {
 			_ = sqlDB.Close()
 		}
 	})
-	return NewRouter(config.Config{
+	router, _ := NewRouter(config.Config{
 		AppPort:       "8080",
 		AppEnv:        "test",
 		SessionSecret: "test-session-secret",
@@ -111,6 +111,7 @@ func newTestRouter(t *testing.T) http.Handler {
 		LandlordName:  "房东",
 		LandlordPhone: "13800000000",
 	}, db)
+	return router
 }
 
 func withProjectRoot(t *testing.T) {

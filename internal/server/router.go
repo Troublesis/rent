@@ -16,7 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
+func NewRouter(cfg config.Config, db *gorm.DB) (*gin.Engine, *service.PushScheduler) {
 	if cfg.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -36,6 +36,7 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	settingsRepo := repository.NewSettingsRepository(db)
+	pushRepo := repository.NewPushRepository(db)
 
 	roomService := service.NewRoomService(roomRepo, tenantRepo)
 	tenantService := service.NewTenantService(db, tenantRepo, roomRepo)
@@ -45,7 +46,7 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	}
 	dashboardService := service.NewDashboardService(roomRepo, tenantRepo, paymentRepo)
 	statsService := service.NewStatsService(roomRepo, tenantRepo, paymentRepo, dashboardService)
-	settingsService := service.NewSettingsService(cfg, settingsRepo)
+	settingsService := service.NewSettingsService(cfg, settingsRepo, pushRepo)
 
 	publicHandler := handler.NewPublicHandler(renderer, roomService, settingsService)
 	authHandler := handler.NewAuthHandler(renderer, cfg)
@@ -56,6 +57,10 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	statsHandler := handler.NewAdminStatsHandler(renderer, paymentService, statsService)
 	settingsHandler := handler.NewAdminSettingsHandler(renderer, settingsService)
 	uploadHandler := handler.NewUploadHandler(cfg.UploadDir, roomService)
+
+	pushService := service.NewPushService(cfg, pushRepo, paymentRepo, settingsService)
+	pushHandler := handler.NewAdminPushHandler(renderer, pushService)
+	pushScheduler := service.NewPushScheduler(pushRepo, pushService)
 
 	router.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -97,6 +102,8 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	admin.GET("/stats", statsHandler.Page)
 	admin.GET("/settings", settingsHandler.Page)
 	admin.POST("/settings", settingsHandler.Update)
+	admin.POST("/settings/push", pushHandler.UpdatePushSettings)
+	admin.POST("/settings/push/test", pushHandler.TestPush)
 
 	api := router.Group("/api")
 	api.Use(auth.RequireLogin())
@@ -113,7 +120,7 @@ func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
 	api.GET("/stats/projection/detail", statsHandler.Projection)
 	api.GET("/dashboard/stats", statsHandler.DashboardStats)
 
-	return router
+	return router, pushScheduler
 }
 
 func startPaymentGenerationTicker(paymentService *service.PaymentService) {

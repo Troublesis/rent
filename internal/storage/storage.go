@@ -23,6 +23,9 @@ func AllModels() []interface{} {
 		&model.Tenant{},
 		&model.Payment{},
 		&model.AppSetting{},
+		&model.PushConfig{},
+		&model.PushTemplate{},
+		&model.PushLog{},
 	}
 }
 

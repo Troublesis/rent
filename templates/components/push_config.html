@@ -1,0 +1,184 @@
+{{define "push_config"}}
+<div class="space-y-6">
+  <div>
+    <h3 class="text-2xl font-black">📲 消息推送配置</h3>
+    <p class="mt-2 text-sm text-stone-600">通过微信公众号向您推送房租催收提醒。在 <a href="https://www.pushplus.plus" class="text-amber-600 underline" target="_blank" rel="noopener">pushplus.plus</a> 获取 Token。</p>
+  </div>
+
+  <label class="block">
+    <span class="text-sm font-bold text-stone-600">PushPlus Token</span>
+    <input class="input mt-2" type="text" name="pushplus_token" value="{{.PushConfig.PushPlusToken}}" placeholder="留空则使用 .env 中的 PUSHPLUS_TOKEN">
+    <p class="mt-1 text-xs text-stone-400">Token 优先使用此处填写值，为空时回退到 .env 环境变量</p>
+  </label>
+
+  <div class="grid grid-cols-2 gap-4">
+    <label class="block">
+      <span class="text-sm font-bold text-stone-600">推送模式</span>
+      <select class="input mt-2" name="push_mode">
+        <option value="summary" {{if eq .PushConfig.PushMode "summary"}}selected{{end}}>汇总模式（合并当天到期记录）</option>
+        <option value="individual" {{if eq .PushConfig.PushMode "individual"}}selected{{end}}>逐条模式（每条单独推送）</option>
+      </select>
+    </label>
+    <label class="block">
+      <span class="text-sm font-bold text-stone-600">推送时间</span>
+      <input class="input mt-2" type="time" name="push_time" value="{{.PushConfig.PushTime}}">
+    </label>
+  </div>
+
+  <fieldset>
+    <legend class="text-sm font-bold text-stone-600 mb-3">调度方式</legend>
+
+    <div class="rounded-lg border border-stone-200 bg-stone-50 p-4 mb-3">
+      <label class="flex items-center gap-2 font-bold text-sm cursor-pointer">
+        <input type="radio" name="schedule_mode" value="advance" {{if eq .PushConfig.ScheduleMode "advance"}}checked{{end}} class="accent-amber-600">
+        按缴租日提前推送
+      </label>
+      <div class="mt-3 ml-6 flex items-center gap-2">
+        <span class="text-sm text-stone-500">到期前</span>
+        <select name="advance_days" class="input py-1 px-2 text-sm w-auto">
+          <option value="0" {{if eq .PushConfig.AdvanceDays 0}}selected{{end}}>当天</option>
+          <option value="3" {{if eq .PushConfig.AdvanceDays 3}}selected{{end}}>提前 3 天</option>
+          <option value="5" {{if eq .PushConfig.AdvanceDays 5}}selected{{end}}>提前 5 天</option>
+          <option value="7" {{if eq .PushConfig.AdvanceDays 7}}selected{{end}}>提前 7 天</option>
+          <option value="10" {{if eq .PushConfig.AdvanceDays 10}}selected{{end}}>提前 10 天</option>
+        </select>
+        <span class="text-sm text-stone-500">推送</span>
+      </div>
+    </div>
+
+    <div class="rounded-lg border border-stone-200 bg-stone-50 p-4">
+      <label class="flex items-center gap-2 font-bold text-sm cursor-pointer">
+        <input type="radio" name="schedule_mode" value="fixed" {{if eq .PushConfig.ScheduleMode "fixed"}}checked{{end}} class="accent-amber-600">
+        固定周期推送
+      </label>
+      <div class="mt-3 ml-6 flex items-center gap-2 flex-wrap">
+        <select name="fixed_period" id="fixed-period" class="input py-1 px-2 text-sm w-auto" onchange="toggleFixedPeriodFields()">
+          <option value="weekly" {{if eq .PushConfig.FixedPeriod "weekly"}}selected{{end}}>每周</option>
+          <option value="monthly" {{if eq .PushConfig.FixedPeriod "monthly"}}selected{{end}}>每月</option>
+        </select>
+        <select name="fixed_weekday" id="fixed-weekday" class="input py-1 px-2 text-sm w-auto">
+          <option value="1" {{if eq .PushConfig.FixedWeekday 1}}selected{{end}}>周一</option>
+          <option value="2" {{if eq .PushConfig.FixedWeekday 2}}selected{{end}}>周二</option>
+          <option value="3" {{if eq .PushConfig.FixedWeekday 3}}selected{{end}}>周三</option>
+          <option value="4" {{if eq .PushConfig.FixedWeekday 4}}selected{{end}}>周四</option>
+          <option value="5" {{if eq .PushConfig.FixedWeekday 5}}selected{{end}}>周五</option>
+          <option value="6" {{if eq .PushConfig.FixedWeekday 6}}selected{{end}}>周六</option>
+          <option value="7" {{if eq .PushConfig.FixedWeekday 7}}selected{{end}}>周日</option>
+        </select>
+        <select name="fixed_month_day" id="fixed-monthday" class="input py-1 px-2 text-sm w-auto" style="display:none;">
+          {{range $d := seq 1 31}}
+          <option value="{{$d}}" {{if eq $.PushConfig.FixedMonthDay $d}}selected{{end}}>{{$d}} 号</option>
+          {{end}}
+        </select>
+        <span id="monthday-hint" class="text-xs text-stone-400" style="display:none;">如当月无此日，自动取月末最后一天</span>
+      </div>
+    </div>
+  </fieldset>
+
+  <label class="flex items-center gap-3 cursor-pointer">
+    <input type="checkbox" name="push_enabled" {{if .PushConfig.Enabled}}checked{{end}} class="accent-amber-600 w-4 h-4">
+    <span class="text-sm font-bold text-stone-600">启用自动推送</span>
+  </label>
+
+  <hr class="border-stone-200">
+
+  <div>
+    <h3 class="text-2xl font-black">✏️ 消息模板</h3>
+    <p class="mt-2 text-sm text-stone-600">编辑推送内容，使用下方变量标签自动填充数据。</p>
+  </div>
+
+  <label class="block">
+    <span class="text-sm font-bold text-stone-600">推送标题</span>
+    <input class="input mt-2" type="text" name="template_title" value="{{.PushTemplate.TitleTpl}}">
+  </label>
+
+  <label class="block">
+    <span class="text-sm font-bold text-stone-600">推送内容（支持 HTML）</span>
+    <textarea class="input mt-2 font-mono text-sm" name="template_body" rows="12">{{.PushTemplate.BodyTpl}}</textarea>
+  </label>
+
+  <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+    <p class="text-xs font-bold text-amber-800 mb-2">可用变量（点击插入光标位置）</p>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" class="var-tag" onclick="insertVar('{{"{{"}}姓名{{"}}"}}')">{{"{{"}}姓名{{"}}"}}</button>
+      <button type="button" class="var-tag" onclick="insertVar('{{"{{"}}手机号{{"}}"}}')">{{"{{"}}手机号{{"}}"}}</button>
+      <button type="button" class="var-tag" onclick="insertVar('{{"{{"}}房源号{{"}}"}}')">{{"{{"}}房源号{{"}}"}}</button>
+      <button type="button" class="var-tag" onclick="insertVar('{{"{{"}}房源标题{{"}}"}}')">{{"{{"}}房源标题{{"}}"}}</button>
+      <button type="button" class="var-tag" onclick="insertVar('{{"{{"}}金额{{"}}"}}')">{{"{{"}}金额{{"}}"}}</button>
+      <button type="button" class="var-tag" onclick="insertVar('{{"{{"}}费用类型{{"}}"}}')">{{"{{"}}费用类型{{"}}"}}</button>
+      <button type="button" class="var-tag" onclick="insertVar('{{"{{"}}应缴日期{{"}}"}}')">{{"{{"}}应缴日期{{"}}"}}</button>
+      <button type="button" class="var-tag" onclick="insertVar('{{"{{"}}月租金{{"}}"}}')">{{"{{"}}月租金{{"}}"}}</button>
+      <button type="button" class="var-tag" onclick="insertVar('{{"{{"}}入住日期{{"}}"}}')">{{"{{"}}入住日期{{"}}"}}</button>
+      <button type="button" class="var-tag" onclick="insertVar('{{"{{"}}逾期天数{{"}}"}}')">{{"{{"}}逾期天数{{"}}"}}</button>
+      <button type="button" class="var-tag-s" onclick="insertVar('{{"{{"}}房东姓名{{"}}"}}')">{{"{{"}}房东姓名{{"}}"}}</button>
+      <button type="button" class="var-tag-s" onclick="insertVar('{{"{{"}}房东电话{{"}}"}}')">{{"{{"}}房东电话{{"}}"}}</button>
+      <button type="button" class="var-tag-g" onclick="insertVar('{{"{{"}}待收总额{{"}}"}}')">{{"{{"}}待收总额{{"}}"}}</button>
+      <button type="button" class="var-tag-g" onclick="insertVar('{{"{{"}}待收笔数{{"}}"}}')">{{"{{"}}待收笔数{{"}}"}}</button>
+    </div>
+    <div class="flex gap-4 mt-2 text-xs text-stone-400">
+      <span>🟡 单条变量</span>
+      <span>🔵 全局变量</span>
+      <span>🟢 汇总变量（仅汇总模式）</span>
+    </div>
+  </div>
+</div>
+
+<script>
+function insertVar(variable) {
+  var ta = document.querySelector('textarea[name="template_body"]');
+  if (!ta) return;
+  var start = ta.selectionStart;
+  var end = ta.selectionEnd;
+  ta.value = ta.value.substring(0, start) + variable + ta.value.substring(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + variable.length;
+}
+
+function toggleFixedPeriodFields() {
+  var period = document.getElementById('fixed-period').value;
+  document.getElementById('fixed-weekday').style.display = period === 'weekly' ? '' : 'none';
+  document.getElementById('fixed-monthday').style.display = period === 'monthly' ? '' : 'none';
+  document.getElementById('monthday-hint').style.display = period === 'monthly' ? '' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  toggleFixedPeriodFields();
+});
+</script>
+
+<style>
+.var-tag {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #92400e;
+  cursor: pointer;
+}
+.var-tag:hover { background: #fde68a; }
+.var-tag-s {
+  background: #dbeafe;
+  border: 1px solid #3b82f6;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #1e40af;
+  cursor: pointer;
+}
+.var-tag-s:hover { background: #bfdbfe; }
+.var-tag-g {
+  background: #dcfce7;
+  border: 1px solid #22c55e;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #166534;
+  cursor: pointer;
+}
+.var-tag-g:hover { background: #bbf7d0; }
+</style>
+{{end}}

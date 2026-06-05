@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/troublesis/rent/config"
+	"github.com/troublesis/rent/internal/model"
 	"github.com/troublesis/rent/internal/repository"
 )
 
@@ -21,10 +22,11 @@ type Settings struct {
 type SettingsService struct {
 	cfg          config.Config
 	settingsRepo *repository.SettingsRepository
+	pushRepo     *repository.PushRepository
 }
 
-func NewSettingsService(cfg config.Config, settingsRepo *repository.SettingsRepository) *SettingsService {
-	return &SettingsService{cfg: cfg, settingsRepo: settingsRepo}
+func NewSettingsService(cfg config.Config, settingsRepo *repository.SettingsRepository, pushRepo *repository.PushRepository) *SettingsService {
+	return &SettingsService{cfg: cfg, settingsRepo: settingsRepo, pushRepo: pushRepo}
 }
 
 func (s *SettingsService) GetSettings() (Settings, error) {
@@ -51,6 +53,14 @@ func (s *SettingsService) UpdateSettings(settings Settings) error {
 		return err
 	}
 	return s.settingsRepo.Set(SettingLandlordPhone, landlordPhone)
+}
+
+func (s *SettingsService) GetPushConfig() (*model.PushConfig, error) {
+	return s.pushRepo.GetConfigOrCreate()
+}
+
+func (s *SettingsService) GetPushTemplate() (*model.PushTemplate, error) {
+	return s.pushRepo.GetTemplateOrCreate()
 }
 
 func valueOrDefault(value string, fallback string) string {

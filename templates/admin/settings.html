@@ -18,4 +18,34 @@
   </div>
 </form>
 <form id="admin-logout-form" method="post" action="/admin/logout"></form>
+
+<form class="card max-w-2xl p-6 mt-6" method="post" action="/admin/settings/push">
+  {{template "push_config" .}}
+  <div class="flex items-center justify-between mt-6">
+    <button type="button" class="btn-stone" id="test-push-btn" onclick="testPush()">🧪 发送测试推送</button>
+    <button class="btn-primary" type="submit">💾 保存推送设置</button>
+  </div>
+</form>
+
+<script>
+async function testPush() {
+  var btn = document.getElementById('test-push-btn');
+  btn.disabled = true;
+  btn.textContent = '发送中...';
+  var formData = new FormData();
+  formData.append('pushplus_token', document.querySelector('input[name="pushplus_token"]').value);
+  formData.append('template_title', document.querySelector('input[name="template_title"]').value);
+  formData.append('template_body', document.querySelector('textarea[name="template_body"]').value);
+  try {
+    var resp = await fetch('/admin/settings/push/test', {method: 'POST', body: formData});
+    var data = await resp.json();
+    alert(data.message || (data.success ? '发送成功' : '发送失败'));
+  } catch(e) {
+    alert('请求失败: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🧪 发送测试推送';
+  }
+}
+</script>
 {{end}}
