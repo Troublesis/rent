@@ -165,6 +165,26 @@ h1, h2, h3, .display-font {
   transform: translateY(-1px);
 }
 
+.btn-stone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  border: 1px solid rgba(120, 113, 108, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--ink);
+  padding: 0.7rem 1.1rem;
+  font-weight: 800;
+  transition: 160ms ease;
+}
+
+.btn-stone:hover {
+  border-color: var(--ink);
+  background: rgba(255, 255, 255, 0.85);
+  transform: translateY(-1px);
+}
+
 .btn-icon {
   display: inline-flex;
   align-items: center;

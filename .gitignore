@@ -19,3 +19,4 @@ tmp/
 .claude/settings.local.json
 .DS_Store
 scripts/backup/.last-backup-hash
+.superpowers/

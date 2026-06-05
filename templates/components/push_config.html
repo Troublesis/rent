@@ -11,7 +11,7 @@
     <p class="mt-1 text-xs text-stone-400">Token 优先使用此处填写值，为空时回退到 .env 环境变量</p>
   </label>
 
-  <div class="grid grid-cols-2 gap-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <label class="block">
       <span class="text-sm font-bold text-stone-600">推送模式</span>
       <select class="input mt-2" name="push_mode">
@@ -33,9 +33,9 @@
         <input type="radio" name="schedule_mode" value="advance" {{if eq .PushConfig.ScheduleMode "advance"}}checked{{end}} class="accent-amber-600">
         按缴租日提前推送
       </label>
-      <div class="mt-3 ml-6 flex items-center gap-2">
+      <div class="mt-3 sm:ml-6 ml-1 flex items-center gap-2 flex-wrap">
         <span class="text-sm text-stone-500">到期前</span>
-        <select name="advance_days" class="input py-1 px-2 text-sm w-auto">
+        <select name="advance_days" class="input py-1 px-2 text-sm w-auto min-w-[5.5rem]">
           <option value="0" {{if eq .PushConfig.AdvanceDays 0}}selected{{end}}>当天</option>
           <option value="3" {{if eq .PushConfig.AdvanceDays 3}}selected{{end}}>提前 3 天</option>
           <option value="5" {{if eq .PushConfig.AdvanceDays 5}}selected{{end}}>提前 5 天</option>
@@ -51,25 +51,27 @@
         <input type="radio" name="schedule_mode" value="fixed" {{if eq .PushConfig.ScheduleMode "fixed"}}checked{{end}} class="accent-amber-600">
         固定周期推送
       </label>
-      <div class="mt-3 ml-6 flex items-center gap-2 flex-wrap">
-        <select name="fixed_period" id="fixed-period" class="input py-1 px-2 text-sm w-auto" onchange="toggleFixedPeriodFields()">
-          <option value="weekly" {{if eq .PushConfig.FixedPeriod "weekly"}}selected{{end}}>每周</option>
-          <option value="monthly" {{if eq .PushConfig.FixedPeriod "monthly"}}selected{{end}}>每月</option>
-        </select>
-        <select name="fixed_weekday" id="fixed-weekday" class="input py-1 px-2 text-sm w-auto">
-          <option value="1" {{if eq .PushConfig.FixedWeekday 1}}selected{{end}}>周一</option>
-          <option value="2" {{if eq .PushConfig.FixedWeekday 2}}selected{{end}}>周二</option>
-          <option value="3" {{if eq .PushConfig.FixedWeekday 3}}selected{{end}}>周三</option>
-          <option value="4" {{if eq .PushConfig.FixedWeekday 4}}selected{{end}}>周四</option>
-          <option value="5" {{if eq .PushConfig.FixedWeekday 5}}selected{{end}}>周五</option>
-          <option value="6" {{if eq .PushConfig.FixedWeekday 6}}selected{{end}}>周六</option>
-          <option value="7" {{if eq .PushConfig.FixedWeekday 7}}selected{{end}}>周日</option>
-        </select>
-        <select name="fixed_month_day" id="fixed-monthday" class="input py-1 px-2 text-sm w-auto" style="display:none;">
-          {{range $d := seq 1 31}}
-          <option value="{{$d}}" {{if eq $.PushConfig.FixedMonthDay $d}}selected{{end}}>{{$d}} 号</option>
-          {{end}}
-        </select>
+      <div class="mt-3 sm:ml-6 ml-1 flex flex-col sm:flex-row sm:items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <select name="fixed_period" id="fixed-period" class="input py-1 px-2 text-sm w-auto min-w-[4.5rem]" onchange="toggleFixedPeriodFields()">
+            <option value="weekly" {{if eq .PushConfig.FixedPeriod "weekly"}}selected{{end}}>每周</option>
+            <option value="monthly" {{if eq .PushConfig.FixedPeriod "monthly"}}selected{{end}}>每月</option>
+          </select>
+          <select name="fixed_weekday" id="fixed-weekday" class="input py-1 px-2 text-sm w-auto min-w-[4rem]">
+            <option value="1" {{if eq .PushConfig.FixedWeekday 1}}selected{{end}}>周一</option>
+            <option value="2" {{if eq .PushConfig.FixedWeekday 2}}selected{{end}}>周二</option>
+            <option value="3" {{if eq .PushConfig.FixedWeekday 3}}selected{{end}}>周三</option>
+            <option value="4" {{if eq .PushConfig.FixedWeekday 4}}selected{{end}}>周四</option>
+            <option value="5" {{if eq .PushConfig.FixedWeekday 5}}selected{{end}}>周五</option>
+            <option value="6" {{if eq .PushConfig.FixedWeekday 6}}selected{{end}}>周六</option>
+            <option value="7" {{if eq .PushConfig.FixedWeekday 7}}selected{{end}}>周日</option>
+          </select>
+          <select name="fixed_month_day" id="fixed-monthday" class="input py-1 px-2 text-sm w-auto min-w-[4rem]" style="display:none;">
+            {{range $d := seq 1 31}}
+            <option value="{{$d}}" {{if eq $.PushConfig.FixedMonthDay $d}}selected{{end}}>{{$d}} 号</option>
+            {{end}}
+          </select>
+        </div>
         <span id="monthday-hint" class="text-xs text-stone-400" style="display:none;">如当月无此日，自动取月末最后一天</span>
       </div>
     </div>
@@ -148,36 +150,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <style>
 .var-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
   background: #fef3c7;
   border: 1px solid #f59e0b;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 11px;
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  font-size: 12px;
   font-family: monospace;
   color: #92400e;
   cursor: pointer;
+  transition: background 160ms ease;
 }
 .var-tag:hover { background: #fde68a; }
 .var-tag-s {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
   background: #dbeafe;
   border: 1px solid #3b82f6;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 11px;
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  font-size: 12px;
   font-family: monospace;
   color: #1e40af;
   cursor: pointer;
+  transition: background 160ms ease;
 }
 .var-tag-s:hover { background: #bfdbfe; }
 .var-tag-g {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
   background: #dcfce7;
   border: 1px solid #22c55e;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 11px;
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  font-size: 12px;
   font-family: monospace;
   color: #166534;
   cursor: pointer;
+  transition: background 160ms ease;
 }
 .var-tag-g:hover { background: #bbf7d0; }
 </style>
