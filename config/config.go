@@ -21,6 +21,7 @@ type Config struct {
 	UploadDir     string
 	LandlordName  string
 	LandlordPhone string
+	PushPlusToken string
 	AppTimezone   string
 }
 
@@ -38,6 +39,7 @@ func Load() (Config, error) {
 		UploadDir:     getEnv("UPLOAD_DIR", "./data/uploads"),
 		LandlordName:  getEnv("LANDLORD_NAME", "房东"),
 		LandlordPhone: getEnv("LANDLORD_PHONE", "13800000000"),
+		PushPlusToken: getEnv("PUSHPLUS_TOKEN", ""),
 		AppTimezone:   getEnv("APP_TIMEZONE", "Asia/Shanghai"),
 	}
 
