@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/troublesis/rent/config"
 	"github.com/troublesis/rent/internal/server"
@@ -36,8 +38,22 @@ func main() {
 	defer cancel()
 	pushScheduler.Start(ctx)
 
-	log.Printf("rent app listening on http://localhost%s", cfg.Addr())
-	if err := router.Run(cfg.Addr()); err != nil {
-		log.Fatalf("run server: %v", err)
+	srv := &http.Server{Addr: cfg.Addr(), Handler: router}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("run server: %v", err)
+		}
+	}()
+
+	log.Printf("rent app listening on http://localhost:%s (addr %s)", cfg.AppPort, cfg.Addr())
+
+	<-ctx.Done()
+	log.Printf("shutdown signal received, draining connections...")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("graceful shutdown failed: %v", err)
 	}
+	log.Printf("rent app stopped")
 }

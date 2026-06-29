@@ -103,7 +103,7 @@ type Payment struct {
 	TenantID      uint `gorm:"not null;index"`
 	Tenant        Tenant
 	Amount        int
-	Type          string `gorm:"not null;index"`
+	Type          string     `gorm:"not null;index"`
 	Paid          bool       `gorm:"default:false;index"`
 	PaidAt        *time.Time // actual date money was received; nil when unpaid
 	PayDate       time.Time
