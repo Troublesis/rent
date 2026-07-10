@@ -35,6 +35,10 @@ type PaymentSummary struct {
 	TotalPaidAmount      int
 	CheckoutPendingCount int64
 	ExcludedCount        int64
+	// PendingRefundAmount is the absolute total of unreturned deposits
+	// (deposit_refund rows that are still unpaid). The rows store negative
+	// amounts; this is the positive sum the landlord still owes tenants.
+	PendingRefundAmount int
 }
 
 type MonthlyIncomeRow struct {
@@ -129,6 +133,11 @@ func (r *PaymentRepository) SummarizePayments(filter PaymentFilter, now time.Tim
 		return PaymentSummary{}, err
 	}
 	if err := summaryQuery().Where("payments.excluded = ?", true).Count(&summary.ExcludedCount).Error; err != nil {
+		return PaymentSummary{}, err
+	}
+	// 待退押金：unpaid deposit_refund rows. Amounts are stored negative, so sum
+	// the absolute values for the positive "still owes tenants" figure.
+	if err := summaryQuery().Select("COALESCE(SUM(ABS(payments.amount)), 0)").Where("payments.type = ? AND payments.paid = ? AND payments.excluded = ?", model.PaymentTypeDepositRefund, false, false).Scan(&summary.PendingRefundAmount).Error; err != nil {
 		return PaymentSummary{}, err
 	}
 	return summary, nil

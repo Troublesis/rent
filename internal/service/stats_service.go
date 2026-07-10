@@ -33,6 +33,7 @@ type StatsOverview struct {
 	ActiveTenants        int64      `json:"active_tenants"`
 	OccupancyRate        float64    `json:"occupancy_rate"`
 	ApproximateOccupancy bool       `json:"approximate_occupancy"`
+	DepositHeldFen       int        `json:"deposit_held_fen"`
 }
 
 type MonthlyIncomeReport struct {
@@ -135,6 +136,10 @@ func (s *StatsService) Overview(filter StatsFilter) (StatsOverview, error) {
 	if err != nil {
 		return StatsOverview{}, err
 	}
+	depositHeld, err := s.tenantRepo.SumActiveDeposit()
+	if err != nil {
+		return StatsOverview{}, err
+	}
 	occupancyRate := 0.0
 	if totalRooms > 0 {
 		occupancyRate = float64(occupiedRooms) / float64(totalRooms)
@@ -150,6 +155,7 @@ func (s *StatsService) Overview(filter StatsFilter) (StatsOverview, error) {
 		ActiveTenants:        activeTenants,
 		OccupancyRate:        occupancyRate,
 		ApproximateOccupancy: true,
+		DepositHeldFen:       depositHeld,
 	}, nil
 }
 

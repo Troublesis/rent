@@ -79,12 +79,16 @@ type paymentAPIResponse struct {
 }
 
 type paymentAPISummary struct {
-	TotalUnpaidAmountFen  int    `json:"total_unpaid_amount_fen"`
-	TotalUnpaidAmountText string `json:"total_unpaid_amount_text"`
-	TotalPaidAmountFen    int    `json:"total_paid_amount_fen"`
-	TotalPaidAmountText   string `json:"total_paid_amount_text"`
-	CheckoutPendingCount  int64  `json:"checkout_pending_count"`
-	ExcludedCount         int64  `json:"excluded_count"`
+	TotalUnpaidAmountFen    int    `json:"total_unpaid_amount_fen"`
+	TotalUnpaidAmountText   string `json:"total_unpaid_amount_text"`
+	TotalPaidAmountFen      int    `json:"total_paid_amount_fen"`
+	TotalPaidAmountText     string `json:"total_paid_amount_text"`
+	CheckoutPendingCount    int64  `json:"checkout_pending_count"`
+	ExcludedCount           int64  `json:"excluded_count"`
+	PendingRefundAmountFen  int    `json:"pending_refund_amount_fen"`
+	PendingRefundAmountText string `json:"pending_refund_amount_text"`
+	DepositHeldFen          int    `json:"deposit_held_fen"`
+	DepositHeldText         string `json:"deposit_held_text"`
 }
 
 type paymentExclusionRequest struct {
@@ -232,6 +236,10 @@ func (h *AdminPaymentHandler) buildPaymentListData(c *gin.Context) (gin.H, error
 	if err != nil {
 		return nil, errPaymentSummary
 	}
+	depositHeld, err := h.tenantService.SumDepositHeld()
+	if err != nil {
+		return nil, errPaymentSummary
+	}
 	tenants, err := h.tenantService.ListTenants(repository.TenantFilter{Status: model.TenantStatusActive})
 	if err != nil {
 		return nil, errPaymentTenants
@@ -250,7 +258,7 @@ func (h *AdminPaymentHandler) buildPaymentListData(c *gin.Context) (gin.H, error
 	return gin.H{
 		"Title":             "收款记录",
 		"Rows":              rows,
-		"Summary":           paymentSummaryToAPI(summary),
+		"Summary":           paymentSummaryToAPI(summary, depositHeld),
 		"Tenants":           tenants,
 		"Filter":            filter,
 		"FilterPaid":        paidFilterValue(c),
@@ -393,8 +401,8 @@ func paymentSummaryScopes(c *gin.Context) map[string]paymentSummaryScope {
 	paidActive := paid == "true" && excluded == "false"
 	excludedActive := excluded == "true"
 	checkoutActive := tenantStatus == model.TenantStatusCheckout && excluded == "false" && paid == "false"
+	depositRefundActive := typeFilter == model.PaymentTypeDepositRefund && paid == "false" && excluded == "false"
 	_ = period
-	_ = typeFilter
 
 	return map[string]paymentSummaryScope{
 		"unpaid": {
@@ -404,6 +412,10 @@ func paymentSummaryScopes(c *gin.Context) map[string]paymentSummaryScope {
 		"paid": {
 			URL:    paymentListURL(c, map[string]string{"paid": "true", "excluded": "false", "tenant_status": "", "page": ""}),
 			Active: paidActive,
+		},
+		"deposit_refund": {
+			URL:    paymentListURL(c, map[string]string{"type": model.PaymentTypeDepositRefund, "paid": "false", "excluded": "false", "tenant_status": "", "page": ""}),
+			Active: depositRefundActive,
 		},
 		"checkout": {
 			URL:    paymentListURL(c, map[string]string{"paid": "false", "excluded": "false", "tenant_status": model.TenantStatusCheckout, "page": ""}),
@@ -438,7 +450,7 @@ func paymentPeriodChips(c *gin.Context) []filterChip {
 func paymentTypeChips(c *gin.Context) []filterChip {
 	current := c.Query("type")
 	chips := []filterChip{paymentChip("全部类型", c, "type", "", current == "")}
-	for _, opt := range paymentTypeOptions() {
+	for _, opt := range paymentFilterTypeOptions() {
 		chips = append(chips, paymentChip(opt.Label, c, "type", opt.Value, current == opt.Value))
 	}
 	return chips
@@ -524,6 +536,11 @@ func (h *AdminPaymentHandler) APIList(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取收款汇总失败"})
 		return
 	}
+	depositHeld, err := h.tenantService.SumDepositHeld()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取收款汇总失败"})
+		return
+	}
 	page := normalizePaymentPage(filter.Page)
 	limit := normalizePaymentLimit(filter.Limit)
 	items := make([]paymentAPIItem, len(result.Payments))
@@ -532,7 +549,7 @@ func (h *AdminPaymentHandler) APIList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, paymentAPIResponse{
 		Data:    items,
-		Summary: paymentSummaryToAPI(summary),
+		Summary: paymentSummaryToAPI(summary, depositHeld),
 		Page:    page,
 		Limit:   limit,
 		Total:   result.Total,
@@ -742,14 +759,26 @@ func paymentTypeOptions() []SelectOption {
 	}
 }
 
-func paymentSummaryToAPI(summary repository.PaymentSummary) paymentAPISummary {
+// paymentFilterTypeOptions is the type list for the FILTER chips — it includes
+// 押金 (deposit_refund) so users can isolate refund records. The create-form
+// dropdown intentionally uses paymentTypeOptions() without 押金, since deposit
+// refunds are auto-generated at checkout and blocked from manual creation.
+func paymentFilterTypeOptions() []SelectOption {
+	return append(paymentTypeOptions(), SelectOption{Value: model.PaymentTypeDepositRefund, Label: "押金"})
+}
+
+func paymentSummaryToAPI(summary repository.PaymentSummary, depositHeld int) paymentAPISummary {
 	return paymentAPISummary{
-		TotalUnpaidAmountFen:  summary.TotalUnpaidAmount,
-		TotalUnpaidAmountText: service.FormatFen(summary.TotalUnpaidAmount),
-		TotalPaidAmountFen:    summary.TotalPaidAmount,
-		TotalPaidAmountText:   service.FormatFen(summary.TotalPaidAmount),
-		CheckoutPendingCount:  summary.CheckoutPendingCount,
-		ExcludedCount:         summary.ExcludedCount,
+		TotalUnpaidAmountFen:    summary.TotalUnpaidAmount,
+		TotalUnpaidAmountText:   service.FormatFen(summary.TotalUnpaidAmount),
+		TotalPaidAmountFen:      summary.TotalPaidAmount,
+		TotalPaidAmountText:     service.FormatFen(summary.TotalPaidAmount),
+		CheckoutPendingCount:    summary.CheckoutPendingCount,
+		ExcludedCount:           summary.ExcludedCount,
+		PendingRefundAmountFen:  summary.PendingRefundAmount,
+		PendingRefundAmountText: service.FormatFen(summary.PendingRefundAmount),
+		DepositHeldFen:          depositHeld,
+		DepositHeldText:         service.FormatFen(depositHeld),
 	}
 }
 

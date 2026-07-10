@@ -132,6 +132,19 @@ func (r *TenantRepository) CountActiveTenants() (int64, error) {
 	return count, nil
 }
 
+// SumActiveDeposit returns the total deposit (fen) held across all currently
+// active (checked-in) tenants — i.e. deposits the landlord is still holding.
+func (r *TenantRepository) SumActiveDeposit() (int, error) {
+	var total int
+	if err := r.db.Model(&model.Tenant{}).
+		Where("status = ?", model.TenantStatusActive).
+		Select("COALESCE(SUM(deposit), 0)").
+		Scan(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
 func (r *TenantRepository) ListTenantsOverlappingPeriod(start time.Time, end time.Time) ([]model.Tenant, error) {
 	var tenants []model.Tenant
 	if err := r.db.Model(&model.Tenant{}).

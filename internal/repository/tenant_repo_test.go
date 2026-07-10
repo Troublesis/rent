@@ -124,3 +124,40 @@ func createTenantRepoTenant(t *testing.T, db interface {
 	}
 	return tenant
 }
+
+func createTenantRepoTenantWithDeposit(t *testing.T, db interface {
+	Create(value interface{}) *gorm.DB
+}, roomNo string, name string, phone string, status string, deposit int) model.Tenant {
+	t.Helper()
+	room := model.Room{RoomNo: roomNo, Title: roomNo + " 房源", RentType: model.RentTypeMonthly, RentPrice: 100000, PaymentTerms: model.PaymentTerms1M1D, Status: model.RoomStatusOccupied}
+	if err := db.Create(&room).Error; err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+	tenant := model.Tenant{
+		Name: name, Phone: phone, RoomID: room.ID,
+		CheckinDate: time.Date(2026, time.May, 1, 0, 0, 0, 0, time.Local),
+		RentPrice:   100000, RentType: model.RentTypeMonthly, PaymentTerms: model.PaymentTerms1M1D,
+		Deposit: deposit, Status: status,
+	}
+	if err := db.Create(&tenant).Error; err != nil {
+		t.Fatalf("create tenant: %v", err)
+	}
+	return tenant
+}
+
+func TestSumActiveDeposit(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewTenantRepository(db)
+	createTenantRepoTenantWithDeposit(t, db, "T401", "甲", "13800005001", model.TenantStatusActive, 150000)
+	createTenantRepoTenantWithDeposit(t, db, "T402", "乙", "13800005002", model.TenantStatusActive, 100000)
+	// Checked-out tenant's deposit must NOT count toward held deposits.
+	createTenantRepoTenantWithDeposit(t, db, "T403", "丙", "13800005003", model.TenantStatusCheckout, 999000)
+
+	total, err := repo.SumActiveDeposit()
+	if err != nil {
+		t.Fatalf("SumActiveDeposit returned error: %v", err)
+	}
+	if total != 250000 {
+		t.Fatalf("SumActiveDeposit = %d, want 250000 (active deposits only)", total)
+	}
+}

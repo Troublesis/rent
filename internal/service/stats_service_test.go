@@ -126,3 +126,48 @@ func createStatsPayment(t *testing.T, db interface {
 	}
 	return payment
 }
+
+func TestStatsServiceOverviewDepositHeld(t *testing.T) {
+	db := newTestDB(t)
+	roomRepo := repository.NewRoomRepository(db)
+	tenantRepo := repository.NewTenantRepository(db)
+	paymentRepo := repository.NewPaymentRepository(db)
+	dashboardService := NewDashboardService(roomRepo, tenantRepo, paymentRepo)
+	statsService := NewStatsService(roomRepo, tenantRepo, paymentRepo, dashboardService)
+
+	room := createStatsRoom(t, db, "S301", model.RoomStatusOccupied)
+	activeA := createStatsTenant(t, db, room.ID, "押金甲", model.TenantStatusActive, time.Date(2026, time.January, 1, 0, 0, 0, 0, time.Local), nil)
+	activeB := createStatsTenant(t, db, room.ID, "押金乙", model.TenantStatusActive, time.Date(2026, time.January, 1, 0, 0, 0, 0, time.Local), nil)
+	checkout := createStatsTenant(t, db, room.ID, "押金丙", model.TenantStatusCheckout, time.Date(2026, time.January, 1, 0, 0, 0, 0, time.Local), ptrTime(2026, 2, 1))
+
+	// Set deposits directly: 1500 + 1000 for active; 9990 for checkout (excluded).
+	activeA.Deposit = 150000
+	if err := db.Save(&activeA).Error; err != nil {
+		t.Fatalf("save activeA deposit: %v", err)
+	}
+	activeB.Deposit = 100000
+	if err := db.Save(&activeB).Error; err != nil {
+		t.Fatalf("save activeB deposit: %v", err)
+	}
+	checkout.Deposit = 999000
+	if err := db.Save(&checkout).Error; err != nil {
+		t.Fatalf("save checkout deposit: %v", err)
+	}
+
+	filter, err := NewYearStatsFilter(2026, time.Date(2026, time.May, 17, 12, 0, 0, 0, time.Local))
+	if err != nil {
+		t.Fatalf("NewYearStatsFilter returned error: %v", err)
+	}
+	overview, err := statsService.Overview(filter)
+	if err != nil {
+		t.Fatalf("Overview returned error: %v", err)
+	}
+	if overview.DepositHeldFen != 250000 {
+		t.Fatalf("DepositHeldFen = %d, want 250000 (active deposits only)", overview.DepositHeldFen)
+	}
+}
+
+func ptrTime(year int, month time.Month, day int) *time.Time {
+	t := time.Date(year, month, day, 0, 0, 0, 0, time.Local)
+	return &t
+}

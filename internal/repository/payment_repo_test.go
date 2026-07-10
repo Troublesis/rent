@@ -100,6 +100,46 @@ func TestPaymentRepositorySummarizePayments(t *testing.T) {
 	}
 }
 
+func TestPaymentRepositorySummarizePendingRefund(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewPaymentRepository(db)
+	tenant := createPaymentRepoTenant(t, db, "P201", "退押金租客", "13800001010")
+	now := time.Date(2026, time.May, 17, 12, 0, 0, 0, time.Local)
+
+	// Two unpaid deposit_refund rows (stored negative) + one already refunded (paid).
+	createPaymentRepoDepositRefund(t, db, tenant.ID, -100000, time.Date(2026, time.May, 1, 0, 0, 0, 0, time.Local), false, false)
+	createPaymentRepoDepositRefund(t, db, tenant.ID, -50000, time.Date(2026, time.May, 2, 0, 0, 0, 0, time.Local), false, false)
+	createPaymentRepoDepositRefund(t, db, tenant.ID, -30000, time.Date(2026, time.May, 3, 0, 0, 0, 0, time.Local), true, false)
+
+	summary, err := repo.SummarizePayments(PaymentFilter{}, now)
+	if err != nil {
+		t.Fatalf("SummarizePayments returned error: %v", err)
+	}
+	// PendingRefundAmount = |100000| + |50000| = 150000 (only unpaid, non-excluded).
+	if summary.PendingRefundAmount != 150000 {
+		t.Fatalf("PendingRefundAmount = %d, want 150000", summary.PendingRefundAmount)
+	}
+	// Paid refund (−30000) must reduce collected income.
+	if summary.TotalPaidAmount != -30000 {
+		t.Fatalf("TotalPaidAmount = %d, want -30000 (refunded deposit deducted)", summary.TotalPaidAmount)
+	}
+	// Unpaid refund must NOT inflate receivable.
+	if summary.TotalUnpaidAmount != 0 {
+		t.Fatalf("TotalUnpaidAmount = %d, want 0 (refund excluded from receivable)", summary.TotalUnpaidAmount)
+	}
+}
+
+func createPaymentRepoDepositRefund(t *testing.T, db interface {
+	Create(value interface{}) *gorm.DB
+}, tenantID uint, amount int, payDate time.Time, paid bool, excluded bool) model.Payment {
+	t.Helper()
+	payment := model.Payment{TenantID: tenantID, Amount: amount, Type: model.PaymentTypeDepositRefund, Paid: paid, PayDate: payDate, Excluded: excluded}
+	if err := db.Create(&payment).Error; err != nil {
+		t.Fatalf("create deposit refund payment: %v", err)
+	}
+	return payment
+}
+
 func TestPaymentRepositoryMonthlyIncomeRange(t *testing.T) {
 	db := newTestDB(t)
 	repo := NewPaymentRepository(db)
