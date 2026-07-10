@@ -145,19 +145,19 @@ func createTenantRepoTenantWithDeposit(t *testing.T, db interface {
 	return tenant
 }
 
-func TestSumActiveDeposit(t *testing.T) {
+func TestSumAllDeposit(t *testing.T) {
 	db := newTestDB(t)
 	repo := NewTenantRepository(db)
 	createTenantRepoTenantWithDeposit(t, db, "T401", "甲", "13800005001", model.TenantStatusActive, 150000)
 	createTenantRepoTenantWithDeposit(t, db, "T402", "乙", "13800005002", model.TenantStatusActive, 100000)
-	// Checked-out tenant's deposit must NOT count toward held deposits.
+	// Checked-out tenants' deposits are still "collected" until refunded.
 	createTenantRepoTenantWithDeposit(t, db, "T403", "丙", "13800005003", model.TenantStatusCheckout, 999000)
 
-	total, err := repo.SumActiveDeposit()
+	total, err := repo.SumAllDeposit()
 	if err != nil {
-		t.Fatalf("SumActiveDeposit returned error: %v", err)
+		t.Fatalf("SumAllDeposit returned error: %v", err)
 	}
-	if total != 250000 {
-		t.Fatalf("SumActiveDeposit = %d, want 250000 (active deposits only)", total)
+	if total != 1249000 {
+		t.Fatalf("SumAllDeposit = %d, want 1249000 (all tenants)", total)
 	}
 }

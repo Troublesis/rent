@@ -139,6 +139,20 @@ func (r *PaymentRepository) SummarizePayments(filter PaymentFilter, now time.Tim
 	return summary, nil
 }
 
+// SumPaidDepositRefund returns the total amount of deposits that have already
+// been refunded (deposit_refund payments marked paid, stored negative, summed
+// as absolute value).
+func (r *PaymentRepository) SumPaidDepositRefund() (int, error) {
+	var total int
+	if err := r.db.Model(&model.Payment{}).
+		Where("type = ? AND paid = ? AND excluded = ?", model.PaymentTypeDepositRefund, true, false).
+		Select("COALESCE(SUM(ABS(amount)), 0)").
+		Scan(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
 func (r *PaymentRepository) GetPayment(id uint) (*model.Payment, error) {
 	var payment model.Payment
 	if err := r.db.Preload("Tenant").Preload("Tenant.Room").Preload("Tenant.Payments", func(db *gorm.DB) *gorm.DB {

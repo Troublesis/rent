@@ -132,12 +132,12 @@ func (r *TenantRepository) CountActiveTenants() (int64, error) {
 	return count, nil
 }
 
-// SumActiveDeposit returns the total deposit (fen) held across all currently
-// active (checked-in) tenants — i.e. deposits the landlord is still holding.
-func (r *TenantRepository) SumActiveDeposit() (int, error) {
+// SumAllDeposit returns the total deposit (fen) across ALL tenants, regardless
+// of status. This is the "ever collected" number; subtract paid refunds to get
+// the "still held" figure (see payment_repo.SumPaidDepositRefund).
+func (r *TenantRepository) SumAllDeposit() (int, error) {
 	var total int
 	if err := r.db.Model(&model.Tenant{}).
-		Where("status = ?", model.TenantStatusActive).
 		Select("COALESCE(SUM(deposit), 0)").
 		Scan(&total).Error; err != nil {
 		return 0, err

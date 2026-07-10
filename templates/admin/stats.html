@@ -155,7 +155,7 @@
       tileHTML('最高单月', data.peak_month ? `¥${formatFen(data.peak_month_paid_fen)}` : '暂无数据', data.peak_month ? formatMonthLabel(data.peak_month) : ''),
       tileHTML('当前房间数', `${data.total_rooms || 0} 间`, `已出租 ${data.occupied_rooms || 0} 间`),
       tileHTML('当前在租', `${data.active_tenants || 0} 人`, '当前有效租客'),
-      tileHTML('在手押金', `¥${formatFen(data.deposit_held_fen)}`, '在租租客押金总和'),
+      tileHTML('在手押金', `¥${formatFen(data.deposit_held_fen)}`, '尚未退还的押金'),
       tileHTML('估算出租率', formatPercent(data.occupancy_rate), '基于当前房态')
     ].join('')
   }

@@ -140,6 +140,29 @@ func createPaymentRepoDepositRefund(t *testing.T, db interface {
 	return payment
 }
 
+func TestSumPaidDepositRefund(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewPaymentRepository(db)
+	tenant := createPaymentRepoTenant(t, db, "P301", "退款汇总租客", "13800001020")
+
+	// Paid refunds (deposit already returned).
+	createPaymentRepoDepositRefund(t, db, tenant.ID, -100000, time.Date(2026, time.May, 1, 0, 0, 0, 0, time.Local), true, false)
+	createPaymentRepoDepositRefund(t, db, tenant.ID, -50000, time.Date(2026, time.May, 2, 0, 0, 0, 0, time.Local), true, false)
+	// Unpaid refund (still held, NOT counted).
+	createPaymentRepoDepositRefund(t, db, tenant.ID, -30000, time.Date(2026, time.May, 3, 0, 0, 0, 0, time.Local), false, false)
+	// Excluded refund (should NOT be counted).
+	createPaymentRepoDepositRefund(t, db, tenant.ID, -20000, time.Date(2026, time.May, 4, 0, 0, 0, 0, time.Local), true, true)
+
+	total, err := repo.SumPaidDepositRefund()
+	if err != nil {
+		t.Fatalf("SumPaidDepositRefund returned error: %v", err)
+	}
+	// |100000| + |50000| = 150000 (only paid, non-excluded).
+	if total != 150000 {
+		t.Fatalf("SumPaidDepositRefund = %d, want 150000", total)
+	}
+}
+
 func TestPaymentRepositoryMonthlyIncomeRange(t *testing.T) {
 	db := newTestDB(t)
 	repo := NewPaymentRepository(db)

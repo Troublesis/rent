@@ -138,9 +138,10 @@ func TestStatsServiceOverviewDepositHeld(t *testing.T) {
 	room := createStatsRoom(t, db, "S301", model.RoomStatusOccupied)
 	activeA := createStatsTenant(t, db, room.ID, "押金甲", model.TenantStatusActive, time.Date(2026, time.January, 1, 0, 0, 0, 0, time.Local), nil)
 	activeB := createStatsTenant(t, db, room.ID, "押金乙", model.TenantStatusActive, time.Date(2026, time.January, 1, 0, 0, 0, 0, time.Local), nil)
+	// Checked-out tenant's deposit is still "held" until the refund is marked paid.
 	checkout := createStatsTenant(t, db, room.ID, "押金丙", model.TenantStatusCheckout, time.Date(2026, time.January, 1, 0, 0, 0, 0, time.Local), ptrTime(2026, 2, 1))
 
-	// Set deposits directly: 1500 + 1000 for active; 9990 for checkout (excluded).
+	// Set deposits directly: active 1500 + 1000, checkout 9990 (still held until refunded).
 	activeA.Deposit = 150000
 	if err := db.Save(&activeA).Error; err != nil {
 		t.Fatalf("save activeA deposit: %v", err)
@@ -162,8 +163,9 @@ func TestStatsServiceOverviewDepositHeld(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Overview returned error: %v", err)
 	}
-	if overview.DepositHeldFen != 250000 {
-		t.Fatalf("DepositHeldFen = %d, want 250000 (active deposits only)", overview.DepositHeldFen)
+	// held = all deposits (150000+100000+999000) - paid refunds (0) = 1249000.
+	if overview.DepositHeldFen != 1249000 {
+		t.Fatalf("DepositHeldFen = %d, want 1249000 (all deposits, none refunded yet)", overview.DepositHeldFen)
 	}
 }
 

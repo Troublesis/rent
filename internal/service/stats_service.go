@@ -136,10 +136,15 @@ func (s *StatsService) Overview(filter StatsFilter) (StatsOverview, error) {
 	if err != nil {
 		return StatsOverview{}, err
 	}
-	depositHeld, err := s.tenantRepo.SumActiveDeposit()
+	totalDeposit, err := s.tenantRepo.SumAllDeposit()
 	if err != nil {
 		return StatsOverview{}, err
 	}
+	refundedDeposit, err := s.paymentRepo.SumPaidDepositRefund()
+	if err != nil {
+		return StatsOverview{}, err
+	}
+	depositHeld := totalDeposit - refundedDeposit
 	occupancyRate := 0.0
 	if totalRooms > 0 {
 		occupancyRate = float64(occupiedRooms) / float64(totalRooms)
