@@ -93,7 +93,7 @@
   </div>
   {{end}}
   <div class="space-y-5 border-b border-stone-300/70 p-4 md:p-5">
-    <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
       {{$unpaid := index .SummaryScopes "unpaid"}}
       <a class="payment-summary-tile payment-summary-tile-unpaid {{if $unpaid.Active}}is-active{{end}}"
          href="{{$unpaid.URL}}"
@@ -112,31 +112,16 @@
         <p class="payment-summary-tile-value text-emerald-700">¥{{.Summary.TotalPaidAmountText}}</p>
         <p class="payment-summary-tile-hint">点击筛选 →</p>
       </a>
-      {{$deposit := index .SummaryScopes "deposit_refund"}}
-      <a class="payment-summary-tile payment-summary-tile-deposit {{if $deposit.Active}}is-active{{end}} {{if gt .Summary.PendingRefundAmountFen 0}}has-alert{{end}}"
-         href="{{$deposit.URL}}"
-         hx-get="{{$deposit.URL}}" hx-target="#payment-list-section" hx-select="#payment-list-section"
-         hx-swap="outerHTML" hx-push-url="true" title="筛选未退还的押金记录">
-        <p class="payment-summary-tile-label">待退押金</p>
-        <p class="payment-summary-tile-value text-amber-700">¥{{.Summary.PendingRefundAmountText}}</p>
-        <p class="payment-summary-tile-hint">点击筛选 →</p>
-      </a>
-      <a class="payment-summary-tile payment-summary-tile-held"
-         href="/admin/tenants?status=active" title="查看在租租客及其押金">
-        <p class="payment-summary-tile-label">总在手押金</p>
-        <p class="payment-summary-tile-value text-stone-700">¥{{.Summary.DepositHeldText}}</p>
-        <p class="payment-summary-tile-hint">查看在租租客 →</p>
-      </a>
       {{$checkout := index .SummaryScopes "checkout"}}
-      <a class="payment-summary-tile payment-summary-tile-checkout {{if $checkout.Active}}is-active{{end}} {{if gt .Summary.CheckoutPendingCount 0}}has-alert{{end}}"
+      <a class="payment-summary-tile payment-summary-tile-checkout {{if $checkout.Active}}is-active{{end}} {{if gt .Summary.PendingRefundAmountFen 0}}has-alert{{end}}"
          href="{{$checkout.URL}}"
          hx-get="{{$checkout.URL}}" hx-target="#payment-list-section" hx-select="#payment-list-section"
-         hx-swap="outerHTML" hx-push-url="true" title="筛选已退租租客的未处理记录">
+         hx-swap="outerHTML" hx-push-url="true" title="筛选已退租租客的未退押金及未收租金">
         <p class="payment-summary-tile-label">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
-          已退租待处理
+          待退押金
         </p>
-        <p class="payment-summary-tile-value text-amber-700">{{.Summary.CheckoutPendingCount}}</p>
+        <p class="payment-summary-tile-value text-amber-700">¥{{.Summary.PendingRefundAmountText}}</p>
         <p class="payment-summary-tile-hint">点击筛选 →</p>
       </a>
       {{$excluded := index .SummaryScopes "excluded"}}

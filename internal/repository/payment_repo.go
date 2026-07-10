@@ -31,10 +31,9 @@ type PaymentListResult struct {
 }
 
 type PaymentSummary struct {
-	TotalUnpaidAmount    int
-	TotalPaidAmount      int
-	CheckoutPendingCount int64
-	ExcludedCount        int64
+	TotalUnpaidAmount int
+	TotalPaidAmount   int
+	ExcludedCount     int64
 	// PendingRefundAmount is the absolute total of unreturned deposits
 	// (deposit_refund rows that are still unpaid). The rows store negative
 	// amounts; this is the positive sum the landlord still owes tenants.
@@ -127,9 +126,6 @@ func (r *PaymentRepository) SummarizePayments(filter PaymentFilter, now time.Tim
 	// Collected income (已收) includes deposit refunds as negative amounts, so
 	// a refunded deposit naturally deducts from the running income total.
 	if err := summaryQuery().Select("COALESCE(SUM(payments.amount), 0)").Where("payments.paid = ? AND payments.excluded = ?", true, false).Scan(&summary.TotalPaidAmount).Error; err != nil {
-		return PaymentSummary{}, err
-	}
-	if err := summaryQuery().Where("tenants.status = ? AND payments.excluded = ? AND payments.paid = ?", model.TenantStatusCheckout, false, false).Count(&summary.CheckoutPendingCount).Error; err != nil {
 		return PaymentSummary{}, err
 	}
 	if err := summaryQuery().Where("payments.excluded = ?", true).Count(&summary.ExcludedCount).Error; err != nil {

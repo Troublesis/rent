@@ -92,8 +92,8 @@ func TestPaymentRepositorySummarizePayments(t *testing.T) {
 	if summary.TotalPaidAmount != 600000 {
 		t.Fatalf("TotalPaidAmount = %d, want 600000", summary.TotalPaidAmount)
 	}
-	if summary.CheckoutPendingCount != 1 {
-		t.Fatalf("CheckoutPendingCount = %d, want 1", summary.CheckoutPendingCount)
+	if summary.PendingRefundAmount != 0 {
+		t.Fatalf("PendingRefundAmount = %d, want 0 (no deposit_refund rows)", summary.PendingRefundAmount)
 	}
 	if summary.ExcludedCount != 1 {
 		t.Fatalf("ExcludedCount = %d, want 1", summary.ExcludedCount)

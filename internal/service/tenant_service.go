@@ -48,11 +48,6 @@ func (s *TenantService) ListTenantsByRoomID(roomID uint) ([]model.Tenant, error)
 	return s.tenantRepo.ListTenantsByRoomID(roomID)
 }
 
-// SumDepositHeld returns the total deposit still held across active tenants.
-func (s *TenantService) SumDepositHeld() (int, error) {
-	return s.tenantRepo.SumActiveDeposit()
-}
-
 func (s *TenantService) CheckInTenant(input TenantInput) (*model.Tenant, error) {
 	var tenant *model.Tenant
 	if err := s.db.Transaction(func(tx *gorm.DB) error {

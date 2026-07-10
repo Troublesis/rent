@@ -1196,8 +1196,6 @@ const renderPaymentSummary = (root, summary) => {
     paymentSummaryCard('总待付款', `¥${summary.total_unpaid_amount_text || '0.00'}`),
     paymentSummaryCard('已付款', `¥${summary.total_paid_amount_text || '0.00'}`),
     paymentSummaryCard('待退押金', `¥${summary.pending_refund_amount_text || '0.00'}`),
-    paymentSummaryCard('总在手押金', `¥${summary.deposit_held_text || '0.00'}`),
-    paymentSummaryCard('已退租待处理', summary.checkout_pending_count || 0),
     paymentSummaryCard('排除记录', summary.excluded_count || 0)
   ].join('')
 }
