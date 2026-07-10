@@ -14,7 +14,7 @@ func TestPaymentToggleAndMonthlyIncome(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	paymentService := NewPaymentService(paymentRepo, tenantRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("B201", "朝南单间", "1200"))
@@ -72,7 +72,7 @@ func TestPaymentExclusionRemovesUnpaidAggregate(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	paymentService := NewPaymentService(paymentRepo, tenantRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("B202", "西向单间", "1000"))
@@ -132,7 +132,7 @@ func TestPaymentExclusionAllowsActiveTenant(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	paymentService := NewPaymentService(paymentRepo, tenantRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("B206", "在租单间", "1000"))
@@ -169,7 +169,7 @@ func TestPaymentExclusionAllowsCheckoutPaidPayment(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	paymentService := NewPaymentService(paymentRepo, tenantRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("B207", "已退租单间", "1000"))
@@ -252,7 +252,7 @@ func TestGenerateDueRecordsCreatesMissingMonthlyRecords(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	paymentService := NewPaymentService(paymentRepo, tenantRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("B203", "月租单间", "1000"))
@@ -290,7 +290,7 @@ func TestGenerateDueRecordsSkipsExistingRecordsAndIsIdempotent(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	paymentService := NewPaymentService(paymentRepo, tenantRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("B204", "免租单间", "1000"))
@@ -340,7 +340,7 @@ func TestGenerateDueRecordsCreatesDailyRecords(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	paymentService := NewPaymentService(paymentRepo, tenantRepo)
 
 	input := validRoomInput("B205", "日租单间", "80")

@@ -233,9 +233,9 @@
         {{if .Excluded}}
           <span class="badge bg-stone-200 text-stone-600">已排除</span>
         {{else if .Paid}}
-          <span class="badge bg-emerald-100 text-emerald-800">已付款</span>
+          <span class="badge bg-emerald-100 text-emerald-800">{{.StatusLabel}}</span>
         {{else}}
-          <span class="badge bg-red-100 text-red-700">未付款</span>
+          <span class="badge bg-red-100 text-red-700">{{.StatusLabel}}</span>
         {{end}}
         <span class="badge bg-stone-100 text-stone-600">{{.TypeLabel}}</span>
       </div>
@@ -258,7 +258,7 @@
           hx-swap="outerHTML" hx-push-url="false">
       <input type="hidden" name="return_to" value="/admin/payments">
       <button class="payment-action-button {{if .Paid}}btn-secondary{{else}}btn-primary{{end}}" type="submit">
-        {{if .Paid}}标为未付{{else}}标为已付{{end}}
+        {{$isRefund := eq .Type "deposit_refund"}}{{if .Paid}}{{if $isRefund}}标为未退{{else}}标为未付{{end}}{{else}}{{if $isRefund}}标为已退{{else}}标为已付{{end}}{{end}}
       </button>
     </form>
   </div>
@@ -292,9 +292,9 @@
     {{if .Excluded}}
       <span class="badge bg-stone-200 text-stone-600">已排除</span>
     {{else if .Paid}}
-      <span class="badge bg-emerald-100 text-emerald-800">已付款</span>
+      <span class="badge bg-emerald-100 text-emerald-800">{{.StatusLabel}}</span>
     {{else}}
-      <span class="badge bg-red-100 text-red-700">未付款</span>
+      <span class="badge bg-red-100 text-red-700">{{.StatusLabel}}</span>
     {{end}}
     {{if and .Paid .PaidAtLabel}}
       <p class="mt-1 text-xs font-bold text-emerald-700">{{.PaidAtLabel}}</p>
@@ -315,7 +315,7 @@
             hx-swap="outerHTML" hx-push-url="false">
         <input type="hidden" name="return_to" value="/admin/payments">
         <button class="payment-action-button {{if .Paid}}btn-secondary{{else}}btn-primary{{end}}" type="submit">
-          {{if .Paid}}标为未付{{else}}标为已付{{end}}
+          {{$isRefund := eq .Type "deposit_refund"}}{{if .Paid}}{{if $isRefund}}标为未退{{else}}标为未付{{end}}{{else}}{{if $isRefund}}标为已退{{else}}标为已付{{end}}{{end}}
         </button>
       </form>
     </div>

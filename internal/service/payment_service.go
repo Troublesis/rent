@@ -289,6 +289,11 @@ func buildPayment(input PaymentInput) (*model.Payment, error) {
 	if !model.ValidPaymentType(input.Type) {
 		return nil, fmt.Errorf("收款类型不正确")
 	}
+	// Deposit-refund records are auto-generated at checkout and must not be
+	// created by hand.
+	if input.Type == model.PaymentTypeDepositRefund {
+		return nil, fmt.Errorf("退款记录由退租自动生成，不能手动添加")
+	}
 	note, err := validateNotes(input.Note, "备注")
 	if err != nil {
 		return nil, err

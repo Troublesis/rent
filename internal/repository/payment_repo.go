@@ -115,9 +115,13 @@ func (r *PaymentRepository) SummarizePayments(filter PaymentFilter, now time.Tim
 	}
 
 	var summary PaymentSummary
-	if err := summaryQuery().Select("COALESCE(SUM(payments.amount), 0)").Where("payments.paid = ? AND payments.excluded = ?", false, false).Scan(&summary.TotalUnpaidAmount).Error; err != nil {
+	// Receivable (待收) excludes deposit refunds: an unreturned deposit is a
+	// liability to the tenant, not rent/utility income the landlord is owed.
+	if err := summaryQuery().Select("COALESCE(SUM(payments.amount), 0)").Where("payments.paid = ? AND payments.excluded = ? AND payments.type != ?", false, false, model.PaymentTypeDepositRefund).Scan(&summary.TotalUnpaidAmount).Error; err != nil {
 		return PaymentSummary{}, err
 	}
+	// Collected income (已收) includes deposit refunds as negative amounts, so
+	// a refunded deposit naturally deducts from the running income total.
 	if err := summaryQuery().Select("COALESCE(SUM(payments.amount), 0)").Where("payments.paid = ? AND payments.excluded = ?", true, false).Scan(&summary.TotalPaidAmount).Error; err != nil {
 		return PaymentSummary{}, err
 	}
@@ -157,6 +161,19 @@ func (r *PaymentRepository) UpdatePayment(payment *model.Payment) error {
 	return r.db.Save(payment).Error
 }
 
+// HasDepositRefund reports whether a deposit-refund record already exists for a
+// tenant, so checkout is idempotent — a second checkout attempt won't spawn a
+// duplicate refund row.
+func (r *PaymentRepository) HasDepositRefund(tenantID uint) (bool, error) {
+	var count int64
+	if err := r.db.Model(&model.Payment{}).
+		Where("tenant_id = ? AND type = ?", tenantID, model.PaymentTypeDepositRefund).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (r *PaymentRepository) SumPaidByMonth(year int, month time.Month) (int, error) {
 	start := time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
 	end := start.AddDate(0, 1, 0)
@@ -169,7 +186,7 @@ func (r *PaymentRepository) SumPaidByMonth(year int, month time.Month) (int, err
 
 func (r *PaymentRepository) SumUnpaid() (int, error) {
 	var total int
-	if err := r.db.Model(&model.Payment{}).Select("COALESCE(SUM(amount), 0)").Where("paid = ? AND excluded = ?", false, false).Scan(&total).Error; err != nil {
+	if err := r.db.Model(&model.Payment{}).Select("COALESCE(SUM(amount), 0)").Where("paid = ? AND excluded = ? AND type != ?", false, false, model.PaymentTypeDepositRefund).Scan(&total).Error; err != nil {
 		return 0, err
 	}
 	return total, nil

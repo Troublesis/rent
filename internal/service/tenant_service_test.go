@@ -13,7 +13,8 @@ func TestCheckInTenant(t *testing.T) {
 	roomRepo := repository.NewRoomRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	paymentRepo := repository.NewPaymentRepository(db)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("A101", "南向一居室", "1500"))
 	if err != nil {
@@ -103,7 +104,8 @@ func TestCheckInTenantDefaultsLeaseTermsFromRoom(t *testing.T) {
 	roomRepo := repository.NewRoomRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	paymentRepo := repository.NewPaymentRepository(db)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 
 	input := validRoomInput("A104", "日租公寓", "80")
 	input.RentType = model.RentTypeDaily
@@ -132,7 +134,8 @@ func TestCheckInTenantStoresOptionalLeaseEndDate(t *testing.T) {
 	roomRepo := repository.NewRoomRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	paymentRepo := repository.NewPaymentRepository(db)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("A105", "长租公寓", "1800"))
 	if err != nil {
@@ -161,7 +164,8 @@ func TestCheckInTenantRejectsLeaseEndBeforeCheckin(t *testing.T) {
 	roomRepo := repository.NewRoomRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	paymentRepo := repository.NewPaymentRepository(db)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("A106", "短租公寓", "1800"))
 	if err != nil {
@@ -186,7 +190,8 @@ func TestCheckInTenantFailsWhenRoomOccupied(t *testing.T) {
 	roomRepo := repository.NewRoomRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	paymentRepo := repository.NewPaymentRepository(db)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("A102", "一居室", "1600"))
 	if err != nil {
@@ -206,7 +211,8 @@ func TestUpdateTenantChangesInfoAndRoomStatus(t *testing.T) {
 	roomRepo := repository.NewRoomRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	paymentRepo := repository.NewPaymentRepository(db)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 
 	oldRoom, err := roomService.CreateRoom(validRoomInput("A107", "旧房源", "1800"))
 	if err != nil {
@@ -269,7 +275,8 @@ func TestUpdateTenantRejectsOccupiedTargetRoom(t *testing.T) {
 	roomRepo := repository.NewRoomRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	paymentRepo := repository.NewPaymentRepository(db)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 
 	firstRoom, err := roomService.CreateRoom(validRoomInput("A109", "第一房源", "1800"))
 	if err != nil {
@@ -298,7 +305,8 @@ func TestCheckOutTenant(t *testing.T) {
 	roomRepo := repository.NewRoomRepository(db)
 	tenantRepo := repository.NewTenantRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	paymentRepo := repository.NewPaymentRepository(db)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("A103", "两居室", "2200"))
 	if err != nil {

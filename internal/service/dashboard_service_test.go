@@ -14,7 +14,7 @@ func TestDashboardSummaryReceivables(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	paymentService := NewPaymentService(paymentRepo, tenantRepo)
 	dashboardService := NewDashboardService(roomRepo, tenantRepo, paymentRepo)
 
@@ -61,7 +61,7 @@ func TestDashboardSummaryCountsOnlyDatedExpiredActiveTenants(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	dashboardService := NewDashboardService(roomRepo, tenantRepo, paymentRepo)
 
 	expiredRoom, err := roomService.CreateRoom(validRoomInput("D103", "到期房", "1000"))
@@ -94,7 +94,7 @@ func TestDashboardProjectionDetailsShareSummaryTotals(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	dashboardService := NewDashboardService(roomRepo, tenantRepo, paymentRepo)
 
 	room, err := roomService.CreateRoom(validRoomInput("D105", "预测房", "1000"))
@@ -128,7 +128,7 @@ func TestDashboardDailyProjectionUsesCalendarDays(t *testing.T) {
 	tenantRepo := repository.NewTenantRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	roomService := NewRoomService(roomRepo, tenantRepo)
-	tenantService := NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	dashboardService := NewDashboardService(roomRepo, tenantRepo, paymentRepo)
 
 	input := validRoomInput("D102", "日租房", "80")

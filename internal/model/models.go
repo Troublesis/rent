@@ -19,10 +19,11 @@ const (
 )
 
 const (
-	PaymentTypeRent        = "rent"
-	PaymentTypeWater       = "water"
-	PaymentTypeElectricity = "electricity"
-	PaymentTypeOther       = "other"
+	PaymentTypeRent          = "rent"
+	PaymentTypeWater         = "water"
+	PaymentTypeElectricity   = "electricity"
+	PaymentTypeOther         = "other"
+	PaymentTypeDepositRefund = "deposit_refund" // 未退押金：退租时生成，金额为负（退还时从收款总额扣除）
 )
 
 const (
@@ -157,6 +158,20 @@ func ValidPaymentType(paymentType string) bool {
 	default:
 		return false
 	}
+}
+
+// IsUserCreatablePaymentType reports whether a payment type can be manually
+// created via the admin form. Deposit-refund records are auto-generated at
+// checkout and must not be hand-entered.
+func IsUserCreatablePaymentType(paymentType string) bool {
+	return ValidPaymentType(paymentType)
+}
+
+// IsReceivablePaymentType reports whether a payment counts toward receivable
+// (待收) totals. Deposit refunds are a liability, not rent/utility income, so
+// they are excluded from 待收 even while unpaid.
+func IsReceivablePaymentType(paymentType string) bool {
+	return ValidPaymentType(paymentType) && paymentType != PaymentTypeDepositRefund
 }
 
 func ValidMediaType(mediaType string) bool {

@@ -26,13 +26,14 @@ type TenantInput struct {
 }
 
 type TenantService struct {
-	db         *gorm.DB
-	tenantRepo *repository.TenantRepository
-	roomRepo   *repository.RoomRepository
+	db          *gorm.DB
+	tenantRepo  *repository.TenantRepository
+	roomRepo    *repository.RoomRepository
+	paymentRepo *repository.PaymentRepository
 }
 
-func NewTenantService(db *gorm.DB, tenantRepo *repository.TenantRepository, roomRepo *repository.RoomRepository) *TenantService {
-	return &TenantService{db: db, tenantRepo: tenantRepo, roomRepo: roomRepo}
+func NewTenantService(db *gorm.DB, tenantRepo *repository.TenantRepository, roomRepo *repository.RoomRepository, paymentRepo *repository.PaymentRepository) *TenantService {
+	return &TenantService{db: db, tenantRepo: tenantRepo, roomRepo: roomRepo, paymentRepo: paymentRepo}
 }
 
 func (s *TenantService) ListTenants(filter repository.TenantFilter) ([]model.Tenant, error) {
@@ -147,6 +148,7 @@ func (s *TenantService) CheckOutTenant(id uint) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		tenantRepo := s.tenantRepo.WithDB(tx)
 		roomRepo := s.roomRepo.WithDB(tx)
+		paymentRepo := s.paymentRepo.WithDB(tx)
 		tenant, err := tenantRepo.GetTenant(id)
 		if err != nil {
 			return err
@@ -160,6 +162,29 @@ func (s *TenantService) CheckOutTenant(id uint) error {
 		updatedTenant.CheckoutDate = &now
 		if err := tenantRepo.UpdateTenant(&updatedTenant); err != nil {
 			return err
+		}
+		// Deposit collected at check-in must be returned. Create an unpaid
+		// deposit-refund record so it surfaces on the payments page as
+		// 未退押金. Amount is negative so marking it paid (退还) deducts it
+		// from total collected income via the shared SUM query.
+		if tenant.Deposit > 0 {
+			exists, err := paymentRepo.HasDepositRefund(tenant.ID)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				refund := &model.Payment{
+					TenantID: tenant.ID,
+					Amount:   -tenant.Deposit,
+					Type:     model.PaymentTypeDepositRefund,
+					Paid:     false,
+					PayDate:  now,
+					Note:     "退租未退押金，退还后从收款总额扣除",
+				}
+				if err := paymentRepo.CreatePayment(refund); err != nil {
+					return err
+				}
+			}
 		}
 		room, err := roomRepo.GetRoom(tenant.RoomID)
 		if err != nil {

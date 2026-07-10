@@ -17,25 +17,28 @@ import (
 const pushPlusSendURL = "http://www.pushplus.plus/send"
 
 type PushService struct {
-	cfg         config.Config
-	pushRepo    *repository.PushRepository
-	paymentRepo *repository.PaymentRepository
-	settingsSvc *SettingsService
-	httpClient  *http.Client
+	cfg            config.Config
+	pushRepo       *repository.PushRepository
+	paymentRepo    *repository.PaymentRepository
+	paymentService *PaymentService
+	settingsSvc    *SettingsService
+	httpClient     *http.Client
 }
 
 func NewPushService(
 	cfg config.Config,
 	pushRepo *repository.PushRepository,
 	paymentRepo *repository.PaymentRepository,
+	paymentService *PaymentService,
 	settingsSvc *SettingsService,
 ) *PushService {
 	return &PushService{
-		cfg:         cfg,
-		pushRepo:    pushRepo,
-		paymentRepo: paymentRepo,
-		settingsSvc: settingsSvc,
-		httpClient:  &http.Client{Timeout: 10 * time.Second},
+		cfg:            cfg,
+		pushRepo:       pushRepo,
+		paymentRepo:    paymentRepo,
+		paymentService: paymentService,
+		settingsSvc:    settingsSvc,
+		httpClient:     &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -275,6 +278,22 @@ func (s *PushService) SendReminder() error {
 		return nil
 	}
 
+	// Materialize upcoming due rows ahead of time. Due records are normally
+	// generated only through "today", but in advance mode we notify about
+	// bills up to AdvanceDays in the future — those rows must exist before we
+	// query, or the reminder fires a day late.
+	lookahead := config.AdvanceDays
+	if lookahead < 0 {
+		lookahead = 0
+	}
+	if lookahead > 0 {
+		now := time.Now()
+		through := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, lookahead)
+		if _, err := s.paymentService.GenerateDueRecordsForActiveTenants(through); err != nil {
+			return fmt.Errorf("generate due records: %w", err)
+		}
+	}
+
 	payments, err := s.queryDuePayments()
 	if err != nil {
 		return fmt.Errorf("query due payments: %w", err)
@@ -392,13 +411,22 @@ func (s *PushService) SendTest(token, title, body string) error {
 }
 
 func (s *PushService) queryDuePayments() ([]model.Payment, error) {
+	config, err := s.pushRepo.GetConfigOrCreate()
+	if err != nil {
+		return nil, err
+	}
+	// AdvanceDays is the signed offset (positive = notify ahead, negative =
+	// notify after). Notify about every unpaid, non-excluded bill whose due
+	// date falls within [overdue … today + offset]. This is the window that
+	// was missing entirely before, which pushed one day late.
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	through := today.AddDate(0, 0, config.AdvanceDays)
 	return s.paymentRepo.ListPayments(repository.PaymentFilter{
 		Paid:         boolPtr(false),
 		Excluded:     boolPtr(false),
 		TenantStatus: model.TenantStatusActive,
-		ToDate:       today,
+		ToDate:       through,
 	})
 }
 
@@ -429,6 +457,8 @@ func paymentTypeLabelCN(paymentType string) string {
 		return "电费"
 	case model.PaymentTypeOther:
 		return "其他"
+	case model.PaymentTypeDepositRefund:
+		return "未退押金"
 	default:
 		return "未知"
 	}

@@ -39,7 +39,7 @@ func NewRouter(cfg config.Config, db *gorm.DB) (*gin.Engine, *service.PushSchedu
 	pushRepo := repository.NewPushRepository(db)
 
 	roomService := service.NewRoomService(roomRepo, tenantRepo)
-	tenantService := service.NewTenantService(db, tenantRepo, roomRepo)
+	tenantService := service.NewTenantService(db, tenantRepo, roomRepo, paymentRepo)
 	paymentService := service.NewPaymentService(paymentRepo, tenantRepo)
 	if cfg.AppEnv != "test" {
 		startPaymentGenerationTicker(paymentService)
@@ -58,7 +58,7 @@ func NewRouter(cfg config.Config, db *gorm.DB) (*gin.Engine, *service.PushSchedu
 	settingsHandler := handler.NewAdminSettingsHandler(renderer, settingsService)
 	uploadHandler := handler.NewUploadHandler(cfg.UploadDir, roomService)
 
-	pushService := service.NewPushService(cfg, pushRepo, paymentRepo, settingsService)
+	pushService := service.NewPushService(cfg, pushRepo, paymentRepo, paymentService, settingsService)
 	pushHandler := handler.NewAdminPushHandler(renderer, pushService)
 	pushScheduler := service.NewPushScheduler(pushRepo, pushService)
 

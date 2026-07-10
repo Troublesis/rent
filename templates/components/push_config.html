@@ -34,15 +34,19 @@
         按缴租日提前推送
       </label>
       <div class="mt-3 sm:ml-6 ml-1 flex items-center gap-2 flex-wrap">
-        <span class="text-sm text-stone-500">到期前</span>
-        <select name="advance_days" class="input py-1 px-2 text-sm w-auto min-w-[5.5rem]">
+        <span class="text-sm text-stone-500">在应缴日</span>
+        <select name="advance_days" class="input py-1 px-2 text-sm w-auto min-w-[7rem]">
+          <option value="-3" {{if eq .PushConfig.AdvanceDays -3}}selected{{end}}>推迟 3 天</option>
+          <option value="-1" {{if eq .PushConfig.AdvanceDays -1}}selected{{end}}>推迟 1 天</option>
           <option value="0" {{if eq .PushConfig.AdvanceDays 0}}selected{{end}}>当天</option>
+          <option value="1" {{if eq .PushConfig.AdvanceDays 1}}selected{{end}}>提前 1 天</option>
+          <option value="2" {{if eq .PushConfig.AdvanceDays 2}}selected{{end}}>提前 2 天</option>
           <option value="3" {{if eq .PushConfig.AdvanceDays 3}}selected{{end}}>提前 3 天</option>
           <option value="5" {{if eq .PushConfig.AdvanceDays 5}}selected{{end}}>提前 5 天</option>
           <option value="7" {{if eq .PushConfig.AdvanceDays 7}}selected{{end}}>提前 7 天</option>
           <option value="10" {{if eq .PushConfig.AdvanceDays 10}}selected{{end}}>提前 10 天</option>
         </select>
-        <span class="text-sm text-stone-500">推送</span>
+        <span class="text-sm text-stone-500">推送提醒</span>
       </div>
     </div>
 
